@@ -1,7 +1,7 @@
 (ns fluree.server.components.consensus-handler
   (:require [donut.system :as ds]
             [fluree.db.util.log :as log]
-            [fluree.http-api.components.http :as http-routes]
+            [fluree.server.components.http :as http-routes]
             [fluree.server.consensus.handlers.create-ledger :as create-ledger]
             [fluree.server.consensus.handlers.ledger-created :as ledger-created]
             [fluree.server.consensus.handlers.tx-queue :as tx-queue]
@@ -11,15 +11,7 @@
 
 (set! *warn-on-reflection* true)
 
-(declare create-handler)
-
-;; note, this handler is started first then injected into the consensus startup
-(def start
-  #::ds{:start  (fn [{{:keys [routes]} ::ds/config}]
-                  (log/debug "Building consensus router with routes:" routes)
-                  (create-handler routes))
-        :config {:routes (ds/ref [:env :fluree/consensus :routes])}})
-
+(declare create-handler default-routes)
 
 (def default-routes
   {:ledger-create          {:summary         "Request to create a new ledger. Generates :ledger-created event when successful"
@@ -40,18 +32,18 @@
                                          :instant   pos-int?}
                             :auth       {} ;; specific authorization logic to determine if action is allowed.
                             :handler    ledger-created/handler
-                            :processor  ledger-created/broadcast}
+                            :processor  ledger-created/broadcast!}
    :tx-queue               {:summary   "Queues a new transaction for a given ledger. If the transactor, processes transaction"
                             :handler   tx-queue/handler
                             :processor tx-queue/processor}
    :new-commit             {:summary   "A transaction has been processed into a new commit. Broadcast to connected clients."
                             :handler   new-commit/handler
-                            :processor new-commit/broadcast}
+                            :processor new-commit/broadcast!}
    :tx-exception           {:summary "Any transaction that has an exception which is not recorded in a new commit.  Broadcast to connected clients."
                             :handler tx-exception/handler}
-   :new-index-file         {:summary "A new (pending) index file is created for an ongoing indexing process"
-                            :handler new-index-file/handler
-                            :processor  new-index-file/processor}
+   :new-index-file         {:summary   "A new (pending) index file is created for an ongoing indexing process"
+                            :handler   new-index-file/handler
+                            :processor new-index-file/processor}
 
    ;; TODO - below are anticipated event types, but not yet implemented
 

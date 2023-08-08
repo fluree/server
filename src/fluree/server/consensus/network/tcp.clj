@@ -23,9 +23,9 @@
                            (System/exit 1)))
         accept-chan (:accept-chan acceptor)]
     (async/go-loop []
-                   (when-let [new-client (async/<! accept-chan)]
-                     (new-connection-handler new-client)
-                     (recur)))
+      (when-let [new-client (async/<! accept-chan)]
+        (new-connection-handler new-client)
+        (recur)))
     ;; return shutdown function
     (fn []
       (log/info "Shutting down tcp server on port" port)
@@ -35,6 +35,11 @@
 ;;; implementation
 
 (def connections (atom {}))
+
+(comment
+
+  @connections
+  )
 
 (defn close-all-connections
   [this-server]
@@ -66,6 +71,7 @@
 
   Returns true if success, false if not"
   [this-server remote-server header data]
+  (log/trace "TCP send-rpc - from:" this-server "to:" remote-server "header:" header "data:" data)
   (let [write-chan (get-in @connections [this-server :conn-to remote-server :write-chan])]
     (if (nil? write-chan)
       false
@@ -88,6 +94,7 @@
                          (try (deserialize-message initial-msg) ;; catch parsing errors (or nil for timeout)
                               (catch Exception _ nil)))
               {:keys [server-id id]} data]
+          (log/info "New inbound consensus server TCP connection from: " server-id)
           (cond
             ;; proper initialization
             (and (string? server-id) (int? id))
@@ -108,7 +115,7 @@
             (= port initialize-timeout)
             (do
               (log/warn "Timeout from new client connection that did not send an initialize message.")
-              (async/close! write-chan)                     ;; forces connection to close
+              (async/close! write-chan) ;; forces connection to close
               nil)
 
             ;; parsing error or incorrect initialization
@@ -139,7 +146,7 @@
       (async/put! write-chan (serialize-message :hello {:server-id this-server :id conn-id}))
       (swap! connections update-in [this-server :conn-to remote-server]
              (fn [existing-conn]
-               (when existing-conn                          ;; another process already established connection, close it
+               (when existing-conn ;; another process already established connection, close it
                  (async/close! (:write-chan existing-conn)))
                conn))
       conn)))
@@ -163,15 +170,15 @@
             (keyword? msg)
             (let [conn* (case msg
                           :connected
-                          (do
-                            (log/debug (str "New TCP connection!! " remote-server))
-                            (if server?
-                              (async/<! (initialize-with-client this-server client))
+                          (if server?
+                            (async/<! (initialize-with-client this-server client))
+                            (do
+                              (log/info (str "New outbound consensus server TCP connection to: " remote-server))
                               (async/<! (initialize-with-server this-server client remote-server))))
 
                           :disconnected
                           (let [remote-server (or (:to conn) remote-server)]
-                            (log/debug (str "TCP read channel disconnected for server: " (or (:to conn) remote-server)
+                            (log/info (str "TCP read channel disconnected for server: " (or (:to conn) remote-server)
                                             ". Waiting for reconnect."))
                             (when remote-server
                               (swap! connections assoc-in [this-server :conn-to remote-server] nil))
@@ -245,11 +252,11 @@
   "Launches a connection from a client to a server."
   [this-server-cfg remote-server-cfg handler]
   (async/go
-    (let [this-server (:server-id this-server-cfg)
+    (let [this-server (:multi-addr this-server-cfg)
           event-loop  (get-client-event-loop this-server)
-          {:keys [host port server-id]} remote-server-cfg
+          {:keys [host port multi-addr]} remote-server-cfg
           _           (validate-remote-address! host port)
           client      (ntcp/connect event-loop {:host       host
                                                 :port       port
                                                 :write-chan (async/chan (async/dropping-buffer 10))})]
-      (monitor-remote-connection this-server client handler server-id))))
+      (monitor-remote-connection this-server client handler multi-addr))))

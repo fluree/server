@@ -1,10 +1,12 @@
 (ns fluree.server.consensus.core
   (:require [clojure.core.async :as async]
+            [clojure.string :as str]
             [fluree.db.util.log :as log]
             [fluree.raft :as raft]
             [fluree.server.consensus.network.tcp :as ftcp]
             [fluree.server.consensus.raft.core :as raft-helpers]
             [fluree.server.consensus.protocol :as txproto]
+            [fluree.server.consensus.network.multi-addr :as multi-addr]
             [fluree.server.io.file :as io-file]))
 
 (set! *warn-on-reflection* true)
@@ -18,7 +20,7 @@
 (defn queue-new-ledger
   "Queues a new ledger into the consensus layer for processing.
   Returns a core async channel that will eventually contain true if successful."
-  [group conn-type ledger-id tx-id txn context]
+  [group conn-type ledger-id tx-id txn opts]
   (log/debug "Consensus - queue new ledger: " ledger-id tx-id txn)
   (txproto/-new-entry-async
     group
@@ -27,23 +29,26 @@
                      :size      (count txn)
                      :tx-id     tx-id
                      :ledger-id ledger-id
-                     :context   context
+                     :opts      opts
                      :instant   (System/currentTimeMillis)}]))
 
 
 
 (defn queue-new-transaction
   "Queues a new transaction into the consensus layer for processing.
-  Returns a core async channel that will eventually contain true if successful."
-  [group conn-type ledger-id tx-id txn]
+  Returns a core async channel that will eventually contain a truthy value if successful."
+  [group conn-type ledger-id tx-id txn defaultContext opts]
   (txproto/-new-entry-async
     group
-    [:tx-queue {:txn       txn
-                :conn-type conn-type
-                :size      (count txn)
-                :tx-id     tx-id
-                :ledger-id ledger-id
-                :instant   (System/currentTimeMillis)}]))
+    [:tx-queue {:txn            txn
+                :conn-type      conn-type
+                :size           (count txn)
+                :tx-id          tx-id
+                :ledger-id      ledger-id
+                :defaultContext defaultContext
+                :opts           opts
+                :instant        (System/currentTimeMillis)}]))
+
 
 
 (defn data-version
@@ -97,10 +102,11 @@
 
 (defn add-state-machine
   "Add state machine configuration options needed for raft"
-  [{:keys [fluree/conn this-server command-chan storage-ledger-read storage-ledger-write] :as raft-config}
+  [{:keys [fluree/conn fluree/watcher this-server command-chan storage-ledger-read storage-ledger-write] :as raft-config}
    handler]
   (let [state-machine-atom   (atom raft-helpers/default-state)
         state-machine-config {:fluree/conn                    conn
+                              :fluree/watcher                 watcher
                               :consensus/command-chan         command-chan
                               :consensus/this-server          this-server
                               :consensus/state-atom           state-machine-atom
@@ -120,13 +126,27 @@
                        :snapshot-list-indexes (raft-helpers/snapshot-list-indexes snapshot-config))))
 
 (defn add-server-configs
-  [{:keys [this-server server-configs] :as raft-state}]
-  (let [this-server-cfg (raft-helpers/validated-this-server-config this-server server-configs)
-        raft-servers    (raft-helpers/validated-raft-servers server-configs)]
-
-    (assoc raft-state :this-server-config this-server-cfg
-                      :port (:port this-server-cfg)
-                      :servers raft-servers)))
+  [{:keys [consensus-this-server consensus-servers] :as raft-state}]
+  (when-not (string? consensus-servers)
+    (throw (ex-info (str "Cannot start raft without a list of participating servers separated by a comma or semicolon. "
+                         "If this is a single server, please specify this-server instead of servers.")
+                    {:status 400 :error :db/invalid-server-address})))
+  (let [servers            (mapv str/trim (str/split consensus-servers #"[,;]"))
+        this-server        (if consensus-this-server
+                             (str/trim consensus-this-server)
+                             (if (= 1 (count servers))
+                               (first servers)
+                               (throw (ex-info "Must specify this-server if multiple servers are specified"
+                                               {:status 400 :error :db/invalid-server-address}))))
+        server-configs-map (mapv multi-addr/multi->map servers)
+        this-server-map    (multi-addr/multi->map this-server)
+        this-server-cfg    (raft-helpers/validated-this-server-config this-server-map server-configs-map)]
+    (raft-helpers/validated-raft-servers server-configs-map)
+    (assoc raft-state :this-server this-server
+                      :servers servers
+                      :this-server-config this-server-cfg
+                      :server-configs server-configs-map
+                      :port (:port this-server-cfg))))
 
 (defn add-leader-change-fn
   [{:keys [this-server join? leader-change-fn] :as raft-config}]
@@ -149,7 +169,7 @@
 
 
 (defn start
-  [handler {:keys [this-server log-history entries-max storage-type catch-up-rounds]
+  [handler {:keys [log-history entries-max storage-type catch-up-rounds]
             :or   {log-history     10
                    entries-max     50
                    catch-up-rounds 10}
@@ -172,7 +192,7 @@
         raft                   (raft/start raft-config*)
         client-message-handler (partial raft-helpers/message-consume raft (:storage-ledger-read raft-config*))
         new-client-handler     (fn [client]
-                                 (ftcp/monitor-remote-connection this-server client client-message-handler nil))
+                                 (ftcp/monitor-remote-connection (:this-server raft-config*) client client-message-handler nil))
         ;; start TCP server, returns the close function
         server-shutdown-fn     (ftcp/start-tcp-server (:port raft-config*) new-client-handler)
         ;; launch client connections on TCP server

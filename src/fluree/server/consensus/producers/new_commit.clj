@@ -26,7 +26,6 @@
     ;; returns promise
     (raft/leader-new-command! config :new-commit created-body)))
 
-
 ;; TODO - the return signature of updated commits from indexing is different than
 ;; TODO - the return values of commit! API, which the above function handles.
 ;; TODO - Ideally these two functions can be consolidated once the inputs match

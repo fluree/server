@@ -69,10 +69,10 @@
   [{:keys [path state-atom storage-read]}]
   (fn [snapshot-id]
     (try
-      (let [file   (str path snapshot-id ".snapshot")
-            _      (log/debug "Reifying snapshot" file)
-            data   (<?? (storage-read file))
-            state  (when data (nippy/thaw data))]
+      (let [file  (str path snapshot-id ".snapshot")
+            _     (log/debug "Reifying snapshot" file)
+            data  (<?? (storage-read file))
+            state (when data (nippy/thaw data))]
         (log/debug "Read snapshot data:" state)
         (reset! state-atom state))
       (catch Exception e (log/error e "Error reifying snapshot: " snapshot-id)))))
@@ -298,7 +298,7 @@
     ;; Unregister state-change-fns
     (unregister-all-state-change-fn)
     ;; close any open connections
-    (ftcp/close-all-connections (:server-id this-server-config))
+    (ftcp/close-all-connections (:multi-addr this-server-config))
     ;; close tcp server
     (server-shutdown)))
 
@@ -372,7 +372,6 @@
   ([{:keys [:consensus/command-chan :consensus/raft-state] :as _config} command params timeout-ms]
    (let [entry     [command params]
          raft-stub {:config {:command-chan command-chan}}
-         resp-chan (async/promise-chan)
          p         (promise)
          callback  (fn [resp]
                      (deliver p resp))]
@@ -472,8 +471,8 @@
     (let [{:keys [new-raft-state old-raft-state]} change-map]
       (log/info "Ledger group leader change:"
                 (dissoc change-map :key :new-raft-state :old-raft-state))
-      (log/debug "Old raft state: \n" old-raft-state "\n"
-                 "New raft state: \n" new-raft-state)
+      (log/trace "Leader change: \n" "... Old raft state: \n" old-raft-state "\n"
+                 "... New raft state: \n" new-raft-state)
       (when (not (nil? new-raft-state))
         (cond (and join? (not (nil? (:leader new-raft-state)))
                    (not= this-server (:leader new-raft-state)))
@@ -494,7 +493,7 @@
   "Returns list of raft servers as needed by the raft library
   using the startup server map configs. Does some basic validation."
   [server-configs]
-  (let [raft-servers (->> (map :server-id server-configs)
+  (let [raft-servers (->> (map :multi-addr server-configs)
                           (into #{})
                           ;; TODO - does downstream really need a vector? seems set should be fine
                           (into []))]
@@ -510,7 +509,7 @@
   "Returns 'this' server's config by finding the matching entry of 'this-server'
   in the list of server config maps. Does some basic validation."
   [this-server server-configs]
-  (let [this-server-cfg (some #(when (= this-server (:server-id %)) %) server-configs)]
+  (let [this-server-cfg (some #(when (= this-server %) %) server-configs)]
     (when-not this-server-cfg
       (throw (ex-info (str "This server: " (pr-str this-server) " has to be included in the group
                                 server configuration." (pr-str server-configs))
@@ -522,15 +521,19 @@
   "Fires up network and provides it the handler for new events/commands"
   [{:keys [this-server-config server-configs join? storage-ledger-read] :as _raft-config} raft-instance]
   ;; TODO - Need slightly more complicated handling. If a server joins, close, and tries to restart with join = false, will fail
-  (let [all-other-servers (filter #(not= (:server-id this-server-config) (:server-id %)) server-configs)
+  (let [all-other-servers (filter #(not= (:multi-addr this-server-config) (:multi-addr %)) server-configs)
         connect-servers   (if join?
                             ;; If joining an existing network, connects to all other servers
                             all-other-servers
                             ;; simple rule (for now) is we connect to servers whose id is > (lexical sort) than our own
-                            (filter #(> 0 (compare (:server-id this-server-config) (:server-id %))) server-configs))
+                            (filter #(> 0 (compare (:multi-addr this-server-config) (:multi-addr %))) server-configs))
+        _                 (log/trace "Launching network connections for this-server-config: " this-server-config
+                                     " server-configs: " server-configs
+                                     " all-other-servers: " all-other-servers
+                                     " connect-servers: " connect-servers)
         handler-fn        (partial message-consume raft-instance storage-ledger-read)]
     (doseq [connect-to connect-servers]
-      (log/debug "Raft: connecting to server: " connect-to)
+      (log/debug "Raft: attempting connection to server: " connect-to)
       (ftcp/launch-client-connection this-server-config connect-to handler-fn))))
 
 

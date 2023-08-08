@@ -3,7 +3,7 @@
             [fluree.db.json-ld.api :as fluree]
             [fluree.db.util.json :as json]
             [fluree.raft.leader :refer [is-leader?]]
-            [fluree.http-api.handlers.ledger :refer [deref! txn-body->opts]]
+            [fluree.server.handlers.ledger :refer [deref!]]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.core :as consensus]
             [fluree.server.consensus.producers.new-index-file :refer [push-new-index-files]]
@@ -26,12 +26,10 @@
 
 (defn create-and-commit
   "Returns promise with eventual response, which could be an exception."
-  [{:keys [:fluree/conn] :as config}
-   {:keys [ledger-id txn context tx-id] :as _params}]
+  [{:keys [fluree/conn] :as config}
+   {:keys [ledger-id txn opts tx-id] :as _params}]
   (log/trace "Creating ledger" ledger-id "with txn: " txn)
   (let [txn'    (json/parse txn false)
-        opts    (txn-body->opts {:txn     txn'
-                                 :context context})
         ledger  (deref! (fluree/create conn ledger-id opts))
         commit! (fn [db]
                   (let [index-files-ch (async/chan)
@@ -52,7 +50,7 @@
   "Pushes create-ledger request in consensus only if leader.
 
   Returns promise that will have the eventual response once committed."
-  [{:keys [:consensus/state-atom :consensus/raft-state :fluree/conn] :as config}
+  [{:keys [consensus/raft-state] :as config}
    {:keys [ledger-id tx-id] :as _params}
    {:keys [db data-file-meta commit-file-meta context-file-meta]}]
   (let [created-body {:ledger-id         ledger-id
@@ -72,11 +70,10 @@
   "Processes create-ledger request.
 
   Only the leader creates new ledgers."
-  [{:keys [:consensus/raft-state] :as config} params]
+  [{:keys [consensus/raft-state] :as config} params]
   (when (is-leader? raft-state)
     (if (verify-doesnt-exist config params)
-      (->> params
-           (create-and-commit config)
+      (->> (create-and-commit config params)
            deref!
            (push-consensus config params)
            deref!)
@@ -87,7 +84,7 @@
   "Adds a new ledger along with its transaction into the state machine in a queue.
   The consensus leader is responsible for creating all new ledgers, and will get
   to it ASAP."
-  [{:keys [:consensus/state-atom :consensus/raft-state] :as config} {:keys [ledger-id] :as params}]
+  [{:keys [consensus/state-atom] :as _config} {:keys [ledger-id tx-id] :as params}]
   (log/debug (str "Queuing new ledger into state machine with params: " params))
   (try
     (swap! state-atom update-in

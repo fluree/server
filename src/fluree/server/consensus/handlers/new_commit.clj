@@ -3,7 +3,8 @@
             [fluree.db.conn.file :as file-conn]
             [fluree.db.conn.proto :as conn-proto]
             [fluree.db.util.async :refer [<? go-try]]
-            [fluree.db.util.log :as log]))
+            [fluree.db.util.log :as log]
+            [fluree.server.components.watcher :as watcher]))
 
 
 (set! *warn-on-reflection* true)
@@ -34,7 +35,7 @@
   local-storage. If using a networked file system (e.g. S3, IPFS) the
   file is already stored by the leader with the respective service."
   [{:keys [:consensus/raft-state :fluree/conn] :as config}
-   {:keys [data-file-meta commit-file-meta context-file-meta server ledger-id] :as params}]
+   {:keys [data-file-meta commit-file-meta context-file-meta server ledger-id] :as commit-result}]
   (go-try
     (let [this-server (:this-server raft-state)
           address-ch  (conn-proto/-address conn ledger-id nil)] ;; launch address lookup in background, don't block
@@ -47,14 +48,15 @@
           (write-file config context-file-meta))
         (write-file config commit-file-meta)
         (<? (conn-proto/-push conn (<? address-ch) commit-file-meta)))
-      params)))
+      commit-result)))
 
 
 (defn update-ledger-state
   "Updates the latest commit in the ledger, and removes the processed transaction in the queue"
   [{:keys [:consensus/state-atom] :as _config}
-   {:keys [ledger-id commit-file-meta t tx-id] :as _params}]
+   {:keys [ledger-id commit-file-meta t tx-id] :as commit-result}]
   (try
+
     (swap! state-atom
            (fn [current-state]
              (-> current-state
@@ -64,6 +66,8 @@
                  (assoc-in [:ledgers ledger-id] {:t              t
                                                  :status         :ready
                                                  :commit-address (:address commit-file-meta)}))))
+    commit-result
+
     (catch Exception e
       ; return exception (don't throw) for handler on error
       (log/warn (ex-message e))
@@ -74,24 +78,20 @@
                   :error  :db/unexpected-error}
                  e)))))
 
-(defn return-success-response
-  [{:keys [ledger-id server] :as _params} state-map]
-  (log/info (str "New Ledger successfully created by server " server ": " ledger-id))
-  (get-in state-map [:ledgers ledger-id]))
 
 
 (defn handler
-  "Adds a new ledger along with its transaction into the state machine in a queue.
-  The consensus leader is responsible for creating all new ledgers, and will get
-  to it ASAP."
-  [config params]
-  (log/debug (str "Queuing new ledger into state machine with params: " params))
+  "Adds a new commit for a ledger into state machine and stores associated files
+  if needed."
+  [config commit-result]
+  (log/debug (str "Queuing new commit into state machine: " commit-result))
   (try
-    (->> params
+
+    (->> commit-result
          (store-ledger-files config)
          async/<!!
-         (update-ledger-state config) ;; returns latest state map
-         (return-success-response params))
+         (update-ledger-state config))
+
     (catch Exception e
       (log/warn (str "Error writing new commit: " (ex-message e)))
       (if (ex-data e)
@@ -101,10 +101,9 @@
                   :error  :db/unexpected-error}
                  e)))))
 
-(defn broadcast
+(defn broadcast!
   "Responsible for producing the event broadcast to connected peers."
-  [config handler-result]
-  ;; TODO
-  (log/warn "TODO  - broadcast NEW COMMIT!: " handler-result)
-
-  )
+  [{:keys [fluree/watcher] :as _config} {:keys [ledger-id tx-id server] :as commit-result}]
+  (log/info "New transaction completed for" ledger-id "tx-id: " tx-id "by server:" server)
+  (watcher/deliver-watch watcher tx-id commit-result)
+  :success) ;; result of this function is not used
