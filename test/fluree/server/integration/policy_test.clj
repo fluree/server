@@ -52,9 +52,10 @@
           query-res    (api-post :query query-req)]
       (is (= 200 (:status query-res))
           (str "policy-enforced query response was: " (pr-str query-res)))
-      (is (= [{"id" "ex:bob", "rdf:type" ["ex:User"]}
+      (is (= [{"id"   "ex:bob",
+               "type" "ex:User"}
               {"id"        "ex:alice",
-               "rdf:type"  ["ex:User"],
+               "type"      "ex:User",
                "ex:secret" "alice's secret"}]
              (-> query-res :body json/read-value))
           "query policy opts should prevent seeing bob's secret")
@@ -75,10 +76,10 @@
             query-res (api-post :query query-req)
             _         (assert (= 200 (:status query-res)))]
         (is (= [{"id"        "ex:bob",
-                 "rdf:type"  ["ex:User"],
+                 "type"      "ex:User",
                  "ex:secret" "bob's secret"}
                 {"id"        "ex:alice",
-                 "rdf:type"  ["ex:User"],
+                 "type"      "ex:User",
                  "ex:secret" "alice's NEW secret"}]
                (-> query-res :body json/read-value))
             "alice's secret should be modified")
@@ -104,7 +105,7 @@
                 query-res (api-post :history query-req)]
             (is (= 200 (:status query-res))
                 (str "History query response was: " (pr-str query-res)))
-            (is (= [{"id" "ex:bob", "rdf:type" ["ex:User"]}]
+            (is (= [{"id" "ex:bob", "type" "ex:User"}]
                    (-> query-res :body json/read-value first (get "f:assert")))
                 "policy opts should have prevented seeing bob's secret")))))))
 

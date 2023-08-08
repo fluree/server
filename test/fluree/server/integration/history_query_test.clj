@@ -38,7 +38,6 @@
                                        "ex:test-type" "integration"}]})
                          :headers json-headers}
           txn2-res      (api-post :transact txn2-req)
-          _ (log/warn "txn2-res: " txn2-res)
           _             (assert (= 200 (:status txn2-res)))
           query-req     {:body
                          (json/write-value-as-string
@@ -47,7 +46,6 @@
                             "t"              {"at" "latest"}})
                          :headers json-headers}
           query-res     (api-post :history query-req)
-          _ (log/warn "query-res: " query-res)
           query-results (-> query-res :body json/read-value)]
       (is (= 200 (:status query-res))
           (str "History query response was: " (pr-str query-res)))
