@@ -1,18 +1,33 @@
 (ns http-calls
   (:require [clj-http.client :as client]
-            [fluree.db.util.json :as json]))
+            [fluree.db.util.json :as json]
+            [fluree.server.consensus.network.multi-addr :refer [multi->map]]
+            [user :as user]))
 
-(def ledger-name "my/test1")
+(defn server-env->http-address
+  [server-env]
+  (let [{:keys [http/server fluree/consensus]} server-env
+        http-port (get server :port)
+        host      (-> consensus :this-server multi->map :host)]
+    (str "http://" host ":" http-port "/")))
+
+(def ledger-name "my/test")
+
+(def server-1-address (server-env->http-address user/server-1-env))
+(def server-2-address (server-env->http-address user/server-2-env))
+(def server-3-address (server-env->http-address user/server-3-env))
+
 
 (comment
 
-  (-> (client/get "http://localhost:8091/swagger.json")
+  (-> (client/get (str server-1-address "swagger.json"))
       :body
       (json/parse false))
 
-  (-> (client/post "http://localhost:8091/fluree/create"
+  (-> (client/post (str server-1-address "fluree/create")
                    {:body               (json/stringify-UTF8
-                                          {"action" "new"
+                                          {
+                                           ;"action" "new"
                                            "ledger" ledger-name
                                            "txn"    {"id"      "ex:test1"
                                                      "ex:name" "Brian"}})
@@ -22,7 +37,7 @@
                     :connection-timeout 1000 ;; in milliseconds
                     :accept             :json}))
 
-  (-> (client/post "http://localhost:8091/fluree/transact"
+  (-> (client/post (str server-1-address "fluree/transact")
                    {:body               (json/stringify-UTF8
                                           {"ledger" ledger-name
                                            "txn"    {"id"      "ex:test2"
@@ -33,7 +48,7 @@
                     :connection-timeout 1000 ;; in milliseconds
                     :accept             :json}))
 
-  (-> (client/post "http://localhost:8093/fluree/query"
+  (-> (client/post (str server-3-address "fluree/query")
                    {:body               (json/stringify-UTF8
                                           {"ledger" ledger-name
                                            "query"  {"select" {"?s" ["*"]}
