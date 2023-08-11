@@ -28,18 +28,18 @@
 (def server-1-env (-> (server/env-config :dev)
                       (assoc-in [:http/server :port] 58090)
                       (assoc-in [:fluree/connection :storage-path] "data/srv1")
-                      (assoc-in [:fluree/consensus :servers] servers-str)
-                      (assoc-in [:fluree/consensus :this-server] server-1)))
+                      (assoc-in [:fluree/consensus :consensus-servers] servers-str)
+                      (assoc-in [:fluree/consensus :consensus-this-server] server-1)))
 (def server-2-env (-> (server/env-config :dev)
                       (assoc-in [:http/server :port] 58091)
                       (assoc-in [:fluree/connection :storage-path] "data/srv2")
-                      (assoc-in [:fluree/consensus :servers] servers-str)
-                      (assoc-in [:fluree/consensus :this-server] server-2)))
+                      (assoc-in [:fluree/consensus :consensus-servers] servers-str)
+                      (assoc-in [:fluree/consensus :consensus-this-server] server-2)))
 (def server-3-env (-> (server/env-config :dev)
                       (assoc-in [:http/server :port] 58092)
                       (assoc-in [:fluree/connection :storage-path] "data/srv3")
-                      (assoc-in [:fluree/consensus :servers] servers-str)
-                      (assoc-in [:fluree/consensus :this-server] server-3)))
+                      (assoc-in [:fluree/consensus :consensus-servers] servers-str)
+                      (assoc-in [:fluree/consensus :consensus-this-server] server-3)))
 
 (defmethod ds/named-system ::srv1
   [_]
@@ -85,7 +85,7 @@
     (fluree.server.consensus.raft.core/get-raft-state raft-map callback)
     p))
 
-(defn start-raft-server
+(defn start-server
   "Supply"
   [config-name]
   (let [sys (donut.system/start config-name)]
@@ -108,9 +108,9 @@
 
 
   ;; starting a 3 server cluster
-  (start-raft-server ::srv1)
-  (start-raft-server ::srv2)
-  (start-raft-server ::srv3)
+  (start-server ::srv1)
+  (start-server ::srv2)
+  (start-server ::srv3)
 
   )
 

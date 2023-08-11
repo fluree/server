@@ -8,7 +8,7 @@
   [server-env]
   (let [{:keys [http/server fluree/consensus]} server-env
         http-port (get server :port)
-        host      (-> consensus :this-server multi->map :host)]
+        host      (-> consensus :consensus-this-server multi->map :host)]
     (str "http://" host ":" http-port "/")))
 
 (def ledger-name "my/test")
@@ -50,9 +50,9 @@
 
   (-> (client/post (str server-3-address "fluree/query")
                    {:body               (json/stringify-UTF8
-                                          {"ledger" ledger-name
-                                           "query"  {"select" {"?s" ["*"]}
-                                                     "where"  [["?s" "ex:name" nil]]}})
+                                          {"select" {"?s" ["*"]}
+                                           "from"   ledger-name
+                                           "where"  [["?s" "ex:name" nil]]})
                     ;:headers {"X-Api-Version" "2"}
                     :content-type       :json
                     :socket-timeout     1000 ;; in milliseconds

@@ -34,6 +34,7 @@
                             :handler    ledger-created/handler
                             :processor  ledger-created/broadcast!}
    :tx-queue               {:summary   "Queues a new transaction for a given ledger. If the transactor, processes transaction"
+                            :produces-events [:new-commit :tx-exception]
                             :handler   tx-queue/handler
                             :processor tx-queue/processor}
    :new-commit             {:summary   "A transaction has been processed into a new commit. Broadcast to connected clients."
