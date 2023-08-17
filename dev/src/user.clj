@@ -41,6 +41,13 @@
                       (assoc-in [:fluree/consensus :consensus-servers] servers-str)
                       (assoc-in [:fluree/consensus :consensus-this-server] server-3)))
 
+
+(def query-server-1-env (-> (server/env-config :dev)
+                            (assoc-in [:http/server :port] 58095)
+                            (assoc-in [:fluree/connection :servers] "http://localhost:58090")
+                            (assoc-in [:fluree/connection :method] :remote)
+                            (assoc-in [:fluree/consensus :consensus-type] :none)))
+
 (defmethod ds/named-system ::srv1
   [_]
   (ds/system :dev {[:env] server-1-env}))
@@ -52,6 +59,11 @@
 (defmethod ds/named-system ::srv3
   [_]
   (ds/system :dev {[:env] server-3-env}))
+
+
+(defmethod ds/named-system ::query1
+  [_]
+  (ds/system :dev {[:env] query-server-1-env}))
 
 
 (defn donut-system
@@ -105,6 +117,8 @@
   ;; read a raft log file
   (fluree.raft.log/read-log-file (io/file "data/srv1/raftlog/0.raft"))
   ;;
+
+  (start-server ::query1)
 
 
   ;; starting a 3 server cluster

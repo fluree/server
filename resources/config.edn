@@ -6,31 +6,33 @@
                                           #profile {:dev    45000
                                                     :prod   45000
                                                     :docker 45000}]}
- :fluree/connection {:method       #or [#env FLUREE_STORAGE_METHOD
-                                        #profile {:dev    :file
-                                                  :prod   :file
-                                                  :docker :file}]
-                     :parallelism  #or [#env FLUREE_CONN_PARALLELISM
-                                        #profile {:dev    1
-                                                  :prod   4
-                                                  :docker 4}]
-                     :storage-path #or [#env FLUREE_STORAGE_PATH
-                                        #profile {:dev    "data"
-                                                  :prod   "data"
-                                                  :docker "data"}]
-                     :cache-max-mb #or [#env FLUREE_CACHE_MAX_MB ;; integer, in MB
-                                        #profile {:dev    100
-                                                  :prod   1000
-                                                  :docker 1000}]
-                     :defaults     {:context-type :string
-                                    :context      {:id   "@id"
-                                                   :type "@type"
-                                                   :ex   "http://example.com/"}}}
- :fluree/consensus  {:servers               #or [#env FLUREE_SERVERS
-                                                 #profile {:dev    nil
-                                                           :prod   nil
-                                                           :docker nil}]
-                     :consensus-servers     #or [#env FLUREE_CONSENSUS_SERVERS
+ :fluree/connection {:remote-servers #or [#env FLUREE_REMOTE_SERVERS
+                                          #profile {:dev    "http://127.0.0.1:58090"
+                                                    :prod   nil
+                                                    :docker nil}]
+                     :method         #or [#env FLUREE_STORAGE_METHOD
+                                          #profile {:dev    :file
+                                                    :prod   :file
+                                                    :docker :file}]
+                     :parallelism    #or [#env FLUREE_CONN_PARALLELISM
+                                          #profile {:dev    1
+                                                    :prod   4
+                                                    :docker 4}]
+                     :storage-path   #or [#env FLUREE_STORAGE_PATH
+                                          #profile {:dev    "data"
+                                                    :prod   "data"
+                                                    :docker "data"}]
+                     :cache-max-mb   #or [#env FLUREE_CACHE_MAX_MB ;; integer, in MB
+                                          #profile {:dev    100
+                                                    :prod   1000
+                                                    :docker 1000}]
+                     :defaults       {:context-type :string
+                                      :indexer      {:reindex-min-bytes 1000
+                                                     :reindex-max-bytes 10000000}
+                                      :context      {:id   "@id"
+                                                     :type "@type"
+                                                     :ex   "http://example.com/"}}}
+ :fluree/consensus  {:consensus-servers     #or [#env FLUREE_CONSENSUS_SERVERS
                                                  #profile {:dev    "/ip4/127.0.0.1/tcp/62071"
                                                            :prod   nil
                                                            :docker nil}]
@@ -38,6 +40,10 @@
                                                  #profile {:dev    "/ip4/127.0.0.1/tcp/62071"
                                                            :prod   nil
                                                            :docker nil}]
+                     :consensus-type        #or [#env FLUREE_CONSENSUS_TYPE
+                                                 #profile {:dev    :raft
+                                                           :prod   :raft
+                                                           :docker :raft}]
                      ;; TODO - trace down both uses of private-key vs private-keys reconcile
                      :private-key           nil
                      :private-keys          nil

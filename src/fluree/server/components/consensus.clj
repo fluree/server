@@ -6,15 +6,21 @@
 
 (set! *warn-on-reflection* true)
 
+(defn start-raft
+  [config connection watcher conn-storage-path]
+  (log/debug "Starting raft consensus with config:" config)
+  (let [handler (consensus-handler/create-handler consensus-handler/default-routes)]
+    (consensus/start handler (assoc config :join? false
+                                           :ledger-directory conn-storage-path
+                                           :fluree/conn connection
+                                           :fluree/watcher watcher))))
+
 (def consensus
   #::ds{:start  (fn [{{:keys [config fluree/connection fluree/watcher conn-storage-path]} ::ds/config}]
-                  (log/debug "Starting consensus with config:" config)
-                  (let [handler (consensus-handler/create-handler consensus-handler/default-routes)]
-                    (consensus/start handler (assoc config :join? false
-                                                           :ledger-directory conn-storage-path
-                                                           :consensus-type :raft
-                                                           :fluree/conn connection
-                                                           :fluree/watcher watcher))))
+                  (let [{:keys [consensus-type]} config]
+                    (case consensus-type
+                      :raft (start-raft config connection watcher conn-storage-path)
+                      :none (log/info "No consensus, starting as query server."))))
         :stop   (fn [{::ds/keys [instance]}]
                   (when instance ((:close instance))))
         :config {:config            (ds/ref [:env :fluree/consensus])
