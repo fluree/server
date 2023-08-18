@@ -63,7 +63,8 @@
                                 "rdf"    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
                                 "f"      "https://ns.flur.ee/ledger#"}}}
                              :fluree/consensus
-                             {:consensus-servers     multi-addr-1
+                             {:consensus-type        :raft
+                              :consensus-servers     multi-addr-1
                               :consensus-this-server multi-addr-1}}})))
 
 (defn run-test-server

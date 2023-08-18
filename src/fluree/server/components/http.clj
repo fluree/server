@@ -9,6 +9,7 @@
     [fluree.db.util.log :as log]
     [fluree.server.handlers.ledger :as ledger]
     [fluree.server.handlers.create :as create]
+    [fluree.server.handlers.remote-resource :as remote]
     [fluree.server.handlers.transact :as srv-tx]
     [malli.core :as m]
     [muuntaja.core :as muuntaja]
@@ -113,6 +114,12 @@
              [:map
               [:ledger LedgerAlias]
               [:t {:optional true} TValue]]]))
+
+(def DefaultResourceRequestBody
+  (m/schema [:and
+             [:map-of :keyword :any]
+             [:map
+              [:resource LedgerAlias]]]))
 
 (def DefaultContextResponseBody Context)
 
@@ -317,7 +324,11 @@
                   :responses  {200 {:body DefaultContextResponseBody}
                                400 {:body ErrorResponse}
                                500 {:body ErrorResponse}}
-                  :handler    #'ledger/default-context}}]]]
+                  :handler    #'ledger/default-context}}]
+          ["/remoteResource"
+           {:post {:summary "Remote connection resource read"
+                   :parameters {:body DefaultResourceRequestBody}
+                   :handler #'remote/read-handler}}]]]
         {:data {:coercion   (reitit.coercion.malli/create
                               {:strip-extra-keys false})
                 :muuntaja   (muuntaja/create
