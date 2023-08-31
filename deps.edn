@@ -1,7 +1,7 @@
 {:deps  {org.clojure/clojure            {:mvn/version "1.11.1"}
          org.clojure/core.async         {:mvn/version "1.6.673"}
          com.fluree/db                  {:git/url "https://github.com/fluree/db.git"
-                                         :sha     "2746c2e15d19e2c664d4951aca8131f5e70d3ea4"}
+                                         :git/sha "d701f0163ea1e388a6fb7b2371c766fb179992d9"}
          club.donutpower/system         {:mvn/version "0.0.165"}
 
          ;; network, consensus
