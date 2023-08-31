@@ -5,7 +5,8 @@
          club.donutpower/system         {:mvn/version "0.0.165"}
 
          ;; network, consensus
-         com.fluree/raft                (:local/root "../raft")
+         com.fluree/raft                {:git/url "https://github.com/fluree/raft.git"
+                                         :git/sha "0fa1f901b5554b2fdef1847541b0910d9e56cdb0"}
          net.async/async                {:mvn/version "0.1.1"}
 
          ;; serialization, compression
