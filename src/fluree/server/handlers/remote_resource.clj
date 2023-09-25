@@ -4,8 +4,7 @@
             [fluree.db.json-ld.api :as fluree]
             [fluree.db.util.async :refer [<? <?? go-try]]
             [fluree.db.util.log :as log]
-            [fluree.server.handlers.ledger :refer [error-catching-handler deref!]]))
-
+            [fluree.server.handlers.shared :refer [defhandler]]))
 
 (defn read-latest-commit
   [conn resource-name]
@@ -23,14 +22,14 @@
     resource-name
     (str "fluree:" (name (conn-proto/-method conn)) "://" resource-name)))
 
-(def read-handler
-  (error-catching-handler
-    (fn [{:keys [fluree/conn credential/did] {{resource-name :resource :as params} :body} :parameters :as parameters}]
-      (log/debug "Remote resource read request params:" params)
-      (let [resource-address (resource-address conn resource-name)
-            file-read?       (str/ends-with? resource-address ".json")
-            result           (if file-read?
-                               (<?? (conn-proto/-c-read conn resource-address))
-                               (<?? (read-latest-commit conn resource-address)))]
-        {:status 200
-         :body   result}))))
+(defhandler read-handler
+  [{:keys [fluree/conn]
+    {{resource-name :resource :as body} :body} :parameters}]
+  (log/debug "Remote resource read request:" body)
+  (let [resource-address (resource-address conn resource-name)
+        file-read?       (str/ends-with? resource-address ".json")
+        result           (if file-read?
+                           (<?? (conn-proto/-c-read conn resource-address))
+                           (<?? (read-latest-commit conn resource-address)))]
+    {:status 200
+     :body   result}))

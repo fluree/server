@@ -55,8 +55,8 @@
    :server-register        {:summary "Register/renews a consensus server lease informing the network it is still available"}
    :server-assign          {:summary "New server assignments for ledgers put out by consensus leader."}
    :server-add             {:summary "Attempts to add a new consensus server."}
-   :server-remove          {:summary "Attempts to remove an existing consensus server"}
-   })
+   :server-remove          {:summary "Attempts to remove an existing consensus server"}})
+
 
 
 (def default-event-handlers
@@ -76,8 +76,8 @@
                                :handler :TODO}
    :consensus/server-remove   {:summary ""
                                :handler :TODO}
-   :consensus/server-reassign {:summary "New worker assignments"}}
-  )
+   :consensus/server-reassign {:summary "New worker assignments"}})
+
 
 
 
@@ -108,7 +108,7 @@
 
 (defn do-processor!
   [event processor-fn config handler-response]
-  (log/debug "Executing consensus processor fn: " event handler-response)
+  (log/debug "Executing consensus processor fn:" event handler-response)
   (try
     (processor-fn config handler-response)
     handler-response
@@ -123,7 +123,7 @@
 (defn create-handler
   [routes]
   (fn [config event parameters]
-    (log/debug "New consensus event: " event parameters)
+    (log/debug "New consensus event:" event parameters)
     (if-let [{:keys [handler processor]} (get routes event)]
       (if handler
         (let [handler-resp (do-handler! event handler config parameters)]
