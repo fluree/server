@@ -19,6 +19,10 @@ docker-push:
 test:
 	clojure -X:test
 
+.PHONY: eastwood
+eastwood:
+	clojure -M:dev:test:eastwood
+
 .PHONY: clean
 clean:
 	rm -rf target

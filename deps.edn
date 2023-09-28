@@ -50,4 +50,8 @@
    :extra-deps  {lambdaisland/kaocha {:mvn/version "1.87.1366"}
                  clj-http/clj-http   {:mvn/version "3.12.3"}}
    :exec-fn     kaocha.runner/exec-fn
-   :exec-args   {}}}}
+   :exec-args   {}}
+
+  :eastwood
+  {:extra-deps {jonase/eastwood {:mvn/version "1.4.0"}}
+   :main-opts  ["-m" "eastwood.lint" {}]}}}

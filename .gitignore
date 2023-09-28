@@ -5,3 +5,4 @@
 .clj-kondo/babashka
 .clj-kondo/metosin
 .DS_Store
+/.eastwood
