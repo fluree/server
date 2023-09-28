@@ -23,6 +23,9 @@ test:
 eastwood:
 	clojure -M:dev:test:eastwood
 
+.PHONY: ci
+ci: test eastwood
+
 .PHONY: clean
 clean:
 	rm -rf target
