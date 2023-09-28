@@ -40,7 +40,7 @@
    :ns-default build}
 
   :dev
-  {:extra-paths ["dev" "test"]
+  {:extra-paths ["dev/src"]
    :extra-deps  {org.clojure/tools.namespace {:mvn/version "1.4.4"}
                  clj-http/clj-http           {:mvn/version "3.12.3"}
                  criterium/criterium         {:mvn/version "0.4.6"}}}
