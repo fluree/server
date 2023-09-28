@@ -19,7 +19,8 @@
               "id"     "@id"
               "rdf"    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
               "schema" "http://schema.org/"
-              "type"   "@type"}
+              "type"   "@type"
+              "graph"  "@graph"}
              (-> default-context-res :body json/read-value)))))
 
   (testing "can retrieve default context at a specific t"
@@ -39,25 +40,27 @@
                                    (dissoc "foo"))
           txn0-req             {:body
                                 (json/write-value-as-string
-                                  {:ledger         ledger-name
-                                   :txn            [{"id"      "ex:nobody"
-                                                     "ex:name" "Nobody"}]
-                                   :defaultContext default-context1})
+                                  {"@context"         {"f" "https://ns.flur.ee/ledger#"}
+                                   "f:ledger"         ledger-name
+                                   "@graph"           [{"id"      "ex:nobody"
+                                                        "ex:name" "Nobody"}]
+                                   "f:defaultContext" default-context1})
                                 :headers json-headers}
           txn0-res             (api-post :transact txn0-req)
           _                    (assert (= 200 (:status txn0-res)))
           txn1-req             {:body
                                 (json/write-value-as-string
-                                  {:ledger         ledger-name
-                                   :txn            [{"id"      "ex:somebody"
-                                                     "ex:name" "Somebody"}]
-                                   :defaultContext default-context2})
+                                 {"@context"         {"f" "https://ns.flur.ee/ledger#"}
+                                  "f:ledger"         ledger-name
+                                  "@graph"           [{"id"      "ex:somebody"
+                                                       "ex:name" "Somebody"}]
+                                  "f:defaultContext" default-context2})
                                 :headers json-headers}
           txn1-res             (api-post :transact txn1-req)
           _                    (assert (= 200 (:status txn1-res)))
           default-context1-req {:body    (json/write-value-as-string
-                                           {:ledger ledger-name
-                                            :t      1})
+                                          {:ledger ledger-name
+                                           :t      1})
                                 :headers json-headers}
           default-context1-res (api-get :defaultContext default-context1-req)
           default-context2-req {:body    (json/write-value-as-string
@@ -76,7 +79,8 @@
               "id"     "@id"
               "rdf"    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
               "schema" "http://schema.org/"
-              "type"   "@type"}
+              "type"   "@type"
+              "graph"  "@graph"}
              (-> default-context1-res :body json/read-value)))
       (is (= {"ex-new" "http://example.com/"
               "f"      "https://ns.flur.ee/ledger#"
@@ -84,7 +88,8 @@
               "id"     "@id"
               "rdf"    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
               "schema" "http://schema.org/"
-              "type"   "@type"}
+              "type"   "@type"
+              "graph"  "@graph"}
              (-> default-context2-res :body json/read-value)))
       (is (= {"ex-new"  "http://example.com/"
               "f"       "https://ns.flur.ee/ledger#"
@@ -92,7 +97,8 @@
               "id"      "@id"
               "rdf"     "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
               "schema"  "http://schema.org/"
-              "type"    "@type"}
+              "type"    "@type"
+              "graph"   "@graph"}
              (-> default-context3-res :body json/read-value))))))
 
 (deftest ^:integration update-default-context-test
@@ -104,9 +110,9 @@
           default-context-res  (api-get :defaultContext default-context-req)
           default-context-0    (-> default-context-res :body json/read-value)
           update-req           {:body    (json/write-value-as-string
-                                           {:ledger ledger-name
-                                            :txn    [{:ex/name "Foo"}]
-                                            :defaultContext
+                                           {"f:ledger" ledger-name
+                                            "@graph"   [{:ex/name "Foo"}]
+                                            "f:defaultContext"
                                             (-> default-context-0
                                                 (assoc "foo-new"
                                                        (get default-context-0 "foo"))
@@ -123,5 +129,6 @@
               "id"      "@id"
               "rdf"     "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
               "schema"  "http://schema.org/"
-              "type"    "@type"}
+              "type"    "@type"
+              "graph"   "@graph"}
              default-context-1)))))

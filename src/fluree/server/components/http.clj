@@ -1,29 +1,30 @@
 (ns fluree.server.components.http
   (:require
-    [clojure.core.async :as async]
-    [donut.system :as ds]
-    [fluree.db.query.fql.syntax :as fql]
-    [fluree.db.query.history :as fqh]
-    [fluree.db.json-ld.credential :as cred]
-    [fluree.db.json-ld.transact :as transact]
-    [fluree.db.util.log :as log]
-    [fluree.server.handlers.ledger :as ledger]
-    [fluree.server.handlers.create :as create]
-    [fluree.server.handlers.remote-resource :as remote]
-    [fluree.server.handlers.transact :as srv-tx]
-    [malli.core :as m]
-    [muuntaja.core :as muuntaja]
-    [muuntaja.format.core :as mf]
-    [muuntaja.format.json :as mfj]
-    [reitit.coercion.malli]
-    [reitit.ring :as ring]
-    [reitit.ring.coercion :as coercion]
-    [reitit.ring.middleware.exception :as exception]
-    [reitit.ring.middleware.muuntaja :as muuntaja-mw]
-    [reitit.swagger :as swagger]
-    [reitit.swagger-ui :as swagger-ui]
-    [ring.adapter.jetty9 :as http]
-    [ring.middleware.cors :as rmc]))
+   [clojure.core.async :as async :refer [<!!]]
+   [donut.system :as ds]
+   [fluree.db.query.fql.syntax :as fql]
+   [fluree.db.query.history :as fqh]
+   [fluree.db.json-ld.credential :as cred]
+   [fluree.db.json-ld.transact :as transact]
+   [fluree.db.util.log :as log]
+   [fluree.server.handlers.ledger :as ledger]
+   [fluree.server.handlers.create :as create]
+   [fluree.server.handlers.remote-resource :as remote]
+   [fluree.server.handlers.transact :as srv-tx]
+   [malli.core :as m]
+   [muuntaja.core :as muuntaja]
+   [muuntaja.format.core :as mf]
+   [muuntaja.format.json :as mfj]
+   [reitit.coercion.malli]
+   [reitit.ring :as ring]
+   [reitit.ring.coercion :as coercion]
+   [reitit.ring.middleware.exception :as exception]
+   [reitit.ring.middleware.muuntaja :as muuntaja-mw]
+   [reitit.swagger :as swagger]
+   [reitit.swagger-ui :as swagger-ui]
+   [ring.adapter.jetty9 :as http]
+   [ring.middleware.cors :as rmc])
+  (:import (java.io InputStream)))
 
 (set! *warn-on-reflection* true)
 
@@ -43,12 +44,7 @@
   (m/schema ::fql/context {:registry fql/registry}))
 
 (def CreateRequestBody
-  (m/schema [:and
-             [:map-of :keyword :any]
-             [:map
-              [:ledger LedgerAlias]
-              [:txn Transaction]
-              [:defaultContext {:optional true} Context]]]))
+  (m/schema [:map-of [:orn [:string :string] [:keyword :keyword]] :any]))
 
 (def TValue
   (m/schema pos-int?))
@@ -66,13 +62,7 @@
               [:commit LedgerAddress]]]))
 
 (def TransactRequestBody
-  (m/schema [:and
-             [:map-of :keyword :any]
-             [:map
-              [:ledger LedgerAlias]
-              [:txn Transaction]
-              [:defaultContext {:optional true} Context]
-              [:opts {:optional true} TransactOpts]]]))
+  (m/schema [:map-of :any :any]))
 
 (def TransactResponseBody
   (m/schema [:and
@@ -83,8 +73,12 @@
               [:tx-id DID]
               [:commit  LedgerAddress]]]))
 
-(def Query (m/schema (fql/query-schema [[:from LedgerAlias]])
-                     {:registry fql/registry}))
+(def FqlQuery (m/schema [:and
+                         [:map-of :keyword :any]
+                         (fql/query-schema [[:from LedgerAlias]])]
+                        {:registry fql/registry}))
+
+(def SparqlQuery (m/schema :string))
 
 (def QueryResponse
   (m/schema [:orn
@@ -95,10 +89,14 @@
   (m/schema (fqh/history-query-schema [[:from LedgerAlias]])
             {:registry fqh/registry}))
 
+(def QueryFormat (m/schema [:enum :sparql]))
+
 (def QueryRequestBody
-  (m/schema [:and
-             [:map-of :keyword :any]
-             Query]))
+  (m/schema [:multi {:dispatch ::format}
+             [:sparql [:map
+                       [::query SparqlQuery]
+                       [::format QueryFormat]]]
+             [::m/default FqlQuery]]))
 
 (def HistoryQueryRequestBody
   (m/schema [:and
@@ -165,13 +163,6 @@
                :fluree/watcher watcher)
         handler)))
 
-(defn wrap-assoc-consensus
-  [consensus handler]
-  (fn [req]
-    (-> req
-        (assoc :fluree/consensus consensus)
-        handler)))
-
 (defn wrap-cors
   [handler]
   (rmc/wrap-cors handler
@@ -186,7 +177,9 @@
   the request body is not a credential, nothing is done."
   [handler]
   (fn [{:keys [body-params] :as req}]
-    (let [verified (async/<!! (cred/verify body-params))
+    (log/trace "unwrap-credential body-params:" body-params)
+    (let [verified (<!! (cred/verify body-params))
+          _        (log/trace "unwrap-credential verified:" verified)
 
           {:keys [subject did]}
           (cond (:subject verified) ; valid credential
@@ -220,6 +213,17 @@
      :matches #"^application/(.+\+)?json$" ; match application/ld+json too
      :decoder [mfj/decoder {:decode-key-fn false}] ; leave keys as strings
      :encoder [mfj/encoder]}))
+
+(def sparql-format
+  (mf/map->Format
+   {:name "application/sparql-query"
+    :decoder [(fn [_]
+                (reify
+                  mf/Decode
+                  (decode [_ data charset]
+                    {::query  (String. (.readAllBytes ^InputStream data)
+                                       ^String charset)
+                     ::format :sparql})))]}))
 
 (defn websocket-handler
   [upgrade-request]
@@ -332,10 +336,13 @@
         {:data {:coercion   (reitit.coercion.malli/create
                               {:strip-extra-keys false})
                 :muuntaja   (muuntaja/create
-                              (assoc-in
-                                muuntaja/default-options
-                                [:formats "application/json"]
-                                json-format))
+                              (-> muuntaja/default-options
+                                  (assoc-in
+                                   [:formats "application/json"]
+                                   json-format)
+                                  (assoc-in
+                                   [:formats "application/sparql-query"]
+                                   sparql-format)))
                 :middleware [swagger/swagger-feature
                              muuntaja-mw/format-negotiate-middleware
                              muuntaja-mw/format-response-middleware

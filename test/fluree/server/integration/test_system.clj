@@ -15,6 +15,10 @@
   {"Content-Type" "application/edn"
    "Accept"       "application/edn"})
 
+(def sparql-headers
+  {"Content-Type" "application/sparql-query"
+   "Accept"       "application/json"})
+
 (defn find-open-port
   ([] (find-open-port nil))
   ([_] ; so it can be used in swap!
@@ -58,6 +62,7 @@
                               {:context
                                {"id"     "@id"
                                 "type"   "@type"
+                                "graph"  "@graph"
                                 "ex"     "http://example.com/"
                                 "schema" "http://schema.org/"
                                 "rdf"    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -88,11 +93,11 @@
   [name-root]
   (let [ledger-name (str name-root "-" (random-uuid))
         req         (json/stringify
-                      {:ledger         ledger-name
-                       :defaultContext ["" {"foo" "http://foobar.com/"}]
-                       :txn            [{"id"       "foo:create-test"
-                                         "type"     "foo:test"
-                                         "foo:name" "create-endpoint-test"}]})
+                      {"f:ledger"         ledger-name
+                       "f:defaultContext" ["" {"foo" "http://foobar.com/"}]
+                       "graph"            [{"id"       "foo:create-test"
+                                            "type"     "foo:test"
+                                            "foo:name" "create-endpoint-test"}]})
         res         (update (api-post :create {:body req :headers json-headers})
                             :body json/parse)]
     (if (= 201 (:status res))

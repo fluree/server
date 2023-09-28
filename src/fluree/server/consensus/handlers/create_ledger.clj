@@ -3,7 +3,7 @@
             [fluree.db.json-ld.api :as fluree]
             [fluree.db.util.json :as json]
             [fluree.raft.leader :refer [is-leader?]]
-            [fluree.server.handlers.ledger :refer [deref!]]
+            [fluree.server.handlers.shared :refer [deref!]]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.core :as consensus]
             [fluree.server.consensus.producers.new-index-file :refer [push-new-index-files]]
@@ -28,7 +28,7 @@
   "Returns promise with eventual response, which could be an exception."
   [{:keys [fluree/conn] :as config}
    {:keys [ledger-id txn opts tx-id] :as _params}]
-  (log/trace "Creating ledger" ledger-id "with txn: " txn)
+  (log/trace "Creating ledger" ledger-id "with txn:" txn)
   (let [txn'    (json/parse txn false)
         ledger  (deref! (fluree/create conn ledger-id opts))
         commit! (fn [db]
@@ -43,7 +43,7 @@
         fluree/db
         (fluree/stage txn' opts)
         deref!
-        (commit!))))
+        commit!)))
 
 
 (defn push-consensus
@@ -60,8 +60,8 @@
                       ;; below is metadata for quickly validating into the state machine, not retained
                       :t                 (:t db) ;; for quickly validating this is the next 'block'
                       :tx-id             tx-id ;; for quickly removing from the queue
-                      :server            (consensus/this-server raft-state) ;; for quickly ensuring this server *is* still the leader
-                      }]
+                      :server            (consensus/this-server raft-state)}] ;; for quickly ensuring this server *is* still the leader
+
     ;; returns promise
     (raft/leader-new-command! config :ledger-created created-body)))
 

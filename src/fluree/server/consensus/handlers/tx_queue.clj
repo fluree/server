@@ -4,7 +4,7 @@
             [fluree.db.util.core :as util]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
-            [fluree.server.handlers.ledger :refer [deref!]]
+            [fluree.server.handlers.shared :refer [deref!]]
             [fluree.server.consensus.producers.new-commit :refer [consensus-push-commit]]
             [fluree.server.consensus.producers.tx-exception :refer [consensus-push-tx-exception]]
             [fluree.server.consensus.producers.new-index-file :refer [push-new-index-files]]))
@@ -21,9 +21,9 @@
    :size      (count txn)
    :tx-id     tx-id
    :ledger-id ledger-id
-   :instant   (System/currentTimeMillis)}
+   :instant   (System/currentTimeMillis)})
 
-  )
+
 
 ;; holds a 'lock' per ledger while processing a transaction
 (def tx-processing-lock (atom {}))
@@ -158,7 +158,7 @@
   the transaction processing or the consensus push, a :tx-exception event is propogated
   through the network and the transaction is removed from the queue."
   [config txn-map]
-
+  (log/trace "process-transaction:" txn-map)
   (try
     (let [tx-result @(do-transaction config txn-map)]
       ;; consensus-push fns return promises which resolve once fully processed through consensus

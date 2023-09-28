@@ -16,12 +16,11 @@
   [raft-state]
   (:this-server raft-state))
 
-
 (defn queue-new-ledger
   "Queues a new ledger into the consensus layer for processing.
   Returns a core async channel that will eventually contain true if successful."
   [group conn-type ledger-id tx-id txn opts]
-  (log/debug "Consensus - queue new ledger: " ledger-id tx-id txn)
+  (log/debug "Consensus - queue new ledger:" ledger-id tx-id txn)
   (txproto/-new-entry-async
     group
     [:ledger-create {:txn       txn
@@ -32,12 +31,12 @@
                      :opts      opts
                      :instant   (System/currentTimeMillis)}]))
 
-
-
 (defn queue-new-transaction
   "Queues a new transaction into the consensus layer for processing.
   Returns a core async channel that will eventually contain a truthy value if successful."
-  [group conn-type ledger-id tx-id txn defaultContext opts]
+  [group conn-type ledger-id tx-id txn default-context opts]
+  (log/trace "queue-new-transaction txn:" txn)
+  (log/trace "queue-new-transaction default-context:" default-context)
   (txproto/-new-entry-async
     group
     [:tx-queue {:txn            txn
@@ -45,11 +44,9 @@
                 :size           (count txn)
                 :tx-id          tx-id
                 :ledger-id      ledger-id
-                :defaultContext defaultContext
+                :defaultContext default-context
                 :opts           opts
                 :instant        (System/currentTimeMillis)}]))
-
-
 
 (defn data-version
   [group]
@@ -207,7 +204,7 @@
 
                                           ;; TODO - these following keyword renaming from config's should be updated downstream to use the same names so renaming didn't need to happen
                                           :state-atom (:state-machine-atom raft-config*)
-                                          :raft-initialized (:raft-initialized-chan raft-config*) ;; added in (add-leader-change-fn ...)
-                                          ))]
+                                          :raft-initialized (:raft-initialized-chan raft-config*)))] ;; added in (add-leader-change-fn ...)
+
 
     (raft-helpers/map->RaftGroup final-map)))

@@ -1,6 +1,5 @@
 (ns fluree.server.integration.history-query-test
   (:require [clojure.test :refer :all]
-            [fluree.db.util.log :as log]
             [fluree.server.integration.test-system :refer :all]
             [jsonista.core :as json]
             [clojure.edn :as edn]))
@@ -24,18 +23,18 @@
     (let [ledger-name   "history-query-json-test"
           txn-req       {:body
                          (json/write-value-as-string
-                           {"ledger" ledger-name
-                            "txn"    [{"id"      "ex:query-test"
-                                       "type"    "schema:Test"
-                                       "ex:name" "query-test"}]})
+                           {"f:ledger" ledger-name
+                            "@graph"   [{"id"      "ex:query-test"
+                                         "type"    "schema:Test"
+                                         "ex:name" "query-test"}]})
                          :headers json-headers}
           txn-res       (api-post :create txn-req)
           _             (assert (= 201 (:status txn-res)))
           txn2-req      {:body
                          (json/write-value-as-string
-                           {"ledger" ledger-name
-                            "txn"    [{"id"           "ex:query-test"
-                                       "ex:test-type" "integration"}]})
+                           {"f:ledger" ledger-name
+                            "@graph"   [{"id"           "ex:query-test"
+                                         "ex:test-type" "integration"}]})
                          :headers json-headers}
           txn2-res      (api-post :transact txn2-req)
           _             (assert (= 200 (:status txn2-res)))
@@ -77,7 +76,7 @@
 
 
 #_(deftest ^:integration ^:edn history-query-edn-test
-  (testing "basic EDN history query works"
+   (testing "basic EDN history query works"
     (let [ledger-name   "history-query-edn-test"
           txn-req       {:body
                          (pr-str

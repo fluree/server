@@ -12,37 +12,39 @@
           alice-did    "did:fluree:Tf6i5oh2ssYNRpxxUM2zea1Yo7x4uRqyTeU"
           txn-req      {:body
                         (json/write-value-as-string
-                          {:ledger ledger-name
-                           :txn    [{"id"        "ex:alice"
-                                     "type"      "ex:User"
-                                     "ex:secret" "alice's secret"}
-                                    {"id"        "ex:bob"
-                                     "type"      "ex:User"
-                                     "ex:secret" "bob's secret"}
-                                    {"id"            "ex:UserPolicy"
-                                     "type"          ["f:Policy"]
-                                     "f:targetClass" {"id" "ex:User"}
-                                     "f:allow"
-                                     [{"id"           "ex:globalViewAllow"
-                                       "f:targetRole" {"id" "ex:userRole"}
-                                       "f:action"     [{"id" "f:view"}]}]
-                                     "f:property"
-                                     [{"f:path" {"id" "ex:secret"}
+                         {"f:ledger" ledger-name
+                          :graph     [{"id"        "ex:alice"
+                                       "type"      "ex:User"
+                                       "ex:secret" "alice's secret"}
+                                      {"id"        "ex:bob"
+                                       "type"      "ex:User"
+                                       "ex:secret" "bob's secret"}
+                                      {"id"            "ex:UserPolicy"
+                                       "type"          ["f:Policy"]
+                                       "f:targetClass" {"id" "ex:User"}
                                        "f:allow"
-                                       [{"id"           "ex:secretsRule"
+                                       [{"id"           "ex:globalViewAllow"
                                          "f:targetRole" {"id" "ex:userRole"}
-                                         "f:action"     [{"id" "f:view"} {"id" "f:modify"}]
-                                         "f:equals"     {"@list" [{"id" "f:$identity"} {"id" "ex:User"}]}}]}]}
-                                    {"id"      alice-did
-                                     "ex:User" {"id" "ex:alice"}
-                                     "f:role"  {"id" "ex:userRole"}}]})
+                                         "f:action"     [{"id" "f:view"}]}]
+                                       "f:property"
+                                       [{"f:path" {"id" "ex:secret"}
+                                         "f:allow"
+                                         [{"id"           "ex:secretsRule"
+                                           "f:targetRole" {"id" "ex:userRole"}
+                                           "f:action"     [{"id" "f:view"}
+                                                           {"id" "f:modify"}]
+                                           "f:equals"     {"@list"
+                                                           [{"id" "f:$identity"}
+                                                            {"id" "ex:User"}]}}]}]}
+                                      {"id"      alice-did
+                                       "ex:User" {"id" "ex:alice"}
+                                       "f:role"  {"id" "ex:userRole"}}]})
                         :headers json-headers}
           txn-res      (api-post :transact txn-req)
           _            (assert (= 200 (:status txn-res)))
           secret-query {"from"   ledger-name
                         "select" {"?s" ["*"]}
                         "where"  [["?s" "rdf:type" "ex:User"]]}
-
           query-req    {:body
                         (json/write-value-as-string
                           (assoc secret-query
@@ -61,11 +63,11 @@
           "query policy opts should prevent seeing bob's secret")
       (let [txn-req   {:body
                        (json/write-value-as-string
-                         {:ledger ledger-name
-                          :txn    [{"id"        "ex:alice"
-                                    "ex:secret" "alice's NEW secret"}]
-                          :opts   {"role" "ex:userRole"
-                                   "did"  alice-did}})
+                        {"f:ledger" ledger-name
+                         :graph     [{"id"        "ex:alice"
+                                      "ex:secret" "alice's NEW secret"}]
+                         :f/opts    {"role" "ex:userRole"
+                                     "did"  alice-did}})
                        :headers json-headers}
             txn-res   (api-post :transact txn-req)
             _         (assert (= 200 (:status txn-res)))
@@ -85,22 +87,22 @@
             "alice's secret should be modified")
         (let [txn-req {:body
                        (json/write-value-as-string
-                         {"ledger" ledger-name
-                          "txn"    [{"id"        "ex:bob"
-                                     "ex:secret" "bob's new secret"}]
-                          "opts"   {"role" "ex:userRole"
-                                    "did"  alice-did}})
+                        {"f:ledger" ledger-name
+                         "@graph"   [{"id"        "ex:bob"}
+                                     "ex:secret" "bob's new secret"]
+                         "f:opts"   {"role" "ex:userRole"
+                                     "did"  alice-did}})
                        :headers json-headers}
               txn-res (api-post :transact txn-req)]
           (is (not= 200 (:status txn-res))
               (str "transaction policy opts should have prevented modification, instead response was: " (pr-str txn-res)))
           (let [query-req {:body
                            (json/write-value-as-string
-                             {"from"    ledger-name
-                              "history" "ex:bob"
-                              "t"       {"from" 1}
-                              "opts"    {"role" "ex:userRole"
-                                         "did"  alice-did}})
+                            {"from"    ledger-name
+                             "history" "ex:bob"
+                             "t"       {"from" 1}
+                             "opts"    {"role" "ex:userRole"
+                                        "did"  alice-did}})
                            :headers json-headers}
                 query-res (api-post :history query-req)]
             (is (= 200 (:status query-res))
@@ -110,7 +112,7 @@
                 "policy opts should have prevented seeing bob's secret")))))))
 
 #_(deftest ^:integration ^:edn policy-opts-edn-test
-  (testing "policy-enforcing opts are correctly handled"
+   (testing "policy-enforcing opts are correctly handled"
     (let [ledger-name  (create-rand-ledger "policy-opts-test")
           alice-did    "did:fluree:Tf6i5oh2ssYNRpxxUM2zea1Yo7x4uRqyTeU"
           txn-req      {:body
