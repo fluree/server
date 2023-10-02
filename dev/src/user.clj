@@ -3,10 +3,12 @@
             [fluree.server.main :as main]
             [donut.system :as ds]
             [donut.system.repl :as donut]
+            [donut.system.repl.state]
             [fluree.server.handlers.transact :as tx-handler]
             [fluree.server.handlers.create :as create-handler]
             [fluree.server.components.consensus :as consensus]
             [fluree.server.components.consensus-handler :as consensus-handler]
+            [fluree.server.consensus.raft.core]
             [clojure.java.io :as io]
             [fluree.server.main :as server]
             [fluree.db.util.log :as log]))
@@ -124,9 +126,4 @@
   ;; starting a 3 server cluster
   (start-server ::srv1)
   (start-server ::srv2)
-  (start-server ::srv3)
-
-  )
-
-
-
+  (start-server ::srv3))

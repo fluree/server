@@ -3,8 +3,6 @@
 
 (set! *warn-on-reflection* true)
 
-(defn broadcast)
-
 (defn handler
   "Registers a new index point in the state via an updated commit file."
   [{:keys [:consensus/state-atom :consensus/raft-state] :as config} {:keys [ledger-id tx-id] :as params}]
