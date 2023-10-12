@@ -1,6 +1,7 @@
 (ns fluree.server.handlers.remote-resource
   (:require [clojure.string :as str]
             [fluree.db.conn.proto :as conn-proto]
+            [fluree.db.nameservice.core :as nameservice]
             [fluree.db.json-ld.api :as fluree]
             [fluree.db.util.async :refer [<? <?? go-try]]
             [fluree.db.util.log :as log]
@@ -9,7 +10,7 @@
 (defn read-latest-commit
   [conn resource-name]
   (go-try
-    (let [commit-addr (<? (conn-proto/-lookup conn resource-name))
+    (let [commit-addr (<? (nameservice/lookup-commit conn resource-name nil))
           _           (when-not commit-addr
                         (throw (ex-info (str "Unable to load. No commit exists for: " alias)
                                         {:status 400 :error :db/invalid-commit-address})))

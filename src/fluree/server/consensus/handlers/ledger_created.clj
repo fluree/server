@@ -1,9 +1,8 @@
 (ns fluree.server.consensus.handlers.ledger-created
   (:require [clojure.core.async :as async]
             [clojure.java.io :as io]
-            [fluree.db.conn.file :as file-conn]
-            [fluree.db.conn.proto :as conn-proto]
-            [fluree.db.util.async :refer [<? go-try]]
+            [fluree.server.consensus.handlers.new-commit :as new-commit]
+            [fluree.db.util.filesystem :as fs]
             [fluree.db.util.log :as log]
             [fluree.server.components.watcher :as watcher])
   (:import (java.io File)))
@@ -20,46 +19,6 @@
                          " as it is no longer queued for creation.")
                     {:status 500 :error :consensus/unexpected-error})))
   create-result)
-
-
-(defn file-path
-  "Returns canonical path to write a commit/data file to disk but
-  only if the conn type is of type 'file' - else assumes it is using
-  networked storage (e.g. S3, IPFS) and does not need to write out file."
-  [{:keys [fluree/conn] :as _config} address]
-  (let [[_ conn-type path] (re-find #"^fluree:([^:]+)://(.+)" address)]
-    (log/debug "Consensus write file with address: " address " of conn type: " conn-type)
-    (when (= "file" conn-type)
-      (str (file-conn/local-path conn) "/" path))))
-
-
-(defn write-file
-  "Only writes file to disk if address is of type 'file'
-
-  See fluree.db.conn.file namespace for key/vals contained in `file-meta` map."
-  [config {:keys [address json] :as _file-meta}]
-  (when-let [file-path (file-path config address)]
-    (file-conn/write-file file-path (.getBytes ^String json))))
-
-
-(defn store-ledger-files
-  "Persist both the data-file and commit-file to disk only if redundant
-  local-storage. If using a networked file system (e.g. S3, IPFS) the
-  file is already stored by the leader with the respective service."
-  [{:keys [consensus/raft-state fluree/conn] :as config}
-   {:keys [data-file-meta commit-file-meta context-file-meta server ledger-id] :as create-result}]
-  (go-try
-    (let [this-server (:this-server raft-state)
-          address-ch  (conn-proto/-address conn ledger-id nil)] ;; launch address lookup in background, don't block
-      (when (not= server this-server)
-        ;; if server that created the new ledger is this server, the files
-        ;; were already written - only other servers need to write file
-        (write-file config data-file-meta)
-        (write-file config commit-file-meta)
-        (when context-file-meta
-          (write-file config context-file-meta))
-        (<? (conn-proto/-push conn (<? address-ch) commit-file-meta)))
-      create-result)))
 
 
 (defn add-ledger-to-state
@@ -98,7 +57,7 @@
 
 (defn clean-up-files
   [{:keys [fluree/conn] :as _config} {:keys [ledger-id] :as _params}]
-  (let [local-path (file-conn/local-path conn)
+  (let [local-path (fs/local-path (:storage-path conn))
         ledger-dir (io/file local-path ledger-id)
         files      (reverse (file-seq ledger-dir))]
     (doseq [^File file files]
@@ -116,7 +75,7 @@
 
     (->> create-result
          (verify-still-pending config)
-         (store-ledger-files config)
+         (new-commit/store-ledger-files config)
          async/<!!
          (add-ledger-to-state config))
 
