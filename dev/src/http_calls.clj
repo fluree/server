@@ -27,10 +27,10 @@
   (-> (client/post (str server-1-address "fluree/create")
                    {:body               (json/stringify-UTF8
                                           {
-                                           ;"action" "new"
-                                           "ledger" ledger-name
-                                           "txn"    {"id"      "ex:test1"
-                                                     "ex:name" "Brian"}})
+                                           "@context" {"f" "https://ns.flur.ee/ledger#"}
+                                           "f:ledger" ledger-name
+                                           "@graph"   {"id"      "ex:test1"
+                                                       "ex:name" "Brian"}})
                     ;:headers {"X-Api-Version" "2"}
                     :content-type       :json
                     :socket-timeout     1000 ;; in milliseconds
@@ -39,16 +39,17 @@
 
   (-> (client/post (str server-1-address "fluree/transact")
                    {:body               (json/stringify-UTF8
-                                          {"ledger" ledger-name
-                                           "txn"    {"id"      "ex:test2"
-                                                     "ex:name" "Brian2"}})
+                                          {"@context" {"f" "https://ns.flur.ee/ledger#"}
+                                           "f:ledger" ledger-name
+                                           "@graph"   {"id"      "ex:test2"
+                                                       "ex:name" "Brian2"}})
                     ;:headers {"X-Api-Version" "2"}
                     :content-type       :json
                     :socket-timeout     1000 ;; in milliseconds
                     :connection-timeout 1000 ;; in milliseconds
                     :accept             :json}))
 
-  (-> (client/post (str server-3-address "fluree/query")
+  (-> (client/post (str server-1-address "fluree/query")
                    {:body               (json/stringify-UTF8
                                           {"select" {"?s" ["*"]}
                                            "from"   ledger-name
