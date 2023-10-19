@@ -7,7 +7,7 @@ target/server-%.jar: $(SOURCES) $(RESOURCES)
 uberjar: target/server-%.jar
 
 docker-build:
-	docker buildx build --platform linux/amd64,linux/arm64 -t fluree/server:latest -t fluree/server:$(shell git rev-parse HEAD) --build-arg="PROFILE=prod" .
+	docker buildx build -t fluree/server:latest -t fluree/server:$(shell git rev-parse HEAD) --build-arg="PROFILE=prod" --load .
 
 docker-run:
 	docker run -p 58090:8090 -v `pwd`/data:/opt/fluree-server/data fluree/server
