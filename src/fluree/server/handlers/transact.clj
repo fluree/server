@@ -6,7 +6,6 @@
             [fluree.db.constants :as const]
             [fluree.db.json-ld.api :as fluree]
             [fluree.db.util.core :as util]
-            [fluree.json-ld :as json-ld]
             [fluree.json-ld.processor.api :as jld-processor]
             [fluree.server.components.watcher :as watcher]
             [fluree.server.handlers.shared :refer [defhandler deref!]]
@@ -20,15 +19,6 @@
   already be normalized."
   [json-txn]
   (crypto/sha2-256 json-txn :hex :string))
-
-(defn normalize-txn
-  [txn]
-  (let [txn*  (json-ld/normalize-data
-                txn
-                {:algorithm :basic
-                 :format    :application/json})
-        tx-id (hash-txn txn*)]
-    [tx-id txn*]))
 
 (defn derive-tx-id
   [txn]
@@ -49,9 +39,8 @@
 
 (defn transact!
   [p consensus conn watcher expanded-txn]
-  (let [ledger-id (-> expanded-txn (get const/iri-ledger) (get 0) (get "@value"))
-
-        tx-id  (derive-tx-id expanded-txn)
+  (let [ledger-id     (-> expanded-txn (get const/iri-ledger) (get 0) (get "@value"))
+        tx-id         (derive-tx-id expanded-txn)
         final-resp-ch (watcher/create-watch watcher tx-id)]
 
     ;; register transaction into consensus

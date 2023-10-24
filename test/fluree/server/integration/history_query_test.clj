@@ -23,8 +23,9 @@
     (let [ledger-name   "history-query-json-test"
           txn-req       {:body
                          (json/write-value-as-string
-                           {"f:ledger" ledger-name
-                            "@graph"   [{"id"      "ex:query-test"
+                           {"ledger" ledger-name
+                            "@context" "https://ns.flur.ee"
+                            "insert"   [{"id"      "ex:query-test"
                                          "type"    "schema:Test"
                                          "ex:name" "query-test"}]})
                          :headers json-headers}

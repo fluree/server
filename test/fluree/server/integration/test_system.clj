@@ -93,9 +93,10 @@
   [name-root]
   (let [ledger-name (str name-root "-" (random-uuid))
         req         (json/stringify
-                      {"f:ledger"         ledger-name
-                       "f:defaultContext" ["" {"foo" "http://foobar.com/"}]
-                       "graph"            [{"id"       "foo:create-test"
+                      {"ledger"         ledger-name
+                       "@context" "https://ns.flur.ee"
+                       "opts" {"defaultContext" ["" {"foo" "http://foobar.com/"}]}
+                       "insert"           [{"id"       "foo:create-test"
                                             "type"     "foo:test"
                                             "foo:name" "create-endpoint-test"}]})
         res         (update (api-post :create {:body req :headers json-headers})

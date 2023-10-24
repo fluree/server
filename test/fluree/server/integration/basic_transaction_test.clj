@@ -11,9 +11,9 @@
   (testing "can create a new ledger w/ JSON"
     (let [ledger-name (str "create-endpoint-" (random-uuid))
           req         (json/write-value-as-string
-                        {"f:ledger" ledger-name
-                         "@context" ["" {"foo" "http://foobar.com/"}]
-                         "@graph"   [{"id"      "ex:create-test"
+                        {"ledger" ledger-name
+                         "@context" ["https://ns.flur.ee" {"foo" "http://foobar.com/"}]
+                         "insert"   [{"id"      "ex:create-test"
                                       "type"    "foo:test"
                                       "ex:name" "create-endpoint-test"}]})
           res         (api-post :create {:body req :headers json-headers})]

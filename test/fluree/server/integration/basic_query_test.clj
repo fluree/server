@@ -159,27 +159,21 @@
                              "schema:age"  2
                              "ex:nickname" "Letty"
                              "schema:name" "Leticia"
-                             "schema:follows"
-                             [{"type"   "id"
-                               "@value" "ex:freddy"}]}
+                             "schema:follows" [{"id" "ex:freddy"}]}
                             {"id"          "ex:betty"
                              "type"        "ex:Yeti"
                              "schema:age"  82
                              "schema:name" "Betty"
                              "schema:follows"
-                             [{"type"   "id"
-                               "@value" "ex:freddy"}]}
+                             [{"@id" "ex:freddy"}]}
                             {"id"          "ex:andrew"
                              "type"        "schema:Person"
                              "schema:age"  35
                              "schema:name" "Andrew Johnson"
                              "schema:follows"
-                             [{"type"   "id"
-                               "@value" "ex:freddy"}
-                              {"type"   "id"
-                               "@value" "ex:letty"}
-                              {"type"   "id"
-                               "@value" "ex:betty"}]}]}})}
+                             [{"@id" "ex:freddy"}
+                              {"@id" "ex:letty"}
+                              {"@id" "ex:betty"}]}]}})}
 
           txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
