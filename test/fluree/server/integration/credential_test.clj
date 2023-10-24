@@ -25,19 +25,20 @@
   (let [ledger-name "credential-test"]
     (testing "create"
       ;; cannot transact without roles already defined
-      (let [create-req {"f:ledger" ledger-name
-                        "@context" default-context
-                        "graph"    [{"id"      (:id auth)
-                                     "f:role"  {"id" "role:root"}
-                                     "type"    "schema:Person"
-                                     "ex:name" "Goose"}
-                                    {"id"           "ex:rootPolicy"
-                                     "type"         "f:Policy"
-                                     "f:targetNode" {"id" "f:allNodes"}
-                                     "f:allow"
-                                     [{"f:targetRole" {"id" "role:root"}
-                                       "f:action"     [{"id" "f:view"}
-                                                       {"id" "f:modify"}]}]}]}
+      (let [create-req {"ledger" ledger-name
+                        "@context" ["https://ns.flur.ee" default-context]
+                        "insert"    {"@graph"
+                                     [{"id"      (:id auth)
+                                       "f:role"  {"id" "role:root"}
+                                       "type"    "schema:Person"
+                                       "ex:name" "Goose"}
+                                      {"id"           "ex:rootPolicy"
+                                       "type"         "f:Policy"
+                                       "f:targetNode" {"id" "f:allNodes"}
+                                       "f:allow"
+                                       [{"f:targetRole" {"id" "role:root"}
+                                         "f:action"     [{"id" "f:view"}
+                                                         {"id" "f:modify"}]}]}]}}
             create-res (api-post :create
                                  {:body    (json/write-value-as-string create-req)
                                   :headers json-headers})]
@@ -47,8 +48,9 @@
                (-> create-res :body json/read-value (select-keys ["ledger" "t"]))))))
     (testing "transact"
       (let [txn-req (<!! (cred/generate
-                          {"f:ledger" ledger-name
-                           "@graph"   [{"id"      "ex:cred-test"
+                          {"ledger" ledger-name
+                           "@context" "https://ns.flur.ee"
+                           "insert"   [{"id"      "ex:cred-test"
                                         "type"    "schema:Test"
                                         "ex:name" "cred test"
                                         "ex:foo"  1}]}
@@ -97,8 +99,9 @@
                (-> history-res :body json/read-value)))))
 
     (testing "invalid credential"
-      (let [invalid-tx  (-> {"f:ledger" "credential-test"
-                             "@graph"   {"@id"    "ex:cred-test"
+      (let [invalid-tx  (-> {"ledger" "credential-test"
+                             "@context" "https://ns.flur.ee"
+                             "insert"   {"@id"    "ex:cred-test"
                                          "ex:KEY" "VALUE"}}
                             (cred/generate (:private auth))
                             <!!

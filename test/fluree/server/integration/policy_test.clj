@@ -12,8 +12,9 @@
           alice-did    "did:fluree:Tf6i5oh2ssYNRpxxUM2zea1Yo7x4uRqyTeU"
           txn-req      {:body
                         (json/write-value-as-string
-                         {"f:ledger" ledger-name
-                          :graph     [{"id"        "ex:alice"
+                         {"ledger" ledger-name
+                          "@context" "https://ns.flur.ee"
+                          "insert" [{"id"        "ex:alice"
                                        "type"      "ex:User"
                                        "ex:secret" "alice's secret"}
                                       {"id"        "ex:bob"
@@ -54,19 +55,22 @@
           query-res    (api-post :query query-req)]
       (is (= 200 (:status query-res))
           (str "policy-enforced query response was: " (pr-str query-res)))
-      (is (= [{"id"   "ex:bob",
-               "type" "ex:User"}
-              {"id"        "ex:alice",
-               "type"      "ex:User",
-               "ex:secret" "alice's secret"}]
-             (-> query-res :body json/read-value))
+      (is (= #{{"id"   "ex:bob",
+                "type" "ex:User"}
+               {"id"        "ex:alice",
+                "type"      "ex:User",
+                "ex:secret" "alice's secret"}}
+             (-> query-res :body json/read-value set))
           "query policy opts should prevent seeing bob's secret")
       (let [txn-req   {:body
                        (json/write-value-as-string
-                        {"f:ledger" ledger-name
-                         :graph     [{"id"        "ex:alice"
+                        {"ledger" ledger-name
+                         "@context" "https://ns.flur.ee"
+                         "delete"   [{"id" "ex:alice"
+                                      "ex:secret" "alice's secret"}]
+                         "insert"   [{"id"        "ex:alice"
                                       "ex:secret" "alice's NEW secret"}]
-                         :f/opts    {"role" "ex:userRole"
+                         "opts"     {"role" "ex:userRole"
                                      "did"  alice-did}})
                        :headers json-headers}
             txn-res   (api-post :transact txn-req)
@@ -77,20 +81,21 @@
                        :headers json-headers}
             query-res (api-post :query query-req)
             _         (assert (= 200 (:status query-res)))]
-        (is (= [{"id"        "ex:bob",
-                 "type"      "ex:User",
-                 "ex:secret" "bob's secret"}
-                {"id"        "ex:alice",
-                 "type"      "ex:User",
-                 "ex:secret" "alice's NEW secret"}]
-               (-> query-res :body json/read-value))
+        (is (= #{{"id"        "ex:bob",
+                  "type"      "ex:User",
+                  "ex:secret" "bob's secret"}
+                 {"id"        "ex:alice",
+                  "type"      "ex:User",
+                  "ex:secret" "alice's NEW secret"}}
+               (-> query-res :body json/read-value set))
             "alice's secret should be modified")
         (let [txn-req {:body
                        (json/write-value-as-string
-                        {"f:ledger" ledger-name
-                         "@graph"   [{"id"        "ex:bob"}
+                        {"ledger" ledger-name
+                         "@context" "https://ns.flur.ee"
+                         "insert"   [{"id"        "ex:bob"}
                                      "ex:secret" "bob's new secret"]
-                         "f:opts"   {"role" "ex:userRole"
+                         "opts"   {"role" "ex:userRole"
                                      "did"  alice-did}})
                        :headers json-headers}
               txn-res (api-post :transact txn-req)]
