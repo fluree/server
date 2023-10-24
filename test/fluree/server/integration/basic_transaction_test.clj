@@ -54,8 +54,9 @@
   (testing "can transact in JSON"
     (let [ledger-name (create-rand-ledger "transact-endpoint-json-test")
           req         (json/write-value-as-string
-                        {"f:ledger" ledger-name
-                         "@graph"   {"id"      "ex:transaction-test"
+                        {"ledger" ledger-name
+                         "@context" "https://ns.flur.ee"
+                         "insert"   {"id"      "ex:transaction-test"
                                      "type"    "schema:Test"
                                      "ex:name" "transact-endpoint-json-test"}})
           res         (api-post :transact {:body req :headers json-headers})]

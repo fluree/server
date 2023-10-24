@@ -32,8 +32,9 @@
           _             (assert (= 201 (:status txn-res)))
           txn2-req      {:body
                          (json/write-value-as-string
-                           {"f:ledger" ledger-name
-                            "@graph"   [{"id"           "ex:query-test"
+                           {"ledger" ledger-name
+                            "@context" "https://ns.flur.ee"
+                            "insert"   [{"id"           "ex:query-test"
                                          "ex:test-type" "integration"}]})
                          :headers json-headers}
           txn2-res      (api-post :transact txn2-req)

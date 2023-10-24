@@ -47,8 +47,9 @@
                (-> create-res :body json/read-value (select-keys ["ledger" "t"]))))))
     (testing "transact"
       (let [txn-req (<!! (cred/generate
-                          {"f:ledger" ledger-name
-                           "@graph"   [{"id"      "ex:cred-test"
+                          {"ledger" ledger-name
+                           "@context" "https://ns.flur.ee"
+                           "insert"   [{"id"      "ex:cred-test"
                                         "type"    "schema:Test"
                                         "ex:name" "cred test"
                                         "ex:foo"  1}]}
@@ -97,8 +98,9 @@
                (-> history-res :body json/read-value)))))
 
     (testing "invalid credential"
-      (let [invalid-tx  (-> {"f:ledger" "credential-test"
-                             "@graph"   {"@id"    "ex:cred-test"
+      (let [invalid-tx  (-> {"ledger" "credential-test"
+                             "@context" "https://ns.flur.ee"
+                             "insert"   {"@id"    "ex:cred-test"
                                          "ex:KEY" "VALUE"}}
                             (cred/generate (:private auth))
                             <!!

@@ -11,8 +11,9 @@
     (let [ledger-name (create-rand-ledger "query-endpoint-basic-entity-test")
           txn-req     {:body
                        (json/write-value-as-string
-                         {"f:ledger" ledger-name
-                          "@graph"   [{"id"      "ex:query-test"
+                         {"ledger" ledger-name
+                          "@context" "https://ns.flur.ee"
+                          "insert"   [{"id"      "ex:query-test"
                                        "type"    "schema:Test"
                                        "ex:name" "query-test"}]})
                        :headers json-headers}
@@ -35,13 +36,15 @@
     (let [ledger-name (create-rand-ledger "query-endpoint-union-test")
           txn-req     {:body
                        (json/write-value-as-string
-                         {"f:ledger" ledger-name
-                          "@graph"   [{"id"      "ex:query-test"
-                                       "type"    "schema:Test"
-                                       "ex:name" "query-test"}
-                                      {"id"       "ex:wes"
-                                       "type"     "schema:Person"
-                                       "ex:fname" "Wes"}]})
+                         {"ledger" ledger-name
+                          "@context" "https://ns.flur.ee"
+                          "insert"   {"@graph"
+                                      [{"id"      "ex:query-test"
+                                        "type"    "schema:Test"
+                                        "ex:name" "query-test"}
+                                       {"id"       "ex:wes"
+                                        "type"     "schema:Person"
+                                        "ex:fname" "Wes"}]}})
                        :headers json-headers}
           txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
@@ -62,22 +65,24 @@
     (let [ledger-name (create-rand-ledger "query-endpoint-optional-test")
           txn-req     {:body
                        (json/write-value-as-string
-                         {"f:ledger" ledger-name
-                          "@graph"   [{"id"          "ex:brian",
-                                       "type"        "ex:User",
-                                       "schema:name" "Brian"
-                                       "ex:friend"   [{"id" "ex:alice"}]}
-                                      {"id"           "ex:alice",
-                                       "type"         "ex:User",
-                                       "ex:favColor"  "Green"
-                                       "schema:email" "alice@flur.ee"
-                                       "schema:name"  "Alice"}
-                                      {"id"           "ex:cam",
-                                       "type"         "ex:User",
-                                       "schema:name"  "Cam"
-                                       "schema:email" "cam@flur.ee"
-                                       "ex:friend"    [{"id" "ex:brian"}
-                                                       {"id" "ex:alice"}]}]})
+                         {"ledger" ledger-name
+                          "@context" "https://ns.flur.ee"
+                          "insert"   {"@graph"
+                                      [{"id"          "ex:brian",
+                                        "type"        "ex:User",
+                                        "schema:name" "Brian"
+                                        "ex:friend"   [{"id" "ex:alice"}]}
+                                       {"id"           "ex:alice",
+                                        "type"         "ex:User",
+                                        "ex:favColor"  "Green"
+                                        "schema:email" "alice@flur.ee"
+                                        "schema:name"  "Alice"}
+                                       {"id"           "ex:cam",
+                                        "type"         "ex:User",
+                                        "schema:name"  "Cam"
+                                        "schema:email" "cam@flur.ee"
+                                        "ex:friend"    [{"id" "ex:brian"}
+                                                        {"id" "ex:alice"}]}]}})
                        :headers json-headers}
           txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
@@ -92,18 +97,19 @@
           query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res))
           (str "Response was: " (pr-str query-res)))
-      (is (= [["Cam" nil]
-              ["Alice" "Green"]
-              ["Brian" nil]]
-             (-> query-res :body json/read-value))
+      (is (= #{["Cam" nil]
+               ["Alice" "Green"]
+               ["Brian" nil]}
+             (-> query-res :body json/read-value set))
           (str "Response was: " (pr-str query-res)))))
 
   (testing "selectOne query works"
     (let [ledger-name (create-rand-ledger "query-endpoint-selectOne-test")
           txn-req     {:body
                        (json/write-value-as-string
-                         {"f:ledger" ledger-name
-                          "@graph"   [{"id"      "ex:query-test"
+                         {"ledger" ledger-name
+                          "@context" "https://ns.flur.ee"
+                          "insert"   [{"id"      "ex:query-test"
                                        "type"    "schema:Test"
                                        "ex:name" "query-test"}]})
                        :headers json-headers}
@@ -127,8 +133,9 @@
           txn-req     {:headers json-headers
                        :body
                        (json/write-value-as-string
-                         {"f:ledger" ledger-name
-                          "f:defaultContext"
+                         {"ledger" ledger-name
+                          "@context" "https://ns.flur.ee"
+                          "defaultContext"
                           {"id"     "@id"
                            "type"   "@type"
                            "xsd"    "http://www.w3.org/2001/XMLSchema#"
@@ -140,38 +147,39 @@
                            "wiki"   "https://www.wikidata.org/wiki/"
                            "f"      "https://ns.flur.ee/ledger#"
                            "ex"     "http://example.org/"}
-                          "@graph"
-                          [{"id"          "ex:freddy"
-                            "type"        "ex:Yeti"
-                            "schema:age"  4
-                            "schema:name" "Freddy"
-                            "ex:verified" true}
-                           {"id"          "ex:letty"
-                            "type"        "ex:Yeti"
-                            "schema:age"  2
-                            "ex:nickname" "Letty"
-                            "schema:name" "Leticia"
-                            "schema:follows"
-                            [{"type"   "id"
-                              "@value" "ex:freddy"}]}
-                           {"id"          "ex:betty"
-                            "type"        "ex:Yeti"
-                            "schema:age"  82
-                            "schema:name" "Betty"
-                            "schema:follows"
-                            [{"type"   "id"
-                              "@value" "ex:freddy"}]}
-                           {"id"          "ex:andrew"
-                            "type"        "schema:Person"
-                            "schema:age"  35
-                            "schema:name" "Andrew Johnson"
-                            "schema:follows"
-                            [{"type"   "id"
-                              "@value" "ex:freddy"}
-                             {"type"   "id"
-                              "@value" "ex:letty"}
-                             {"type"   "id"
-                              "@value" "ex:betty"}]}]})}
+                          "insert"
+                          {"@graph"
+                           [{"id"          "ex:freddy"
+                             "type"        "ex:Yeti"
+                             "schema:age"  4
+                             "schema:name" "Freddy"
+                             "ex:verified" true}
+                            {"id"          "ex:letty"
+                             "type"        "ex:Yeti"
+                             "schema:age"  2
+                             "ex:nickname" "Letty"
+                             "schema:name" "Leticia"
+                             "schema:follows"
+                             [{"type"   "id"
+                               "@value" "ex:freddy"}]}
+                            {"id"          "ex:betty"
+                             "type"        "ex:Yeti"
+                             "schema:age"  82
+                             "schema:name" "Betty"
+                             "schema:follows"
+                             [{"type"   "id"
+                               "@value" "ex:freddy"}]}
+                            {"id"          "ex:andrew"
+                             "type"        "schema:Person"
+                             "schema:age"  35
+                             "schema:name" "Andrew Johnson"
+                             "schema:follows"
+                             [{"type"   "id"
+                               "@value" "ex:freddy"}
+                              {"type"   "id"
+                               "@value" "ex:letty"}
+                              {"type"   "id"
+                               "@value" "ex:betty"}]}]}})}
 
           txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))

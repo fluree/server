@@ -10,8 +10,9 @@
     (let [ledger-name (create-rand-ledger "query-sparql-test")
           txn-req     {:body
                        (json/write-value-as-string
-                        {"f:ledger" ledger-name
-                         "@graph"   [{"id"      "ex:query-sparql-test"
+                        {"ledger" ledger-name
+                         "@context" "https://ns.flur.ee"
+                         "insert"   [{"id"      "ex:query-sparql-test"
                                       "type"    "schema:Test"
                                       "ex:name" "query-sparql-test"}]})
                        :headers json-headers}
