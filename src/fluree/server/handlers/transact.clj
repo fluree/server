@@ -14,22 +14,16 @@
 
 (set! *warn-on-reflection* true)
 
-(defn hash-txn
-  "Hashes a string, JSON representation of a txn that should
-  already be normalized."
-  [json-txn]
-  (crypto/sha2-256 json-txn :hex :string))
-
 (defn derive-tx-id
   [txn]
-  (let [canonized  (jld-processor/canonize txn)]
-    (hash-txn canonized)))
+  (-> txn jld-processor/canonize (crypto/sha2-256 :hex :string)))
 
 (defn queue-consensus
   [consensus conn watcher ledger tx-id expanded-txn]
   (let [conn-type       (conn-proto/-method conn)
         ;; initial response is not completion, but acknowledgement of persistence
-        persist-resp-ch (consensus/queue-new-transaction consensus conn-type ledger tx-id expanded-txn nil nil)]
+        persist-resp-ch (consensus/queue-new-transaction consensus conn-type ledger tx-id
+                                                         expanded-txn nil nil)]
     (async/go
       (let [persist-resp (async/<! persist-resp-ch)]
         ;; check for exception trying to put txn in consensus, if so we must deliver the

@@ -76,8 +76,8 @@
     {:keys [body]} :parameters}]
   (log/debug "create body:" body)
   (let [[expanded-txn] (util/sequential (jld-processor/expand body))
-        ledger-id  (-> expanded-txn (get const/iri-ledger) (get 0) (get "@value"))
-        resp-p       (promise)]
+        ledger-id      (-> expanded-txn (get const/iri-ledger) (get 0) (get "@value"))
+        resp-p         (promise)]
     (or (not (deref! (fluree/exists? conn ledger-id)))
         (throw-ledger-exists ledger-id))
     ;; kick of async process that will eventually deliver resp or exception to resp-p

@@ -11,7 +11,7 @@
     (let [ledger-name (create-rand-ledger "query-endpoint-basic-entity-test")
           txn-req     {:body
                        (json/write-value-as-string
-                         {"ledger" ledger-name
+                         {"ledger"   ledger-name
                           "@context" "https://ns.flur.ee"
                           "insert"   [{"id"      "ex:query-test"
                                        "type"    "schema:Test"
@@ -36,7 +36,7 @@
     (let [ledger-name (create-rand-ledger "query-endpoint-union-test")
           txn-req     {:body
                        (json/write-value-as-string
-                         {"ledger" ledger-name
+                         {"ledger"   ledger-name
                           "@context" "https://ns.flur.ee"
                           "insert"   {"@graph"
                                       [{"id"      "ex:query-test"
@@ -65,7 +65,7 @@
     (let [ledger-name (create-rand-ledger "query-endpoint-optional-test")
           txn-req     {:body
                        (json/write-value-as-string
-                         {"ledger" ledger-name
+                         {"ledger"   ledger-name
                           "@context" "https://ns.flur.ee"
                           "insert"   {"@graph"
                                       [{"id"          "ex:brian",
@@ -107,7 +107,7 @@
     (let [ledger-name (create-rand-ledger "query-endpoint-selectOne-test")
           txn-req     {:body
                        (json/write-value-as-string
-                         {"ledger" ledger-name
+                         {"ledger"   ledger-name
                           "@context" "https://ns.flur.ee"
                           "insert"   [{"id"      "ex:query-test"
                                        "type"    "schema:Test"
@@ -133,7 +133,7 @@
           txn-req     {:headers json-headers
                        :body
                        (json/write-value-as-string
-                         {"ledger" ledger-name
+                         {"ledger"   ledger-name
                           "@context" "https://ns.flur.ee"
                           "defaultContext"
                           {"id"     "@id"
@@ -154,11 +154,11 @@
                              "schema:age"  4
                              "schema:name" "Freddy"
                              "ex:verified" true}
-                            {"id"          "ex:letty"
-                             "type"        "ex:Yeti"
-                             "schema:age"  2
-                             "ex:nickname" "Letty"
-                             "schema:name" "Leticia"
+                            {"id"             "ex:letty"
+                             "type"           "ex:Yeti"
+                             "schema:age"     2
+                             "ex:nickname"    "Letty"
+                             "schema:name"    "Leticia"
                              "schema:follows" [{"id" "ex:freddy"}]}
                             {"id"          "ex:betty"
                              "type"        "ex:Yeti"
@@ -175,18 +175,18 @@
                               {"@id" "ex:letty"}
                               {"@id" "ex:betty"}]}]}})}
 
-          txn-res     (api-post :transact txn-req)
-          _           (assert (= 200 (:status txn-res)))
-          query-req   {:body
-                       (json/write-value-as-string
-                         {"from"    ledger-name
-                          "select"  ["?name" "?age" "?canVote"]
-                          "where"   [["?s" "schema:name" "?name"]
-                                     ["?s" "schema:age" "?age"]
-                                     {"bind" {"?canVote" "(>= ?age 18)"}}]
-                          "orderBy" ["?name"]})
-                       :headers json-headers}
-          query-res   (api-post :query query-req)]
+          txn-res   (api-post :transact txn-req)
+          _         (assert (= 200 (:status txn-res)))
+          query-req {:body
+                     (json/write-value-as-string
+                       {"from"    ledger-name
+                        "select"  ["?name" "?age" "?canVote"]
+                        "where"   [["?s" "schema:name" "?name"]
+                                   ["?s" "schema:age" "?age"]
+                                   {"bind" {"?canVote" "(>= ?age 18)"}}]
+                        "orderBy" ["?name"]})
+                     :headers json-headers}
+          query-res (api-post :query query-req)]
       (is (= 200 (:status query-res))
           (str "Query response was: " (pr-str query-res)))
       (is (= [["Andrew Johnson" 35 true]
