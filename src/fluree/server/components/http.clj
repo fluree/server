@@ -7,6 +7,7 @@
    [fluree.db.json-ld.credential :as cred]
    [fluree.db.json-ld.transact :as transact]
    [fluree.db.util.log :as log]
+   [fluree.db.validation :as v]
    [fluree.server.handlers.ledger :as ledger]
    [fluree.server.handlers.create :as create]
    [fluree.server.handlers.remote-resource :as remote]
@@ -137,12 +138,21 @@
                  {:port  (ds/ref [:env :http/server :port])
                   :join? false}}})
 
+(def query-coercer
+  (reitit.coercion.malli/create
+   {:strip-extra-keys false
+    :error-keys #{}
+    :encode-error (fn [explained]
+                    {:error :db/invalid-query
+                     :message (v/format-explained-errors explained nil)})}))
+
 (def query-endpoint
   {:summary    "Endpoint for submitting queries"
    :parameters {:body QueryRequestBody}
    :responses  {200 {:body QueryResponse}
                 400 {:body ErrorResponse}
                 500 {:body ErrorResponse}}
+   :coercion   ^:replace  query-coercer
    :handler    #'ledger/query})
 
 
@@ -152,6 +162,7 @@
    :responses  {200 {:body HistoryQueryResponse}
                 400 {:body ErrorResponse}
                 500 {:body ErrorResponse}}
+   :coercion   ^:replace  query-coercer
    :handler    #'ledger/history})
 
 (defn wrap-assoc-system
