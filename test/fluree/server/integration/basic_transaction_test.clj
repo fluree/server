@@ -63,6 +63,73 @@
       (is (= {"ledger" ledger-name, "t" 2}
              (-> res :body json/read-value (select-keys ["ledger" "t"])))))))
 
+(deftest ^:pending ^:integration ^:json transaction-with-where-clause-test
+  (testing "can transact with a where clause"
+    (let [ledger-name (create-rand-ledger "transact-endpoint-json-test")
+          req1        (json/write-value-as-string
+                       {"ledger"   ledger-name
+                        "@context" "https://ns.flur.ee"
+                        "insert"   {"id"      "ex:transaction-test"
+                                    "type"    "schema:Test"
+                                    "ex:name" "transact-endpoint-json-test"}})
+          res1        (api-post :transact {:body req1, :headers json-headers})
+          _           (assert (= 200 (:status res1)))
+          req2        (json/write-value-as-string
+                       {"ledger"   ledger-name
+                        "@context" "https://ns.flur.ee"
+                        "insert"   {"id"      "?t"
+                                    "ex:name" "new-name"}
+                        "delete"   {"id"      "?t"
+                                    "ex:name" "transact-endpoint-json-test"}
+                        "where"    [["?t" "id" "ex:transaction-test"]]})
+          res2        (api-post :transact {:body req2, :headers json-headers})]
+      (is (= 200 (:status res2)))
+      (is (= [{"id"      "ex:transaction-test"
+               "type"    "schema:Test"
+               "ex:name" "new-name"}]
+             (->> {:body    (json/write-value-as-string
+                             {"select" {"?t" ["*"]}
+                              "from"   ledger-name
+                              "where"  [["?t" "id" "ex:transaction-test"]]})
+                   :headers json-headers}
+                  (api-post :query)
+                  :body
+                  json/read-value)))))
+  (testing "can transact with a where clause w/ optional"
+    (let [ledger-name (create-rand-ledger "transact-endpoint-json-test")
+          req1        (json/write-value-as-string
+                       {"ledger"   ledger-name
+                        "@context" "https://ns.flur.ee"
+                        "insert"   {"id"          "ex:transaction-test"
+                                    "type"        "schema:Test"
+                                    "schema:name" "transact-endpoint-json-test"}})
+          res1        (api-post :transact {:body req1, :headers json-headers})
+          _           (assert (= 200 (:status res1)))
+          req2        (json/write-value-as-string
+                       {"ledger"   ledger-name
+                        "@context" "https://ns.flur.ee"
+                        "insert"   {"id"      "?t"
+                                    "schema:name" "new-name"}
+                        "delete"   {"id"      "?t"
+                                    "schema:name" "?n"
+                                    "schema:description" "?d"}
+                        "where"    [["?t" "id" "ex:transaction-test"]
+                                    {"optional" ["?t" "schema:name" "?n"]}
+                                    {"optional" ["?t" "schema:description" "?d"]}]})
+          res2        (api-post :transact {:body req2, :headers json-headers})]
+      (is (= 200 (:status res2)))
+      (is (= [{"id"      "ex:transaction-test"
+               "type"    "schema:Test"
+               "ex:name" "new-name"}]
+             (->> {:body    (json/write-value-as-string
+                             {"select" {"?t" ["*"]}
+                              "from"   ledger-name
+                              "where"  [["?t" "id" "ex:transaction-test"]]})
+                   :headers json-headers}
+                  (api-post :query)
+                  :body
+                  json/read-value))))))
+
 #_(deftest ^:integration ^:edn transaction-edn-test
     (testing "can transact in EDN"
       (let [ledger-name (create-rand-ledger "transact-endpoint-edn-test")
