@@ -99,11 +99,12 @@
 
 (defn add-state-machine
   "Add state machine configuration options needed for raft"
-  [{:keys [fluree/conn fluree/watcher this-server command-chan storage-ledger-read storage-ledger-write] :as raft-config}
+  [{:keys [fluree/conn fluree/watcher fluree/subscriptions this-server command-chan storage-ledger-read storage-ledger-write] :as raft-config}
    handler]
   (let [state-machine-atom   (atom raft-helpers/default-state)
         state-machine-config {:fluree/conn                    conn
                               :fluree/watcher                 watcher
+                              :fluree/subscriptions           subscriptions
                               :consensus/command-chan         command-chan
                               :consensus/this-server          this-server
                               :consensus/state-atom           state-machine-atom

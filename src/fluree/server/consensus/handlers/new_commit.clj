@@ -5,6 +5,7 @@
             [fluree.db.util.async :refer [<? go-try]]
             [fluree.db.util.filesystem :as fs]
             [fluree.db.util.log :as log]
+            [fluree.server.components.subscriptions :as subs]
             [fluree.server.components.watcher :as watcher]))
 
 
@@ -103,7 +104,9 @@
 
 (defn broadcast!
   "Responsible for producing the event broadcast to connected peers."
-  [{:keys [fluree/watcher] :as _config} {:keys [ledger-id tx-id server] :as commit-result}]
+  [{:keys [fluree/watcher fluree/subscriptions] :as _config}
+   {:keys [ledger-id tx-id server commit-file-meta] :as commit-result}]
   (log/info "New transaction completed for" ledger-id "tx-id: " tx-id "by server:" server)
   (watcher/deliver-watch watcher tx-id commit-result)
+  (subs/send-message-to-all subscriptions "new-commit" ledger-id (:json commit-file-meta))
   :success) ;; result of this function is not used

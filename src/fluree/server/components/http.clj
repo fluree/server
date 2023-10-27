@@ -1,29 +1,31 @@
 (ns fluree.server.components.http
   (:require
-   [clojure.core.async :as async :refer [<!!]]
-   [donut.system :as ds]
-   [fluree.db.query.fql.syntax :as fql]
-   [fluree.db.query.history :as fqh]
-   [fluree.db.json-ld.credential :as cred]
-   [fluree.db.json-ld.transact :as transact]
-   [fluree.db.util.log :as log]
-   [fluree.server.handlers.ledger :as ledger]
-   [fluree.server.handlers.create :as create]
-   [fluree.server.handlers.remote-resource :as remote]
-   [fluree.server.handlers.transact :as srv-tx]
-   [malli.core :as m]
-   [muuntaja.core :as muuntaja]
-   [muuntaja.format.core :as mf]
-   [muuntaja.format.json :as mfj]
-   [reitit.coercion.malli]
-   [reitit.ring :as ring]
-   [reitit.ring.coercion :as coercion]
-   [reitit.ring.middleware.exception :as exception]
-   [reitit.ring.middleware.muuntaja :as muuntaja-mw]
-   [reitit.swagger :as swagger]
-   [reitit.swagger-ui :as swagger-ui]
-   [ring.adapter.jetty9 :as http]
-   [ring.middleware.cors :as rmc])
+    [clojure.core.async :as async :refer [<!!]]
+    [donut.system :as ds]
+    [fluree.db.query.fql.syntax :as fql]
+    [fluree.db.query.history :as fqh]
+    [fluree.db.validation :as v]
+    [fluree.db.json-ld.credential :as cred]
+    [fluree.db.json-ld.transact :as transact]
+    [fluree.db.util.log :as log]
+    [fluree.server.components.subscriptions :as subscriptions]
+    [fluree.server.handlers.ledger :as ledger]
+    [fluree.server.handlers.create :as create]
+    [fluree.server.handlers.remote-resource :as remote]
+    [fluree.server.handlers.transact :as srv-tx]
+    [malli.core :as m]
+    [muuntaja.core :as muuntaja]
+    [muuntaja.format.core :as mf]
+    [muuntaja.format.json :as mfj]
+    [reitit.coercion.malli :as rcm]
+    [reitit.ring :as ring]
+    [reitit.ring.coercion :as coercion]
+    [reitit.ring.middleware.exception :as exception]
+    [reitit.ring.middleware.muuntaja :as muuntaja-mw]
+    [reitit.swagger :as swagger]
+    [reitit.swagger-ui :as swagger-ui]
+    [ring.adapter.jetty9 :as http]
+    [ring.middleware.cors :as rmc])
   (:import (java.io InputStream)))
 
 (set! *warn-on-reflection* true)
@@ -75,7 +77,7 @@
 
 (def FqlQuery (m/schema [:and
                          [:map-of :keyword :any]
-                         (fql/query-schema [[:from LedgerAlias]])]
+                         (fql/query-schema [])]
                         {:registry fql/registry}))
 
 (def SparqlQuery (m/schema :string))
@@ -137,12 +139,21 @@
                  {:port  (ds/ref [:env :http/server :port])
                   :join? false}}})
 
+(def query-coercer
+  (rcm/create
+    {:strip-extra-keys false
+     :error-keys #{}
+     :encode-error (fn [explained]
+                     {:error :db/invalid-query
+                      :message (v/format-explained-errors explained nil)})}))
+
 (def query-endpoint
   {:summary    "Endpoint for submitting queries"
    :parameters {:body QueryRequestBody}
    :responses  {200 {:body QueryResponse}
                 400 {:body ErrorResponse}
                 500 {:body ErrorResponse}}
+   :coercion   ^:replace  query-coercer
    :handler    #'ledger/query})
 
 
@@ -152,6 +163,7 @@
    :responses  {200 {:body HistoryQueryResponse}
                 400 {:body ErrorResponse}
                 500 {:body ErrorResponse}}
+   :coercion   ^:replace  query-coercer
    :handler    #'ledger/history})
 
 (defn wrap-assoc-system
@@ -226,30 +238,74 @@
                      ::format :sparql})))]}))
 
 (defn websocket-handler
-  [upgrade-request]
+  [conn subscriptions]
   ;; Mostly copy-pasta from
   ;; https://github.com/sunng87/ring-jetty9-adapter/blob/master/examples/rj9a/websocket.clj
-  (let [provided-subprotocols (:websocket-subprotocols upgrade-request)
-        provided-extensions   (:websocket-extensions upgrade-request)]
-    {;; provide websocket callbacks
-     :on-connect  (fn on-connect [_]
-                    (tap> [:ws :connect]))
-     :on-text     (fn on-text [ws text-message]
-                    (tap> [:ws :msg text-message])
-                    (http/send! ws (str "echo: " text-message)))
-     :on-bytes    (fn on-bytes [_ _ _ _]
-                    (tap> [:ws :bytes]))
-     :on-close    (fn on-close [_ status-code reason]
-                    (tap> [:ws :close status-code reason]))
-     :on-ping     (fn on-ping [ws payload]
-                    (tap> [:ws :ping])
-                    (http/send! ws payload))
-     :on-pong     (fn on-pong [_ _]
-                    (tap> [:ws :pong]))
-     :on-error    (fn on-error [_ e]
-                    (tap> [:ws :error e]))
-     :subprotocol (first provided-subprotocols)
-     :extensions  provided-extensions}))
+  (fn [upgrade-request]
+    (let [provided-subprotocols (:websocket-subprotocols upgrade-request)
+          provided-extensions   (:websocket-extensions upgrade-request)
+          subscription-id       (str (random-uuid))
+          subscription-chan     (async/chan)]
+      {;; provide websocket callbacks
+       :on-connect  (fn on-connect [ws]
+                      (subscriptions/client-message
+                        {:msg-type             :on-connect
+                         :http/ws              ws
+                         :http/sub-id          subscription-id
+                         :http/sub-chan        subscription-chan
+                         :fluree/subscriptions subscriptions
+                         :fluree/connection    conn}))
+       :on-text     (fn on-text [ws text-message]
+                      (subscriptions/client-message
+                        {:msg-type             :on-text
+                         :payload              text-message
+                         :http/ws              ws
+                         :http/sub-id          subscription-id
+                         :http/sub-chan        subscription-chan
+                         :fluree/subscriptions subscriptions
+                         :fluree/connection    conn}))
+       :on-bytes    (fn on-bytes [ws payload offset len]
+                      (subscriptions/client-message
+                        {:msg-type             :on-bytes
+                         :payload              payload
+                         :offset               offset
+                         :len                  len
+                         :http/ws              ws
+                         :http/sub-id          subscription-id
+                         :http/sub-chan        subscription-chan
+                         :fluree/subscriptions subscriptions
+                         :fluree/connection    conn}))
+       :on-close    (fn on-close [ws status-code reason]
+                      (subscriptions/client-message
+                        {:msg-type             :on-close
+                         :status-code          status-code
+                         :reason               reason
+                         :http/ws              ws
+                         :http/sub-id          subscription-id
+                         :http/sub-chan        subscription-chan
+                         :fluree/subscriptions subscriptions
+                         :fluree/connection    conn}))
+       :on-ping     (fn on-ping [ws payload]
+                      (subscriptions/client-message
+                        {:msg-type             :on-ping
+                         :payload              payload
+                         :http/ws              ws
+                         :http/sub-id          subscription-id
+                         :http/sub-chan        subscription-chan
+                         :fluree/subscriptions subscriptions
+                         :fluree/connection    conn}))
+       :on-error    (fn on-error [ws e]
+                      (subscriptions/client-message
+                        {:msg-type             :on-error
+                         :error                e
+                         :http/ws              ws
+                         :http/sub-id          subscription-id
+                         :http/sub-chan        subscription-chan
+                         :fluree/subscriptions subscriptions
+                         :fluree/connection    conn}))
+       :subprotocol (first provided-subprotocols)
+       :extensions  provided-extensions})))
+
 
 (defn debug-middleware
   "Put this in anywhere in your middleware chain to get some insight into what's
@@ -267,7 +323,7 @@
          resp)))))
 
 (defn app
-  [{:keys [fluree/conn fluree/consensus fluree/watcher http/middleware http/routes]}]
+  [{:keys [fluree/conn fluree/consensus fluree/watcher fluree/subscriptions http/middleware http/routes]}]
   (log/debug "HTTP server running with Fluree connection:" conn
              "- middleware:" middleware "- routes:" routes)
   (let [exception-middleware      (exception/create-exception-middleware
@@ -351,11 +407,11 @@
         (ring/ring-handler
           (ring/router
             (concat
-              [["/ws" {:get (fn [req]
-                              (if (http/ws-upgrade-request? req)
-                                (http/ws-upgrade-response websocket-handler)
-                                {:status 400
-                                 :body   "Invalid websocket upgrade request"}))}]
+              [["/fluree/subscribe" {:get (fn [req]
+                                            (if (http/ws-upgrade-request? req)
+                                              (http/ws-upgrade-response (websocket-handler conn subscriptions))
+                                              {:status 400
+                                               :body   "Invalid websocket upgrade request"}))}]
                routes])))
         (swagger-ui/create-swagger-ui-handler
           {:path   "/"
