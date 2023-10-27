@@ -11,11 +11,11 @@
   (testing "can create a new ledger w/ JSON"
     (let [ledger-name (str "create-endpoint-" (random-uuid))
           req         (json/write-value-as-string
-                        {"ledger" ledger-name
-                         "@context" ["https://ns.flur.ee" {"foo" "http://foobar.com/"}]
-                         "insert"   [{"id"      "ex:create-test"
-                                      "type"    "foo:test"
-                                      "ex:name" "create-endpoint-test"}]})
+                       {"ledger"   ledger-name
+                        "@context" ["https://ns.flur.ee" {"foo" "http://foobar.com/"}]
+                        "insert"   [{"id"      "ex:create-test"
+                                     "type"    "foo:test"
+                                     "ex:name" "create-endpoint-test"}]})
           res         (api-post :create {:body req :headers json-headers})]
       (is (= 201 (:status res)))
       (is (= {"ledger" ledger-name
@@ -54,11 +54,11 @@
   (testing "can transact in JSON"
     (let [ledger-name (create-rand-ledger "transact-endpoint-json-test")
           req         (json/write-value-as-string
-                        {"ledger" ledger-name
-                         "@context" "https://ns.flur.ee"
-                         "insert"   {"id"      "ex:transaction-test"
-                                     "type"    "schema:Test"
-                                     "ex:name" "transact-endpoint-json-test"}})
+                       {"ledger"   ledger-name
+                        "@context" "https://ns.flur.ee"
+                        "insert"   {"id"      "ex:transaction-test"
+                                    "type"    "schema:Test"
+                                    "ex:name" "transact-endpoint-json-test"}})
           res         (api-post :transact {:body req :headers json-headers})]
       (is (= 200 (:status res)))
       (is (= {"ledger" ledger-name, "t" 2}
@@ -69,10 +69,10 @@
       (let [ledger-name (create-rand-ledger "transact-endpoint-edn-test")
             address     (str "fluree:memory://" ledger-name "/main/head")
             req         (pr-str
-                          {:ledger ledger-name
-                           :txn    [{:id      :ex/transaction-test
-                                     :type    :schema/Test
-                                     :ex/name "transact-endpoint-edn-test"}]})
+                         {:ledger ledger-name
+                          :txn    [{:id      :ex/transaction-test
+                                    :type    :schema/Test
+                                    :ex/name "transact-endpoint-edn-test"}]})
             res         (api-post :transact {:body req :headers edn-headers})]
         (is (= 200 (:status res)))
         (is (= {:address address, :alias ledger-name, :t 2}
