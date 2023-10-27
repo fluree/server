@@ -53,7 +53,14 @@
    :extra-deps  {lambdaisland/kaocha {:mvn/version "1.87.1366"}
                  clj-http/clj-http   {:mvn/version "3.12.3"}}
    :exec-fn     kaocha.runner/exec-fn
-   :exec-args   {}}
+   :exec-args   {:kaocha.filter/skip-meta [:pending]}}
+
+  :pending-tests
+  {:extra-paths ["test"]
+   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.87.1366"}
+                 clj-http/clj-http   {:mvn/version "3.12.3"}}
+   :exec-fn     kaocha.runner/exec-fn
+   :exec-args   {:kaocha.filter/focus-meta [:pending]}}
 
   :eastwood
   {:extra-deps {jonase/eastwood {:mvn/version "1.4.0"}}

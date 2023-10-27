@@ -19,6 +19,13 @@ docker-push:
 test:
 	clojure -X:test
 
+.PHONY: pending-tests
+pending-tests:
+	clojure -X:pending-tests
+
+.PHONY: pt
+pt: pending-tests
+
 .PHONY: eastwood
 eastwood:
 	clojure -M:dev:test:eastwood
