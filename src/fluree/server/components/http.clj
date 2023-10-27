@@ -76,7 +76,7 @@
 
 (def FqlQuery (m/schema [:and
                          [:map-of :keyword :any]
-                         (fql/query-schema [[:from LedgerAlias]])]
+                         (fql/query-schema [])]
                         {:registry fql/registry}))
 
 (def SparqlQuery (m/schema :string))
