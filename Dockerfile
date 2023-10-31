@@ -16,12 +16,12 @@ FROM eclipse-temurin:17-jre-jammy AS runner
 RUN mkdir -p /opt/fluree-server
 WORKDIR /opt/fluree-server
 
-COPY --from=builder /usr/src/fluree-server/target/http-server-*.jar ./fluree-server.jar
+COPY --from=builder /usr/src/fluree-server/target/server-*.jar ./server.jar
 
 EXPOSE 8090
 EXPOSE 58090
 
 VOLUME ./data
 
-ENTRYPOINT ["java", "-jar", "fluree-server.jar"]
+ENTRYPOINT ["java", "-jar", "server.jar"]
 CMD ["docker"]

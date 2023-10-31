@@ -1,10 +1,11 @@
 (ns fluree.server.consensus.handlers.create-ledger
   (:require [clojure.core.async :as async]
+            [fluree.db.constants :as const]
             [fluree.db.json-ld.api :as fluree]
             [fluree.db.util.json :as json]
+            [fluree.db.util.log :as log]
             [fluree.raft.leader :refer [is-leader?]]
             [fluree.server.handlers.shared :refer [deref!]]
-            [fluree.db.util.log :as log]
             [fluree.server.consensus.core :as consensus]
             [fluree.server.consensus.producers.new-index-file :refer [push-new-index-files]]
             [fluree.server.consensus.raft.core :as raft]))
@@ -24,12 +25,21 @@
         false)
       true)))
 
+(defn parse-opts
+  "Extract the opts from the transaction and keywordify the top level keys."
+  [expanded-txn]
+  (-> expanded-txn
+      (get const/iri-opts)
+      (get 0)
+      (get "@value")
+      (->> (reduce-kv (fn [opts k v] (assoc opts (keyword k) v)) {}))))
+
 (defn create-and-commit
   "Returns promise with eventual response, which could be an exception."
   [{:keys [fluree/conn] :as config}
-   {:keys [ledger-id txn opts tx-id] :as _params}]
+   {:keys [ledger-id txn tx-id] :as _params}]
   (log/trace "Creating ledger" ledger-id "with txn:" txn)
-  (let [txn'    (json/parse txn false)
+  (let [opts    (parse-opts txn)
         ledger  (deref! (fluree/create conn ledger-id opts))
         commit! (fn [db]
                   (let [index-files-ch (async/chan)
@@ -41,10 +51,9 @@
     ;; following uses :file-data? and will return map with {:keys [db data-file commit-file]}
     (-> ledger
         fluree/db
-        (fluree/stage txn' opts)
+        (fluree/stage2 txn)
         deref!
         commit!)))
-
 
 (defn push-consensus
   "Pushes create-ledger request in consensus only if leader.

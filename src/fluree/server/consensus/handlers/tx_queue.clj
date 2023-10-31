@@ -1,5 +1,6 @@
 (ns fluree.server.consensus.handlers.tx-queue
   (:require [clojure.core.async :as async]
+            [fluree.db.constants :as const]
             [fluree.db.json-ld.api :as fluree]
             [fluree.db.util.core :as util]
             [fluree.db.util.json :as json]
@@ -66,29 +67,6 @@
   [raft-state ledger-id]
   (= :leader (:status raft-state)))
 
-(defn do-default-context-update
-  [{:keys [:fluree/conn] :as config} {:keys [ledger-id tx-id txn defaultContext opts] :as params}]
-  (let [start-time (System/currentTimeMillis)
-        _          (log/debug "Starting transaction processing for ledger:" ledger-id
-                              "with tx-id" tx-id ". Transaction sat in queue for"
-                              (- start-time (:instant params)) "milliseconds.")
-        ledger     (if (deref! (fluree/exists? conn ledger-id))
-                     (deref! (fluree/load conn ledger-id))
-                     (throw (ex-info "Ledger does not exist" {:ledger ledger-id})))
-        txn'       (json/parse txn false)
-        commit!    (fn [db]
-                     (let [index-files-ch (async/chan)
-                           _              (push-new-index-files config index-files-ch) ;; monitor for new index files and push across network
-                           resp           (fluree/commit! ledger db {:file-data?     true
-                                                                     :index-files-ch index-files-ch})]
-                       (log/debug "New commit for ledger" ledger-id "with tx-id: " tx-id
-                                  "processed in" (- (System/currentTimeMillis) start-time) "milliseconds.")
-                       resp))]
-    (-> ledger
-        fluree/db
-        (fluree/stage txn' opts)
-        deref!
-        (commit!))))
 
 (defn update-default-context
   [db defaultContext]
@@ -100,7 +78,7 @@
 
 
 (defn do-transaction
-  [{:keys [:fluree/conn] :as config} {:keys [ledger-id tx-id txn defaultContext opts] :as params}]
+  [{:keys [:fluree/conn] :as config} {:keys [ledger-id tx-id txn] :as params}]
   (let [start-time (System/currentTimeMillis)
         _          (log/debug "Starting transaction processing for ledger:" ledger-id
                               "with tx-id" tx-id ". Transaction sat in queue for"
@@ -108,19 +86,22 @@
         ledger     (if (deref! (fluree/exists? conn ledger-id))
                      (deref! (fluree/load conn ledger-id))
                      (throw (ex-info "Ledger does not exist" {:ledger ledger-id})))
-        txn'       (json/parse txn false)
-        commit!    (fn [db]
-                     (let [index-files-ch (async/chan)
-                           _              (push-new-index-files config index-files-ch) ;; monitor for new index files and push across network
-                           resp           (fluree/commit! ledger db {:file-data?     true
-                                                                     :index-files-ch index-files-ch})]
-                       (log/debug "New commit for ledger" ledger-id "with tx-id: " tx-id
-                                  "processed in" (- (System/currentTimeMillis) start-time) "milliseconds.")
-                       resp))]
+
+        default-context (-> txn (get const/iri-default-context) (get 0) (get "@value"))
+
+        commit! (fn [db]
+                  (let [index-files-ch (async/chan)
+                        ;; monitor for new index files and push across network
+                        _    (push-new-index-files config index-files-ch)
+                        resp (fluree/commit! ledger db {:file-data?     true
+                                                        :index-files-ch index-files-ch})]
+                    (log/debug "New commit for ledger" ledger-id "with tx-id: " tx-id
+                               "processed in" (- (System/currentTimeMillis) start-time) "milliseconds.")
+                    resp))]
     (-> ledger
         fluree/db
-        (update-default-context defaultContext)
-        (fluree/stage txn' opts)
+        (update-default-context default-context)
+        (fluree/stage2 txn)
         deref!
         (commit!))))
 

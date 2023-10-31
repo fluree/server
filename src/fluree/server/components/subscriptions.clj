@@ -1,7 +1,6 @@
 (ns fluree.server.components.subscriptions
   (:require [clojure.core.async :as async]
             [donut.system :as ds]
-            [fluree.db.util.core :as util]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [ring.adapter.jetty9.websocket :as ws])
@@ -72,7 +71,6 @@
   "Establish a new communication subscription with a client using async chan
   to send messages"
   [{:keys [sub-atom] :as subscriptions} websocket sub-id sub-chan opts]
-  (log/warn "establish-subscription - subscriptions: " subscriptions)
   (log/debug "Establishing new subscription id:" sub-id "with opts" opts)
   (swap! sub-atom update-in [:subs sub-id]
          (fn [{:keys [chan ws] :as existing-sub}]
@@ -147,7 +145,6 @@
   "Sends a message to all subscriptions. Message sent as JSON stringified map
   in the form: {action: commit, ledger: my/ledger, data: {...}}"
   [{:keys [sub-atom] :as subscriptions} action ledger-alias data]
-  (log/warn "SEND MESSAGE TO ALL subscriptions: " subscriptions)
   (let [data*   (if (string? data)
                   (json/parse data false)
                   data)
