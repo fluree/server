@@ -51,10 +51,10 @@
           query-req   {:body
                        (json/write-value-as-string
                          {"from"   ledger-name
-                          "select" '?n
-                          "where"  '["union"
-                                     {"id" ?s, "ex:name" ?n}
-                                     {"id" ?s, "ex:fname" ?n}]})
+                          "select" "?n"
+                          "where"  [["union"
+                                     {"id" "?s", "ex:name" "?n"}
+                                     {"id" "?s", "ex:fname" "?n"}]]})
                        :headers json-headers}
           query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res)))
