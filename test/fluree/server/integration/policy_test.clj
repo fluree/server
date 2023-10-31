@@ -45,7 +45,8 @@
           _            (assert (= 200 (:status txn-res)))
           secret-query {"from"   ledger-name
                         "select" {"?s" ["*"]}
-                        "where"  [["?s" "type" "ex:User"]]}
+                        "where"  {"@id" "?s"
+                                  "type" "ex:User"} #_[["?s" "type" "ex:User"]]}
           query-req    {:body
                         (json/write-value-as-string
                           (assoc secret-query
