@@ -1,6 +1,7 @@
 (ns fluree.server.consensus.core
   (:require [clojure.core.async :as async]
             [clojure.string :as str]
+            [fluree.db.conn.proto :as conn-proto]
             [fluree.db.util.log :as log]
             [fluree.raft :as raft]
             [fluree.server.consensus.network.tcp :as ftcp]
@@ -61,40 +62,40 @@
   "Returns a map of the necessary configurations for snapshot reading/writing, etc.
   used automatically by the raft system to handle all snapshot activities automaticallly."
   [{:keys [encryption-key storage-group-read storage-group-write storage-group-exists
-           storage-group-delete storage-group-list log-directory state-machine-atom] :as _raft-config}]
+           storage-group-delete storage-group-list log-path state-machine-atom] :as _raft-config}]
   {:path           "snapshots/"
    :state-atom     state-machine-atom
    :storage-read   (or storage-group-read
                        (io-file/connection-storage-read
-                         log-directory
+                         log-path
                          encryption-key))
    :storage-write  (or storage-group-write
                        (io-file/connection-storage-write
-                         log-directory
+                         log-path
                          encryption-key))
    :storage-exists (or storage-group-exists
                        (io-file/connection-storage-exists?
-                         log-directory))
+                         log-path))
    :storage-delete (or storage-group-delete
                        (io-file/connection-storage-delete
-                         log-directory))
+                         log-path))
    :storage-list   (or storage-group-list
                        (io-file/connection-storage-list
-                         log-directory))})
+                         log-path))})
 
 (defn add-ledger-storage-fns
   "Functions that write and read ledger data. Either supplied with config, or generated
   automatically with defaults"
-  [{:keys [encryption-key ledger-directory
+  [{:keys [encryption-key conn-storage-path
            storage-ledger-read storage-ledger-write] :as raft-config}]
   (assoc raft-config
     :storage-ledger-read (or storage-ledger-read
                              (io-file/connection-storage-read
-                               ledger-directory
+                               conn-storage-path
                                encryption-key))
     :storage-ledger-write (or storage-ledger-write
                               (io-file/connection-storage-write
-                                ledger-directory
+                                conn-storage-path
                                 encryption-key))))
 
 (defn add-state-machine
@@ -115,7 +116,7 @@
                        :state-machine (raft-helpers/handler handler state-machine-config))))
 
 (defn add-snapshot-config
-  [{:keys [state-machine-atom log-directory] :as raft-config}]
+  [raft-config]
   (let [snapshot-config (build-snapshot-config raft-config)]
     (assoc raft-config :snapshot-write (raft-helpers/snapshot-writer snapshot-config)
                        :snapshot-reify (raft-helpers/snapshot-reify snapshot-config)
@@ -124,24 +125,24 @@
                        :snapshot-list-indexes (raft-helpers/snapshot-list-indexes snapshot-config))))
 
 (defn add-server-configs
-  [{:keys [consensus-this-server consensus-servers] :as raft-state}]
-  (when-not (string? consensus-servers)
+  [{:keys [this-server servers] :as raft-state}]
+  (when-not (string? servers)
     (throw (ex-info (str "Cannot start raft without a list of participating servers separated by a comma or semicolon. "
                          "If this is a single server, please specify this-server instead of servers.")
                     {:status 400 :error :db/invalid-server-address})))
-  (let [servers            (mapv str/trim (str/split consensus-servers #"[,;]"))
-        this-server        (if consensus-this-server
-                             (str/trim consensus-this-server)
-                             (if (= 1 (count servers))
-                               (first servers)
+  (let [servers*           (mapv str/trim (str/split servers #"[,;]"))
+        this-server*       (if this-server
+                             (str/trim this-server)
+                             (if (= 1 (count servers*))
+                               (first servers*)
                                (throw (ex-info "Must specify this-server if multiple servers are specified"
                                                {:status 400 :error :db/invalid-server-address}))))
-        server-configs-map (mapv multi-addr/multi->map servers)
-        this-server-map    (multi-addr/multi->map this-server)
+        server-configs-map (mapv multi-addr/multi->map servers*)
+        this-server-map    (multi-addr/multi->map this-server*)
         this-server-cfg    (raft-helpers/validated-this-server-config this-server-map server-configs-map)]
     (raft-helpers/validated-raft-servers server-configs-map)
-    (assoc raft-state :this-server this-server
-                      :servers servers
+    (assoc raft-state :this-server this-server*
+                      :servers servers*
                       :this-server-config this-server-cfg
                       :server-configs server-configs-map
                       :port (:port this-server-cfg))))
@@ -153,33 +154,66 @@
     (assoc raft-config :raft-initialized-chan raft-initialized-chan
                        :leader-change-fn leader-change-fn*)))
 
+(defn path-safe-server-address
+  "For creating part of a default log path if not specified in config,
+  we use the multi-address of the server, but we want convert the `/`
+  to `-` so that we don't create nested directories which isn't needed
+  here."
+  [server-address]
+  (-> server-address
+      (str/replace #"^/" "") ;; strip leading /
+      (str/replace #"/$" "") ;; strip trailing /
+      (str/replace "/" "-"))) ;; replace / with -
+
+(defn add-trailing-slash
+  "Adds a '/' to end of string path if it doesn't already exist."
+  [path]
+  (if (str/ends-with? path "/")
+    path
+    (str path "/")))
 
 (defn canonicalize-directories
-  [{:keys [log-directory ledger-directory this-server] :as raft-config}]
-  (let [log-directory*    (-> (or log-directory
-                                  (str "./data/" (name this-server) "/raftlog/"))
-                              io-file/canonicalize-path)
-        ledger-directory* (-> (or ledger-directory
-                                  (str "./data/" (name this-server) "/ledger/"))
-                              io-file/canonicalize-path)]
-    (assoc raft-config :log-directory log-directory*
-                       :ledger-directory* ledger-directory*)))
+  [{:keys [log-path conn-storage-path this-server] :as raft-config}]
+  (log/warn "LOG PATH: " log-path)
+  (log/warn "CONN STORAGE PATH: " conn-storage-path)
+  (let [log-path*          (-> (or (some-> log-path add-trailing-slash)
+                                   (str "./data/" (path-safe-server-address this-server) "/_log/"))
+                               io-file/canonicalize-path)
+        conn-storage-path* (-> (or conn-storage-path
+                                   (str "./data/" (path-safe-server-address this-server) "/"))
+                               io-file/canonicalize-path)]
+    (log/warn "LOG PATH*: " log-path*)
+    (log/warn "CONN STORAGE PATH*: " conn-storage-path*)
+    (assoc raft-config :log-path log-path*
+                       :log-directory log-path* ;; note raft library config is `:log-directory`
+                       :conn-storage-path conn-storage-path*)))
 
+
+(defn is-shared-storage?
+  "If conn method is :file or :memory, returns false, else true."
+  [conn]
+  (let [method (conn-proto/-method conn)]
+    (if (#{:file :memory} method)
+      false
+      true)))
 
 (defn start
-  [handler {:keys [log-history entries-max storage-type catch-up-rounds]
+  [handler {:keys [log-history entries-max shared-storage catch-up-rounds fluree/conn]
             :or   {log-history     10
                    entries-max     50
                    catch-up-rounds 10}
             :as   raft-config}]
-  (let [raft-config*           (-> raft-config
+  (let [shared-storage?        (if (some? shared-storage)
+                                 (boolean shared-storage)
+                                 (is-shared-storage? conn))
+        raft-config*           (-> raft-config
                                    (assoc :event-chan (async/chan)
                                           :command-chan (async/chan)
                                           :send-rpc-fn raft-helpers/send-rpc
                                           :log-history log-history
                                           :entries-max entries-max
                                           :catch-up-rounds catch-up-rounds
-                                          :only-leader-snapshots (not= :file storage-type))
+                                          :shared-storage? shared-storage?)
                                    (add-server-configs)
                                    (canonicalize-directories)
                                    (add-leader-change-fn)
@@ -198,7 +232,7 @@
         close-fn               (raft-helpers/close-everything-fn raft (:this-server-config raft-config*) server-shutdown-fn)
         final-map              (-> raft-config*
                                    (select-keys [:this-server :this-server-config :server-configs :storage-ledger-read
-                                                 :join? :event-chan :command-chan :private-keys :open-api])
+                                                 :join? :event-chan :command-chan :private-keys])
                                    (assoc :raft raft
                                           :close close-fn
                                           :server-shutdown server-shutdown-fn ;; TODO - since shutdown of this happens in the :close function below, does this need to remain in this map for anything downstream?

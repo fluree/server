@@ -37,23 +37,77 @@
                                                       :type "@type"
                                                       :ex   "http://example.com/"
                                                       :f    "https://ns.flur.ee/ledger#"}}]}}
- :fluree/consensus  {:consensus-servers     #or [#env FLUREE_CONSENSUS_SERVERS
-                                                 #profile {:dev    "/ip4/127.0.0.1/tcp/62071"
-                                                           :prod   nil
-                                                           :docker "/ip4/127.0.0.1/tcp/62071"}]
-                     :consensus-this-server #or [#env FLUREE_CONSENSUS_THIS_SERVER
-                                                 #profile {:dev    "/ip4/127.0.0.1/tcp/62071"
-                                                           :prod   nil
-                                                           :docker "/ip4/127.0.0.1/tcp/62071"}]
-                     :consensus-type        #or [#env FLUREE_CONSENSUS_TYPE
-                                                 #profile {:dev    :raft
-                                                           :prod   :raft
-                                                           :docker :raft}]
-                     ;; TODO - trace down both uses of private-key vs private-keys reconcile
-                     :private-key           nil
-                     :private-keys          nil
-                     :log-directory         nil #_"./data/log/"
-                     :ledger-directory      nil #_"./data/ledger/"
-                     :encryption-key        nil
-                     :storage-type          :file
-                     :open-api              true}}
+ :fluree/consensus  {
+                     ;; servers: a list of servers comma-separated in multi-addr format
+                     ;; currently all addresses should be of type `/ip4/...` or `/ip6/...`
+                     ;; While this setting can be consistent for all servers in the cluster,
+                     ;; the following setting for :this-server must uniquely identify each
+                     ;; server in the cluster and must be one of the addresses listed here
+                     :servers         #or [#env FLUREE_CONSENSUS_SERVERS
+                                           #profile {:dev    "/ip4/127.0.0.1/tcp/62071"
+                                                     :prod   "/ip4/127.0.0.1/tcp/62071"
+                                                     :docker "/ip4/127.0.0.1/tcp/62071"}]
+
+                     ;; this-server: which of the above listed :servers this server should identify as
+                     ;; if only one server is provided in :servers, this can be blank as it is implied
+                     ;; this is the only server
+                     :this-server     #or [#env FLUREE_CONSENSUS_THIS_SERVER
+                                           #profile {:dev    nil
+                                                     :prod   nil
+                                                     :docker nil}]
+                     ;; consensus-type: either :raft or :none
+                     :consensus-type  #or [#env FLUREE_CONSENSUS_TYPE
+                                           #profile {:dev    :raft
+                                                     :prod   :raft
+                                                     :docker :raft}]
+                     ;; log-path: where to store raft log files
+                     ;; If empty, will default to FLUREE_STORAGE_PATH/<consensus-this-server>/raftlogs
+                     :log-path        #or [#env FLUREE_CONSENSUS_LOG_PATH
+                                           #profile {:dev    nil
+                                                     :prod   "data/_logs"
+                                                     :docker "data/_logs"}]
+                     ;; timeout-ms: how long to wait until kicking off a leadership election process
+                     ;; typical range would be 200ms->500ms, increase more you have a slow network
+                     :timeout-ms      #or [#env FLUREE_CONSENSUS_TIMEOUT_MS
+                                           #profile {:dev    500
+                                                     :prod   500
+                                                     :docker 500}]
+                     ;; heartbeat-ms: how often to send a heartbeat to other servers, ideally is
+                     ;; approximately 1/3 of timeout-ms.
+                     :heartbeat-ms    #or [#env FLUREE_CONSENSUS_HEARTBEAT_MS
+                                           #profile {:dev    150
+                                                     :prod   150
+                                                     :docker 150}]
+                     ;; entries-max: how many log entries per log file, before rotating to a new file
+                     :entries-max     #or [#env FLUREE_CONSENSUS_ENTRIES_MAX
+                                           #profile {:dev    50
+                                                     :prod   50
+                                                     :docker 50}]
+                     ;; log-history: how many historical raft log files to keep, only the latest log
+                     ;; file is used for consensus, the rest are for debugging or recovery purposes
+                     ;; each log file will contain entries-max entries
+                     :log-history     #or [#env FLUREE_CONSENSUS_LOG_HISTORY
+                                           #profile {:dev    10
+                                                     :prod   10
+                                                     :docker 10}]
+                     ;; catch-up-rounds: highly unlikely this needs to be changed,
+                     ;; used when adding a new server to the cluster, how many rounds max to try to catch up
+                     :catch-up-rounds #or [#env FLUREE_CONSENSUS_CATCH_UP_ROUNDS
+                                           #profile {:dev    10
+                                                     :prod   10
+                                                     :docker 10}]
+                     ;; shared-storage: It is recommended to leave this blank (nil)
+                     ;; and Fluree will default this to false for connection types of
+                     ;; fluree:file and fluree:memory, else true for all other connection types.
+                     ;; When true, only the leader server will write new data/commits/index files
+                     ;; to storage. When false, all servers in the cluster will write every file
+                     ;; for complete redundancy.
+                     ;;
+                     ;; The only time you may want to explicitly set this to true
+                     ;; is if using fluree:file connection type where the storage is
+                     ;; shared across all servers (such as AWS EFS filesystem, or a shared NFS mount).
+                     :shared-storage  #or [#env FLUREE_CONSENSUS_SHARED_STORAGE
+                                           #profile {:dev    nil
+                                                     :prod   nil
+                                                     :docker nil}]
+                     :private-keys    nil}}
