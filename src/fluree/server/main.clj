@@ -97,4 +97,5 @@
 (defn -main
   [& args]
   (let [profile (or (-> args first keyword) :prod)]
+    (log/info "Starting fluree/server with profile:" profile)
     (ds/start profile)))
