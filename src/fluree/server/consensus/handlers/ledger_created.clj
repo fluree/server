@@ -4,6 +4,7 @@
             [fluree.server.consensus.handlers.new-commit :as new-commit]
             [fluree.db.util.filesystem :as fs]
             [fluree.db.util.log :as log]
+            [fluree.server.components.subscriptions :as subs]
             [fluree.server.components.watcher :as watcher])
   (:import (java.io File)))
 
@@ -93,7 +94,9 @@
 
 (defn broadcast!
   "Responsible for producing the event broadcast to connected peers."
-  [{:keys [fluree/watcher] :as _config} {:keys [ledger-id server tx-id] :as handler-result}]
+  [{:keys [fluree/watcher fluree/subscriptions] :as config}
+   {:keys [ledger-id server tx-id commit-file-meta] :as handler-result}]
   (log/info (str "New Ledger successfully created by server " server ": " ledger-id " with tx-id: " tx-id "."))
   (watcher/deliver-watch watcher tx-id handler-result)
+  (subs/send-message-to-all subscriptions "ledger-created" ledger-id (:json commit-file-meta))
   :success) ;; result of this function is not used

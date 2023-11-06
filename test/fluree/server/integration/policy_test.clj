@@ -45,7 +45,8 @@
           _            (assert (= 200 (:status txn-res)))
           secret-query {"from"   ledger-name
                         "select" {"?s" ["*"]}
-                        "where"  [["?s" "rdf:type" "ex:User"]]}
+                        "where"  {"@id" "?s"
+                                  "type" "ex:User"}}
           query-req    {:body
                         (json/write-value-as-string
                           (assoc secret-query
@@ -64,9 +65,9 @@
           "query policy opts should prevent seeing bob's secret")
       (let [txn-req   {:body
                        (json/write-value-as-string
-                        {"ledger" ledger-name
-                         "@context" "https://ns.flur.ee"
-                         "delete"   [{"id" "ex:alice"
+                        {"@context" "https://ns.flur.ee"
+                         "ledger"   ledger-name
+                         "delete"   [{"id"        "ex:alice"
                                       "ex:secret" "alice's secret"}]
                          "insert"   [{"id"        "ex:alice"
                                       "ex:secret" "alice's NEW secret"}]
@@ -91,11 +92,11 @@
             "alice's secret should be modified")
         (let [txn-req {:body
                        (json/write-value-as-string
-                        {"ledger" ledger-name
-                         "@context" "https://ns.flur.ee"
-                         "insert"   [{"id"        "ex:bob"}
+                        {"@context" "https://ns.flur.ee"
+                         "ledger"   ledger-name
+                         "insert"   [{"id"       "ex:bob"}
                                      "ex:secret" "bob's new secret"]
-                         "opts"   {"role" "ex:userRole"
+                         "opts"     {"role" "ex:userRole"
                                      "did"  alice-did}})
                        :headers json-headers}
               txn-res (api-post :transact txn-req)]

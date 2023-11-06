@@ -66,7 +66,8 @@
       (let [query-req (<!! (cred/generate
                             {"from"   ledger-name
                              "select" {"?t" ["*"]}
-                             "where"  [["?t" "type" "schema:Test"]]}
+                             "where"  {"@id" "?t"
+                                       "type" "schema:Test"}}
                             (:private auth)))
             query-res (api-post :query
                                 {:body    (json/write-value-as-string query-req)

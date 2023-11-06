@@ -23,7 +23,7 @@
                        (json/write-value-as-string
                          {"from"   ledger-name
                           "select" '{?t ["*"]}
-                          "where"  '[[?t "type" "schema:Test"]]})
+                          "where"  '{"id" ?t, "type" "schema:Test"}})
                        :headers json-headers}
           query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res)))
@@ -51,10 +51,10 @@
           query-req   {:body
                        (json/write-value-as-string
                          {"from"   ledger-name
-                          "select" '?n
-                          "where"  '[{"union"
-                                      [[[?s "ex:name" ?n]]
-                                       [[?s "ex:fname" ?n]]]}]})
+                          "select" "?n"
+                          "where"  [["union"
+                                     {"id" "?s", "ex:name" "?n"}
+                                     {"id" "?s", "ex:fname" "?n"}]]})
                        :headers json-headers}
           query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res)))
@@ -88,9 +88,10 @@
           _           (assert (= 200 (:status txn-res)))
           query       {"from"   ledger-name
                        "select" '[?name ?favColor]
-                       "where"  '[[?s "rdf:type" "ex:User"]
-                                  [?s "schema:name" ?name]
-                                  {"optional" [?s "ex:favColor" ?favColor]}]}
+                       "where"  '[{"id" ?s
+                                   "rdf:type" "ex:User"
+                                   "schema:name" ?name}
+                                  ["optional" {"id" ?s, "ex:favColor" ?favColor}]]}
           query-req   {:body
                        (json/write-value-as-string query)
                        :headers json-headers}
@@ -119,7 +120,7 @@
                        (json/write-value-as-string
                          {"from"      ledger-name
                           "selectOne" '{?t ["*"]}
-                          "where"     '[[?t "type" "schema:Test"]]})
+                          "where"     '{"id" ?t, "type" "schema:Test"}})
                        :headers json-headers}
           query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res)))
@@ -181,9 +182,9 @@
                      (json/write-value-as-string
                        {"from"    ledger-name
                         "select"  ["?name" "?age" "?canVote"]
-                        "where"   [["?s" "schema:name" "?name"]
-                                   ["?s" "schema:age" "?age"]
-                                   {"bind" {"?canVote" "(>= ?age 18)"}}]
+                        "where"   [{"schema:name" "?name"
+                                    "schema:age" "?age"}
+                                   ["bind" "?canVote" "(>= ?age 18)"]]
                         "orderBy" ["?name"]})
                      :headers json-headers}
           query-res (api-post :query query-req)]
@@ -215,7 +216,7 @@
                        (pr-str {:context edn-context
                                 :from    ledger-name
                                 :select  '{?t [:*]}
-                                :where   '[[?t :type :schema/Test]]})
+                                :where   '{:id ?t :type :schema/Test}})
                        :headers edn-headers}
           query-res   (post :query query-req)]
       (is (= 200 (:status query-res))

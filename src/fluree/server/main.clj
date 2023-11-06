@@ -9,6 +9,7 @@
             [fluree.server.components.consensus :as consensus]
             [fluree.server.components.http :as http]
             [fluree.server.components.watcher :as watcher]
+            [fluree.server.components.subscriptions :as subscriptions]
             [fluree.server.components.fluree :as fluree])
   (:import (java.io PushbackReader))
   (:gen-class))
@@ -39,23 +40,26 @@
    {:env    {:http/server       {}
              :fluree/connection {}
              :fluree/consensus  {}}
-    :fluree {:conn      fluree/conn
-             :consensus consensus/consensus
-             :watcher   watcher/watcher}
+    :fluree {:conn          fluree/conn
+             :consensus     consensus/consensus
+             :watcher       watcher/watcher
+             :subscriptions subscriptions/subscriptions}
     :http   {:server  http/server
-             :handler #::ds{:start  (fn [{{:keys [fluree/connection fluree/consensus fluree/watcher] :as cfg
+             :handler #::ds{:start  (fn [{{:keys [fluree/connection fluree/consensus fluree/watcher fluree/subscriptions] :as cfg
                                            {:keys [routes middleware]} :http}
                                           ::ds/config}]
                                       (log/debug "ds/config:" cfg)
-                                      (http/app {:fluree/conn      connection
-                                                 :fluree/consensus consensus
-                                                 :fluree/watcher   watcher
-                                                 :http/routes      routes
-                                                 :http/middleware  middleware}))
-                            :config {:http              (ds/ref [:env :http/server])
-                                     :fluree/connection (ds/ref [:fluree :conn])
-                                     :fluree/watcher    (ds/ref [:fluree :watcher])
-                                     :fluree/consensus  (ds/ref [:fluree :consensus])}}}}})
+                                      (http/app {:fluree/conn          connection
+                                                 :fluree/consensus     consensus
+                                                 :fluree/watcher       watcher
+                                                 :fluree/subscriptions subscriptions
+                                                 :http/routes          routes
+                                                 :http/middleware      middleware}))
+                            :config {:http                 (ds/ref [:env :http/server])
+                                     :fluree/connection    (ds/ref [:fluree :conn])
+                                     :fluree/watcher       (ds/ref [:fluree :watcher])
+                                     :fluree/consensus     (ds/ref [:fluree :consensus])
+                                     :fluree/subscriptions (ds/ref [:fluree :subscriptions])}}}}})
 
 (defmethod ds/named-system :base
   [_]
@@ -93,4 +97,5 @@
 (defn -main
   [& args]
   (let [profile (or (-> args first keyword) :prod)]
+    (log/info "Starting fluree/server with profile:" profile)
     (ds/start profile)))

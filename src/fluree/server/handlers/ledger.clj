@@ -16,7 +16,7 @@
                          did (assoc :did did)))
         query* (if opts (assoc query :opts opts) query)]
     {:status 200
-     :body   (deref! (fluree/from-query conn query* {:format format}))}))
+     :body   (deref! (fluree/query-connection conn query* {:format format}))}))
 
 (defhandler history
   [{:keys [fluree/conn credential/did]

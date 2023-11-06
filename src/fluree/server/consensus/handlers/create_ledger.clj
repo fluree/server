@@ -37,7 +37,7 @@
 (defn create-and-commit
   "Returns promise with eventual response, which could be an exception."
   [{:keys [fluree/conn] :as config}
-   {:keys [ledger-id txn tx-id] :as _params}]
+   {:keys [ledger-id txn txn-context tx-id] :as _params}]
   (log/trace "Creating ledger" ledger-id "with txn:" txn)
   (let [opts    (parse-opts txn)
         ledger  (deref! (fluree/create conn ledger-id opts))
@@ -51,7 +51,7 @@
     ;; following uses :file-data? and will return map with {:keys [db data-file commit-file]}
     (-> ledger
         fluree/db
-        (fluree/stage2 txn)
+        (fluree/stage2 txn {:context txn-context})
         deref!
         commit!)))
 
