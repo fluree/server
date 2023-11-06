@@ -46,7 +46,7 @@
           secret-query {"from"   ledger-name
                         "select" {"?s" ["*"]}
                         "where"  {"@id" "?s"
-                                  "type" "ex:User"} #_[["?s" "type" "ex:User"]]}
+                                  "type" "ex:User"}}
           query-req    {:body
                         (json/write-value-as-string
                           (assoc secret-query

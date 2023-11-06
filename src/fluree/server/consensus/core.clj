@@ -20,24 +20,24 @@
 (defn queue-new-ledger
   "Queues a new ledger into the consensus layer for processing.
   Returns a core async channel that will eventually contain true if successful."
-  [group conn-type ledger-id tx-id txn opts]
+  [group conn-type ledger-id tx-id txn txn-context opts]
   (log/debug "Consensus - queue new ledger:" ledger-id tx-id txn)
   (txproto/-new-entry-async
     group
-    [:ledger-create {:txn       txn
-                     :conn-type conn-type
-                     :size      (count txn)
-                     :tx-id     tx-id
-                     :ledger-id ledger-id
-                     :opts      opts
-                     :instant   (System/currentTimeMillis)}]))
+    [:ledger-create {:txn         txn
+                     :txn-context txn-context
+                     :conn-type   conn-type
+                     :size        (count txn)
+                     :tx-id       tx-id
+                     :ledger-id   ledger-id
+                     :opts        opts
+                     :instant     (System/currentTimeMillis)}]))
 
 (defn queue-new-transaction
   "Queues a new transaction into the consensus layer for processing.
   Returns a core async channel that will eventually contain a truthy value if successful."
-  [group conn-type ledger-id tx-id txn default-context opts]
+  [group conn-type ledger-id tx-id txn txn-context opts]
   (log/trace "queue-new-transaction txn:" txn)
-  (log/trace "queue-new-transaction default-context:" default-context)
   (txproto/-new-entry-async
     group
     [:tx-queue {:txn            txn
@@ -45,7 +45,7 @@
                 :size           (count txn)
                 :tx-id          tx-id
                 :ledger-id      ledger-id
-                :defaultContext default-context
+                :txn-context    txn-context
                 :opts           opts
                 :instant        (System/currentTimeMillis)}]))
 

@@ -78,7 +78,7 @@
 
 
 (defn do-transaction
-  [{:keys [:fluree/conn] :as config} {:keys [ledger-id tx-id txn] :as params}]
+  [{:keys [:fluree/conn] :as config} {:keys [ledger-id tx-id txn txn-context] :as params}]
   (let [start-time (System/currentTimeMillis)
         _          (log/debug "Starting transaction processing for ledger:" ledger-id
                               "with tx-id" tx-id ". Transaction sat in queue for"
@@ -101,7 +101,7 @@
     (-> ledger
         fluree/db
         (update-default-context default-context)
-        (fluree/stage2 txn)
+        (fluree/stage2 txn {:context txn-context})
         deref!
         (commit!))))
 

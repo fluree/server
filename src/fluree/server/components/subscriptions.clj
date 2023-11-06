@@ -103,12 +103,12 @@
 (defn unsubscribe-ledger
   "Unsubscribe from ledger"
   [{:keys [sub-atom] :as subscriptions} sub-id {:keys [ledger] :as request}]
-  (log/debug "Unsubscribe websocket request by sub-id" sub-id "request:" request)
+  (log/debug "Unsubscribe websocket request by sub-id:" sub-id "request:" request)
   (swap! sub-atom update-in [:subs sub-id :ledgers]
          (fn [ledger-subs]
            (if ledger-subs
              (dissoc ledger-subs ledger)
-             (log/info "Existing subscription for sub-id: " sub-id "cannot be found, assume just closed.")))))
+             (log/info "Existing subscription for sub-id:" sub-id "cannot be found, assume just closed.")))))
 
 (defn send-message
   "Sends a message to an individual socket. If an exception occurs,
@@ -118,12 +118,12 @@
     (try
       (ws/send! ws message)
       (catch IOException _
-        (log/info "Websocket channel closed (java.io.IOException) for sub-id: " sub-id))
+        (log/info "Websocket channel closed (java.io.IOException) for sub-id:" sub-id))
       (catch ClosedChannelException _
         (log/info "Websocket channel closed for sub-id: " sub-id)
         (close-subscription subscriptions sub-id nil nil))
       (catch Exception e
-        (log/error e "Error sending message to websocket subscriber: " sub-id)
+        (log/error e "Error sending message to websocket subscriber:" sub-id)
         (close-subscription subscriptions sub-id nil nil)))))
 
 
@@ -196,20 +196,20 @@
           (log/trace "Websocket keep-alive from sub-id:" sub-id)
           nil)))
     (catch Exception e
-      (log/error e "Error with :on-text message from websocket subscriber: " sub-id))))
+      (log/error e "Error with :on-text message from websocket subscriber:" sub-id))))
 
 (defmethod client-message :on-bytes
   [{:keys [http/sub-id payload offset len]}]
-  (log/info "websocket :on-bytes (no-op) message for sub-id: " sub-id))
+  (log/info "websocket :on-bytes (no-op) message for sub-id:" sub-id))
 
 ;; pong handled automatically, no response needed
 (defmethod client-message :on-ping
   [{:keys [http/sub-id payload]}]
-  (log/trace "ws :on-ping message received from: " sub-id "with payload: " payload))
+  (log/trace "ws :on-ping message received from:" sub-id "with payload:" payload))
 
 (defmethod client-message :on-error
   [{:keys [http/sub-id error]}]
-  (log/warn "Websocket error for sub-id: " sub-id "with error: " (type error)))
+  (log/warn "Websocket error for sub-id:" sub-id "with error:" (type error)))
 
 (defmethod client-message :on-close
   [{:keys [fluree/subscriptions http/sub-id status-code reason]}]
