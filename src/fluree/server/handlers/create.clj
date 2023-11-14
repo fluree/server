@@ -77,7 +77,9 @@
     {:keys [body]} :parameters}]
   (log/debug "create body:" body)
   (let [txn-context    (ctx-util/txn-context body)
-        [expanded-txn] (util/sequential (jld-processor/expand body))
+        [expanded-txn] (-> (ctx-util/use-fluree-context body)
+                           jld-processor/expand
+                           util/sequential)
         ledger-id      (-> expanded-txn (get const/iri-ledger) (get 0) (get "@value"))
         resp-p         (promise)]
     (or (not (deref! (fluree/exists? conn ledger-id)))

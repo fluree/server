@@ -82,7 +82,9 @@
   [{:keys          [fluree/conn fluree/consensus fluree/watcher]
     {:keys [body]} :parameters}]
   (let [txn-context    (ctx-util/txn-context body)
-        [expanded-txn] (util/sequential (jld-processor/expand body))
+        [expanded-txn] (-> (ctx-util/use-fluree-context body)
+                           jld-processor/expand
+                           util/sequential)
         ledger-id  (-> expanded-txn (get const/iri-ledger) (get 0) (get "@value"))
         resp-p     (promise)]
     (log/trace "parsed transact req:" expanded-txn)

@@ -51,7 +51,7 @@
     ;; following uses :file-data? and will return map with {:keys [db data-file commit-file]}
     (-> ledger
         fluree/db
-        (fluree/stage2 txn {:context txn-context})
+        (fluree/stage txn {:context txn-context})
         deref!
         commit!)))
 

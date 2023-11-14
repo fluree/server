@@ -101,7 +101,7 @@
     (-> ledger
         fluree/db
         (update-default-context default-context)
-        (fluree/stage2 txn {:context txn-context})
+        (fluree/stage txn {:context txn-context})
         deref!
         (commit!))))
 

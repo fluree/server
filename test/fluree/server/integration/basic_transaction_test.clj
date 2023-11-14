@@ -12,7 +12,7 @@
     (let [ledger-name (str "create-endpoint-" (random-uuid))
           req         (json/write-value-as-string
                        {"ledger"   ledger-name
-                        "@context" ["https://ns.flur.ee" {"foo" "http://foobar.com/"}]
+                        "@context" {"foo" "http://foobar.com/"}
                         "insert"   [{"id"      "ex:create-test"
                                      "type"    "foo:test"
                                      "ex:name" "create-endpoint-test"}]})
@@ -55,7 +55,6 @@
     (let [ledger-name (create-rand-ledger "transact-endpoint-json-test")
           req         (json/write-value-as-string
                        {"ledger"   ledger-name
-                        "@context" "https://ns.flur.ee"
                         "insert"   {"id"      "ex:transaction-test"
                                     "type"    "schema:Test"
                                     "ex:name" "transact-endpoint-json-test"}})
