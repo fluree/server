@@ -6,7 +6,6 @@
     [fluree.db.query.history :as fqh]
     [fluree.db.validation :as v]
     [fluree.db.json-ld.credential :as cred]
-    [fluree.db.json-ld.transact :as transact]
     [fluree.db.util.log :as log]
     [fluree.server.components.subscriptions :as subscriptions]
     [fluree.server.handlers.ledger :as ledger]
@@ -35,9 +34,6 @@
 
 (def LedgerAddress
   (m/schema [:string {:min 1}]))
-
-(def Transaction
-  (m/schema ::transact/txn {:registry transact/registry}))
 
 (def TransactOpts
   (m/schema [:map-of :keyword :any]))
