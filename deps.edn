@@ -1,9 +1,9 @@
 {:deps  {org.clojure/clojure            {:mvn/version "1.11.1"}
          org.clojure/core.async         {:mvn/version "1.6.681"}
          com.fluree/db                  {:git/url "https://github.com/fluree/db.git"
-                                         :git/sha "a7ec8bbd8b226f5f8f736d9825ca073637d071dc"}
+                                         :git/sha "c12f5c01165828a179ce8fc2197ccb6dc7ed8d20"}
          com.fluree/json-ld             {:git/url "https://github.com/fluree/json-ld.git"
-                                         :git/sha "2b4a4cf75f2b823eea7fa221c6b9cbeb68299e90"}
+                                         :git/sha "c2bef3785631dd178b9261e2f4d2ee012fed984c"}
 
          club.donutpower/system         {:mvn/version "0.0.165"}
 
@@ -13,7 +13,7 @@
          net.async/async                {:mvn/version "0.1.1"}
 
          ;; serialization, compression
-         com.taoensso/nippy             {:mvn/version "3.2.0"}
+         com.taoensso/nippy             {:mvn/version "3.3.0"}
          org.xerial.snappy/snappy-java  {:mvn/version "1.1.10.5"}
 
          ;; config
@@ -26,11 +26,11 @@
          ;; http
          ;; ring-jetty9-adapter 0.30.x uses Jetty 12 & requires JDK 17+
          ;; so we have to stay on 0.22.x b/c our minimum JDK version is 11
-         info.sunng/ring-jetty9-adapter ^{:antq/exclude "0.30.x"} {:mvn/version  "0.22.2"}
+         info.sunng/ring-jetty9-adapter ^{:antq/exclude "0.30.x"} {:mvn/version  "0.22.4"}
          metosin/reitit                 {:mvn/version "0.6.0"}
          metosin/muuntaja               {:mvn/version "0.6.8"}
          metosin/malli                  {:git/url "https://github.com/metosin/malli.git"
-                                         :git/sha "5211aca498ff7b022c36de4ca713990f5e731a9c" }
+                                         :git/sha "4c788a674883cee3d737d6a91a2b235d6924b88a"}
          ring-cors/ring-cors            {:mvn/version "0.1.13"}
 
          ;; retries
@@ -64,5 +64,5 @@
    :exec-args   {:kaocha.filter/focus-meta [:pending]}}
 
   :eastwood
-  {:extra-deps {jonase/eastwood {:mvn/version "1.4.0"}}
+  {:extra-deps {jonase/eastwood {:mvn/version "1.4.2"}}
    :main-opts  ["-m" "eastwood.lint" {}]}}}
