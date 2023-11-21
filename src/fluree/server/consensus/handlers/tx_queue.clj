@@ -162,19 +162,20 @@
          processed (list)] ;; list of transactions that have been evaluated
     ;; TODO - push-consensus will only work if a leader. As leader can only do txns for the moment this is OK
     ;; TODO - but once the work gets spread out to other servers it will have to push the commit to the leader
-    (let [processed*     (conj processed tx-id)]
+    (when (acquire-lock ledger-id tx-id)
+      (let [processed* (conj processed tx-id)]
 
-      ;; process the transaction, a success (commit) or exception (tx-exception) will be broadcast to network
-      (process-transaction config next-txn-map)
+        ;; process the transaction, a success (commit) or exception (tx-exception) will be broadcast to network
+        (process-transaction config next-txn-map)
 
-      (if-let [next-txn-in-queue (get-next-transaction config processed* ledger-id)]
-        (do
-          (update-lock ledger-id (:tx-id next-txn-in-queue))
-          (recur next-txn-in-queue (trim-processed processed*)))
-        ;; if no more transactions, return last consensus push
-        (do
-          (release-lock ledger-id)
-          :success)))))
+        (if-let [next-txn-in-queue (get-next-transaction config processed* ledger-id)]
+          (do
+            (update-lock ledger-id (:tx-id next-txn-in-queue))
+            (recur next-txn-in-queue (trim-processed processed*)))
+          ;; if no more transactions, return last consensus push
+          (do
+            (release-lock ledger-id)
+            :success))))))
 
 
 (defn processor
@@ -184,8 +185,8 @@
 
   Return value is not used."
   [{:keys [:consensus/raft-state] :as config} {:keys [ledger-id] :as params}]
-  (when (and (my-responsibility? raft-state ledger-id)
-             (acquire-lock config ledger-id))
+  (log/debug "starting processor for ledger-id:" ledger-id)
+  (when (my-responsibility? raft-state ledger-id)
     (process-transactions config params)))
 
 
