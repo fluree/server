@@ -49,6 +49,10 @@
                  clj-http/clj-http           {:mvn/version "3.12.3"}
                  criterium/criterium         {:mvn/version "0.4.6"}}}
 
+  :run-dev
+  {:exec-fn   fluree.server.main/run-server
+   :exec-args {:profile :dev}}
+
   :test
   {:extra-paths ["test"]
    :extra-deps  {lambdaisland/kaocha {:mvn/version "1.87.1366"}
