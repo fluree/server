@@ -54,14 +54,78 @@
   (testing "can transact in JSON"
     (let [ledger-name (create-rand-ledger "transact-endpoint-json-test")
           req         (json/write-value-as-string
-                       {"ledger"   ledger-name
-                        "insert"   {"id"      "ex:transaction-test"
-                                    "type"    "schema:Test"
-                                    "ex:name" "transact-endpoint-json-test"}})
+                       {"ledger" ledger-name
+                        "insert" {"id"      "ex:transaction-test"
+                                  "type"    "schema:Test"
+                                  "ex:name" "transact-endpoint-json-test"}})
           res         (api-post :transact {:body req :headers json-headers})]
       (is (= 200 (:status res)))
       (is (= {"ledger" ledger-name, "t" 2}
              (-> res :body json/read-value (select-keys ["ledger" "t"])))))))
+
+(deftest ^:integration ^:json transaction-with-where-clause-test
+  (testing "can transact with a where clause"
+    (let [ledger-name (create-rand-ledger "transact-endpoint-json-test")
+          req1        (json/write-value-as-string
+                       {"ledger" ledger-name
+                        "insert" {"id"      "ex:transaction-test"
+                                  "type"    "schema:Test"
+                                  "ex:name" "transact-endpoint-json-test"}})
+          res1        (api-post :transact {:body req1, :headers json-headers})
+          _           (assert (= 200 (:status res1)))
+          req2        (json/write-value-as-string
+                       {"ledger" ledger-name
+                        "insert" {"id"      "?t"
+                                  "ex:name" "new-name"}
+                        "delete" {"id"      "?t"
+                                  "ex:name" "transact-endpoint-json-test"}
+                        "where"  {"id" "?t", "type" "schema:Test"}})
+          res2        (api-post :transact {:body req2, :headers json-headers})]
+      (is (= 200 (:status res2)))
+      (is (= [{"id"      "ex:transaction-test"
+               "type"    "schema:Test"
+               "ex:name" "new-name"}]
+             (->> {:body    (json/write-value-as-string
+                             {"select" {"ex:transaction-test" ["*"]}
+                              "from"   ledger-name})
+                   :headers json-headers}
+                  (api-post :query)
+                  :body
+                  json/read-value)))))
+  (testing "can transact with a where clause w/ optional"
+    (let [ledger-name (create-rand-ledger "transact-endpoint-json-test")
+          req1        (json/write-value-as-string
+                       {"ledger" ledger-name
+                        "insert" {"id"          "ex:transaction-test"
+                                  "type"        "schema:Test"
+                                  "schema:name" "transact-endpoint-json-test"}})
+          res1        (api-post :transact {:body req1, :headers json-headers})
+          _           (assert (= 200 (:status res1)))
+          req2        (json/write-value-as-string
+                       {"ledger" ledger-name
+                        "insert" {"id"          "?t"
+                                  "schema:name" "new-name"}
+                        "delete" {"id"                 "?t"
+                                  "schema:name"        "?n"
+                                  "schema:description" "?d"}
+                        "where"  [{"id" "?t", "type" "schema:Test"}
+                                  ["optional" {"id"          "?t"
+                                               "schema:name" "?n"}]
+                                  ["optional" {"id"                 "?t"
+                                               "schema:description" "?d"}]]})
+          res2        (api-post :transact {:body req2, :headers json-headers})]
+      (is (= 200 (:status res2)))
+      (is (= [{"id"          "ex:transaction-test"
+               "type"        "schema:Test"
+               "schema:name" "new-name"}]
+             (->> {:body    (json/write-value-as-string
+                             {"select" {"?t" ["*"]}
+                              "from"   ledger-name
+                              "where"  {"id" "?t", "type" "schema:Test"}})
+                   :headers json-headers}
+                  (api-post :query)
+                  :body
+                  json/read-value))))))
 
 #_(deftest ^:integration ^:edn transaction-edn-test
     (testing "can transact in EDN"
