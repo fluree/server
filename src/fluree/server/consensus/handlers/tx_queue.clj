@@ -67,16 +67,6 @@
   [raft-state ledger-id]
   (= :leader (:status raft-state)))
 
-
-(defn update-default-context
-  [db defaultContext]
-  (if defaultContext
-    (do
-      (log/trace "Updating default context to:" defaultContext)
-      (fluree/update-default-context db defaultContext))
-    db))
-
-
 (defn do-transaction
   [{:keys [:fluree/conn] :as config} {:keys [ledger-id tx-id txn txn-context] :as params}]
   (let [start-time (System/currentTimeMillis)
@@ -86,8 +76,6 @@
         ledger     (if (deref! (fluree/exists? conn ledger-id))
                      (deref! (fluree/load conn ledger-id))
                      (throw (ex-info "Ledger does not exist" {:ledger ledger-id})))
-
-        default-context (-> txn (get const/iri-default-context) (get 0) (get "@value"))
 
         commit! (fn [db]
                   (let [index-files-ch (async/chan)
@@ -100,7 +88,6 @@
                     resp))]
     (-> ledger
         fluree/db
-        (update-default-context default-context)
         (fluree/stage txn {:context txn-context})
         deref!
         (commit!))))
