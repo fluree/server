@@ -48,6 +48,14 @@
   (swap! consensus-port-2 find-open-port)
   (swap! consensus-port-3 find-open-port))
 
+(def default-context
+  {"id"     "@id"
+   "type"   "@type"
+   "graph"  "@graph"
+   "ex"     "http://example.com/"
+   "schema" "http://schema.org/"
+   "rdf"    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   "f"      "https://ns.flur.ee/ledger#"})
 
 (defmethod ds/named-system :test
   [_]
@@ -57,16 +65,7 @@
                              :fluree/connection
                              {:method       :memory
                               :parallelism  1
-                              :cache-max-mb 100
-                              :defaults
-                              {:context
-                               {"id"     "@id"
-                                "type"   "@type"
-                                "graph"  "@graph"
-                                "ex"     "http://example.com/"
-                                "schema" "http://schema.org/"
-                                "rdf"    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-                                "f"      "https://ns.flur.ee/ledger#"}}}
+                              :cache-max-mb 100}
                              :fluree/consensus
                              {:consensus-type        :raft
                               :consensus-servers     multi-addr-1
@@ -93,8 +92,9 @@
   (let [ledger-name (str name-root "-" (random-uuid))
         req         (json/stringify
                      {"ledger"   ledger-name
-                      "@context" "https://ns.flur.ee"
-                      "opts"     {"defaultContext" ["" {"foo" "http://foobar.com/"}]}
+                      "@context" ["https://ns.flur.ee"
+                                  default-context
+                                  {"foo" "http://foobar.com/"}]
                       "insert"   [{"id"       "foo:create-test"
                                    "type"     "foo:test"
                                    "foo:name" "create-endpoint-test"}]})
