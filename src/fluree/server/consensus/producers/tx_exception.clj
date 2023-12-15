@@ -2,7 +2,6 @@
   (:require [fluree.server.consensus.core :as consensus]
             [fluree.server.consensus.raft.core :as raft]))
 
-
 (defn consensus-push-tx-exception
   [{:keys [:consensus/state-atom :consensus/raft-state :fluree/conn] :as config}
    {:keys [ledger-id tx-id] :as _params}

@@ -4,10 +4,10 @@
             [fluree.server.components.http :as http-routes]
             [fluree.server.consensus.handlers.create-ledger :as create-ledger]
             [fluree.server.consensus.handlers.ledger-created :as ledger-created]
-            [fluree.server.consensus.handlers.tx-queue :as tx-queue]
-            [fluree.server.consensus.handlers.tx-exception :as tx-exception]
             [fluree.server.consensus.handlers.new-commit :as new-commit]
-            [fluree.server.consensus.handlers.new-index-file :as new-index-file]))
+            [fluree.server.consensus.handlers.new-index-file :as new-index-file]
+            [fluree.server.consensus.handlers.tx-exception :as tx-exception]
+            [fluree.server.consensus.handlers.tx-queue :as tx-queue]))
 
 (set! *warn-on-reflection* true)
 
@@ -57,8 +57,6 @@
    :server-add             {:summary "Attempts to add a new consensus server."}
    :server-remove          {:summary "Attempts to remove an existing consensus server"}})
 
-
-
 (def default-event-handlers
   {:fluree/ledger-create      {:summary "A new ledger create request was just received."}
    :fluree/ledger-created     {:summary    "A new ledger was just created."
@@ -78,9 +76,6 @@
                                :handler :TODO}
    :consensus/server-reassign {:summary "New worker assignments"}})
 
-
-
-
 (defn unhandled-route-exception
   "Handles any exceptions not handled directly by the respective handlers."
   [event parameters message cause]
@@ -92,7 +87,6 @@
                          :error      :node/consensus
                          :event      event
                          :parameters parameters}))))
-
 
 (defn do-handler!
   "Executes the handler with a try/catch"
@@ -118,7 +112,6 @@
                                  (str "Unexpected error in processor function for event " event
                                       " with message: " (ex-message e))
                                  e))))
-
 
 (defn create-handler
   [routes]

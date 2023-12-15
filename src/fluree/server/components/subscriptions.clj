@@ -7,7 +7,6 @@
   (:import (java.io IOException)
            (java.nio.channels ClosedChannelException)))
 
-
 ;; structure of subscriptions atom:
 ;{:subs    {"id" {:chan   port ;; <- core.async channel
 ;                 :ledgers {"some/ledger" {}} ;; <- map where each key is a ledger-id subscribed to
@@ -126,7 +125,6 @@
         (log/error e "Error sending message to websocket subscriber:" sub-id)
         (close-subscription subscriptions sub-id nil nil)))))
 
-
 (defn send-ledger-message
   "Sends a message only to subscriptions that subscribed to a ledger.
   Note the message format should be a JSON-stringified map in the form of:
@@ -140,7 +138,6 @@
           ;; TODO - use ledger subscription opts to filter out messages, permission
           (send-message subscriptions sub-id message))))))
 
-
 (defn send-message-to-all
   "Sends a message to all subscriptions. Message sent as JSON stringified map
   in the form: {action: commit, ledger: my/ledger, data: {...}}"
@@ -153,7 +150,6 @@
                                  "data"   data*})
         sub-ids (all-sub-ids @sub-atom)]
     (run! #(send-message subscriptions % message) sub-ids)))
-
 
 (defn close
   [{:keys [sub-atom] :as _subscriptions}]
@@ -171,7 +167,6 @@
         :stop   (fn [{::ds/keys [instance]}]
                   (close instance))
         :config {}})
-
 
 (defmulti client-message :msg-type)
 

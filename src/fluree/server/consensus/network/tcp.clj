@@ -1,9 +1,9 @@
 (ns fluree.server.consensus.network.tcp
-  (:require [net.async.tcp :as ntcp]
-            [clojure.core.async :as async]
-            [taoensso.nippy :as nippy]
+  (:require [clojure.core.async :as async]
             [fluree.db.util.async :refer [go-try]]
-            [fluree.db.util.log :as log])
+            [fluree.db.util.log :as log]
+            [net.async.tcp :as ntcp]
+            [taoensso.nippy :as nippy])
   (:import (java.net BindException InetSocketAddress)))
 
 (set! *warn-on-reflection* true)
@@ -38,8 +38,7 @@
 
 (comment
 
-  @connections
-  )
+  @connections)
 
 (defn close-all-connections
   [this-server]
@@ -49,22 +48,18 @@
         (async/close! write-chan))
       (swap! connections update-in [this-server :conn-to] dissoc remote-server))))
 
-
 (defn- serialize-message
   "Formats our message into byte array with prefixed integer size."
   [header data]
   (nippy/freeze [header data]))
 
-
 (defn- deserialize-message
   [msg]
   (nippy/thaw msg))
 
-
 (defn send-message
   [write-chan header data]
   (async/put! write-chan (serialize-message header data)))
-
 
 (defn send-rpc
   "sends message from this server to remote server.
@@ -76,7 +71,6 @@
     (if (nil? write-chan)
       false
       (send-message write-chan header data))))
-
 
 (defn initialize-with-client
   "Checks initial client message and initializes the connection.
@@ -125,7 +119,6 @@
                         (or data initial-msg))
               (recur))))))))
 
-
 (defn initialize-with-server
   "Does initialization with a remote server to set up a trusted
   connection.
@@ -150,7 +143,6 @@
                  (async/close! (:write-chan existing-conn)))
                conn))
       conn)))
-
 
 (defn monitor-remote-connection
   "Monitors remote server connection for messages.
@@ -179,7 +171,7 @@
                           :disconnected
                           (let [remote-server (or (:to conn) remote-server)]
                             (log/info (str "TCP read channel disconnected for server: " (or (:to conn) remote-server)
-                                            ". Waiting for reconnect."))
+                                           ". Waiting for reconnect."))
                             (when remote-server
                               (swap! connections assoc-in [this-server :conn-to remote-server] nil))
                             nil)
@@ -194,7 +186,6 @@
               (if (instance? Exception conn*)
                 (log/error conn* (str "Unexpected exception creating connection to: " remote-server))
                 (recur conn*)))
-
 
             :else
             (do
@@ -218,7 +209,6 @@
                                  loops
                                  (assoc loops this-server (ntcp/event-loop)))))]
         (get new-state this-server))))
-
 
 (defn shutdown-client-event-loop
   "Shuts down client event loop if it exists, returns true."
@@ -246,7 +236,6 @@
             (Thread/sleep 5000)
             (recur (inc retries)))
         addr))))
-
 
 (defn launch-client-connection
   "Launches a connection from a client to a server."

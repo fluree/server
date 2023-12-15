@@ -1,8 +1,8 @@
 (ns fluree.server.components.consensus
   (:require [donut.system :as ds]
+            [fluree.db.util.log :as log]
             [fluree.server.components.consensus-handler :as consensus-handler]
-            [fluree.server.consensus.core :as consensus]
-            [fluree.db.util.log :as log]))
+            [fluree.server.consensus.core :as consensus]))
 
 (set! *warn-on-reflection* true)
 
@@ -11,10 +11,10 @@
   (log/debug "Starting raft consensus with config:" config)
   (let [handler (consensus-handler/create-handler consensus-handler/default-routes)]
     (consensus/start handler (assoc config :join? false
-                                           :ledger-directory conn-storage-path
-                                           :fluree/conn connection
-                                           :fluree/watcher watcher
-                                           :fluree/subscriptions subscriptions))))
+                                    :ledger-directory conn-storage-path
+                                    :fluree/conn connection
+                                    :fluree/watcher watcher
+                                    :fluree/subscriptions subscriptions))))
 
 (def consensus
   #::ds{:start  (fn [{{:keys [config fluree/connection fluree/watcher fluree/subscriptions conn-storage-path]} ::ds/config}]

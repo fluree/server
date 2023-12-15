@@ -13,20 +13,20 @@
     (let [ledger-name (create-rand-ledger "query-endpoint-basic-entity-test")
           txn-req     {:body
                        (json/write-value-as-string
-                         {"ledger"   ledger-name
-                          "@context" ["https://ns.flur.ee" test-system/default-context]
-                          "insert"   [{"id"      "ex:query-test"
-                                       "type"    "schema:Test"
-                                       "ex:name" "query-test"}]})
+                        {"ledger"   ledger-name
+                         "@context" ["https://ns.flur.ee" test-system/default-context]
+                         "insert"   [{"id"      "ex:query-test"
+                                      "type"    "schema:Test"
+                                      "ex:name" "query-test"}]})
                        :headers json-headers}
           txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
           query-req   {:body
                        (json/write-value-as-string
-                         {"@context" test-system/default-context
-                          "from"     ledger-name
-                          "select"   '{?t ["*"]}
-                          "where"    '{"id" ?t, "type" "schema:Test"}})
+                        {"@context" test-system/default-context
+                         "from"     ledger-name
+                         "select"   '{?t ["*"]}
+                         "where"    '{"id" ?t, "type" "schema:Test"}})
                        :headers json-headers}
           query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res)))
@@ -39,26 +39,26 @@
     (let [ledger-name (create-rand-ledger "query-endpoint-union-test")
           txn-req     {:body
                        (json/write-value-as-string
-                         {"ledger"   ledger-name
-                          "@context" ["https://ns.flur.ee" test-system/default-context]
-                          "insert"   {"@graph"
-                                      [{"id"      "ex:query-test"
-                                        "type"    "schema:Test"
-                                        "ex:name" "query-test"}
-                                       {"id"       "ex:wes"
-                                        "type"     "schema:Person"
-                                        "ex:fname" "Wes"}]}})
+                        {"ledger"   ledger-name
+                         "@context" ["https://ns.flur.ee" test-system/default-context]
+                         "insert"   {"@graph"
+                                     [{"id"      "ex:query-test"
+                                       "type"    "schema:Test"
+                                       "ex:name" "query-test"}
+                                      {"id"       "ex:wes"
+                                       "type"     "schema:Person"
+                                       "ex:fname" "Wes"}]}})
                        :headers json-headers}
           txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
           query-req   {:body
                        (json/write-value-as-string
-                         {"@context" test-system/default-context
-                          "from"     ledger-name
-                          "select"   "?n"
-                          "where"    [["union"
-                                       {"id" "?s", "ex:name" "?n"}
-                                       {"id" "?s", "ex:fname" "?n"}]]})
+                        {"@context" test-system/default-context
+                         "from"     ledger-name
+                         "select"   "?n"
+                         "where"    [["union"
+                                      {"id" "?s", "ex:name" "?n"}
+                                      {"id" "?s", "ex:fname" "?n"}]]})
                        :headers json-headers}
           query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res)))
@@ -69,24 +69,24 @@
     (let [ledger-name (create-rand-ledger "query-endpoint-optional-test")
           txn-req     {:body
                        (json/write-value-as-string
-                         {"ledger"   ledger-name
-                          "@context" ["https://ns.flur.ee" test-system/default-context]
-                          "insert"   {"@graph"
-                                      [{"id"          "ex:brian",
-                                        "type"        "ex:User",
-                                        "schema:name" "Brian"
-                                        "ex:friend"   [{"id" "ex:alice"}]}
-                                       {"id"           "ex:alice",
-                                        "type"         "ex:User",
-                                        "ex:favColor"  "Green"
-                                        "schema:email" "alice@flur.ee"
-                                        "schema:name"  "Alice"}
-                                       {"id"           "ex:cam",
-                                        "type"         "ex:User",
-                                        "schema:name"  "Cam"
-                                        "schema:email" "cam@flur.ee"
-                                        "ex:friend"    [{"id" "ex:brian"}
-                                                        {"id" "ex:alice"}]}]}})
+                        {"ledger"   ledger-name
+                         "@context" ["https://ns.flur.ee" test-system/default-context]
+                         "insert"   {"@graph"
+                                     [{"id"          "ex:brian",
+                                       "type"        "ex:User",
+                                       "schema:name" "Brian"
+                                       "ex:friend"   [{"id" "ex:alice"}]}
+                                      {"id"           "ex:alice",
+                                       "type"         "ex:User",
+                                       "ex:favColor"  "Green"
+                                       "schema:email" "alice@flur.ee"
+                                       "schema:name"  "Alice"}
+                                      {"id"           "ex:cam",
+                                       "type"         "ex:User",
+                                       "schema:name"  "Cam"
+                                       "schema:email" "cam@flur.ee"
+                                       "ex:friend"    [{"id" "ex:brian"}
+                                                       {"id" "ex:alice"}]}]}})
                        :headers json-headers}
           txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
@@ -113,20 +113,20 @@
     (let [ledger-name (create-rand-ledger "query-endpoint-selectOne-test")
           txn-req     {:body
                        (json/write-value-as-string
-                         {"ledger"   ledger-name
-                          "@context" ["https://ns.flur.ee" test-system/default-context]
-                          "insert"   [{"id"      "ex:query-test"
-                                       "type"    "schema:Test"
-                                       "ex:name" "query-test"}]})
+                        {"ledger"   ledger-name
+                         "@context" ["https://ns.flur.ee" test-system/default-context]
+                         "insert"   [{"id"      "ex:query-test"
+                                      "type"    "schema:Test"
+                                      "ex:name" "query-test"}]})
                        :headers json-headers}
           txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
           query-req   {:body
                        (json/write-value-as-string
-                         {"@context"  test-system/default-context
-                          "from"      ledger-name
-                          "selectOne" '{?t ["*"]}
-                          "where"     '{"id" ?t, "type" "schema:Test"}})
+                        {"@context"  test-system/default-context
+                         "from"      ledger-name
+                         "selectOne" '{?t ["*"]}
+                         "where"     '{"id" ?t, "type" "schema:Test"}})
                        :headers json-headers}
           query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res)))
@@ -151,47 +151,47 @@
           txn-req     {:headers json-headers
                        :body
                        (json/write-value-as-string
-                         {"ledger"   ledger-name
-                          "@context" ["https://ns.flur.ee" context]
-                          "insert"
-                          {"@graph"
-                           [{"id"          "ex:freddy"
-                             "type"        "ex:Yeti"
-                             "schema:age"  4
-                             "schema:name" "Freddy"
-                             "ex:verified" true}
-                            {"id"             "ex:letty"
-                             "type"           "ex:Yeti"
-                             "schema:age"     2
-                             "ex:nickname"    "Letty"
-                             "schema:name"    "Leticia"
-                             "schema:follows" [{"id" "ex:freddy"}]}
-                            {"id"          "ex:betty"
-                             "type"        "ex:Yeti"
-                             "schema:age"  82
-                             "schema:name" "Betty"
-                             "schema:follows"
-                             [{"@id" "ex:freddy"}]}
-                            {"id"          "ex:andrew"
-                             "type"        "schema:Person"
-                             "schema:age"  35
-                             "schema:name" "Andrew Johnson"
-                             "schema:follows"
-                             [{"@id" "ex:freddy"}
-                              {"@id" "ex:letty"}
-                              {"@id" "ex:betty"}]}]}})}
+                        {"ledger"   ledger-name
+                         "@context" ["https://ns.flur.ee" context]
+                         "insert"
+                         {"@graph"
+                          [{"id"          "ex:freddy"
+                            "type"        "ex:Yeti"
+                            "schema:age"  4
+                            "schema:name" "Freddy"
+                            "ex:verified" true}
+                           {"id"             "ex:letty"
+                            "type"           "ex:Yeti"
+                            "schema:age"     2
+                            "ex:nickname"    "Letty"
+                            "schema:name"    "Leticia"
+                            "schema:follows" [{"id" "ex:freddy"}]}
+                           {"id"          "ex:betty"
+                            "type"        "ex:Yeti"
+                            "schema:age"  82
+                            "schema:name" "Betty"
+                            "schema:follows"
+                            [{"@id" "ex:freddy"}]}
+                           {"id"          "ex:andrew"
+                            "type"        "schema:Person"
+                            "schema:age"  35
+                            "schema:name" "Andrew Johnson"
+                            "schema:follows"
+                            [{"@id" "ex:freddy"}
+                             {"@id" "ex:letty"}
+                             {"@id" "ex:betty"}]}]}})}
 
           txn-res   (api-post :transact txn-req)
           _         (assert (= 200 (:status txn-res)))
           query-req {:body
                      (json/write-value-as-string
-                       {"@context" context
-                        "from"     ledger-name
-                        "select"   ["?name" "?age" "?canVote"]
-                        "where"    [{"schema:name" "?name"
-                                     "schema:age"  "?age"}
+                      {"@context" context
+                       "from"     ledger-name
+                       "select"   ["?name" "?age" "?canVote"]
+                       "where"    [{"schema:name" "?name"
+                                    "schema:age"  "?age"}
                                    ["bind" "?canVote" "(>= ?age 18)"]]
-                        "orderBy"  ["?name"]})
+                       "orderBy"  ["?name"]})
                      :headers json-headers}
           query-res (api-post :query query-req)]
       (is (= 200 (:status query-res))
@@ -203,31 +203,31 @@
              (-> query-res :body json/read-value))))))
 
 #_(deftest ^:integration ^:edn query-edn-test
-   (testing "can query a basic entity w/ EDN"
-    (let [ledger-name (create-rand-ledger "query-endpoint-basic-entity-test")
-          edn-context {:id     "@id"
-                       :type   "@type"
-                       :ex     "http://example.org/"
-                       :schema "http://schema.org/"}
-          txn-req     {:body
-                       (pr-str {:ledger ledger-name
-                                :txn    {"@context" edn-context
-                                         "@graph"   [{:id      :ex/query-test
-                                                      :type    :schema/Test
-                                                      :ex/name "query-test"}]}})
-                       :headers edn-headers}
-          txn-res     (post :transact txn-req)
-          _           (assert (= 200 (:status txn-res)))
-          query-req   {:body
-                       (pr-str {:context edn-context
-                                :from    ledger-name
-                                :select  '{?t [:*]}
-                                :where   '{:id ?t :type :schema/Test}})
-                       :headers edn-headers}
-          query-res   (post :query query-req)]
-      (is (= 200 (:status query-res))
-          (str "Query response was:" (pr-str query-res)))
-      (is (= [{:id       :ex/query-test
-               :rdf/type [:schema/Test]
-               :ex/name  "query-test"}]
-             (-> query-res :body edn/read-string))))))
+    (testing "can query a basic entity w/ EDN"
+      (let [ledger-name (create-rand-ledger "query-endpoint-basic-entity-test")
+            edn-context {:id     "@id"
+                         :type   "@type"
+                         :ex     "http://example.org/"
+                         :schema "http://schema.org/"}
+            txn-req     {:body
+                         (pr-str {:ledger ledger-name
+                                  :txn    {"@context" edn-context
+                                           "@graph"   [{:id      :ex/query-test
+                                                        :type    :schema/Test
+                                                        :ex/name "query-test"}]}})
+                         :headers edn-headers}
+            txn-res     (post :transact txn-req)
+            _           (assert (= 200 (:status txn-res)))
+            query-req   {:body
+                         (pr-str {:context edn-context
+                                  :from    ledger-name
+                                  :select  '{?t [:*]}
+                                  :where   '{:id ?t :type :schema/Test}})
+                         :headers edn-headers}
+            query-res   (post :query query-req)]
+        (is (= 200 (:status query-res))
+            (str "Query response was:" (pr-str query-res)))
+        (is (= [{:id       :ex/query-test
+                 :rdf/type [:schema/Test]
+                 :ex/name  "query-test"}]
+               (-> query-res :body edn/read-string))))))

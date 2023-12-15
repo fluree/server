@@ -3,10 +3,10 @@
             [clojure.string :as str]
             [fluree.db.util.log :as log]
             [fluree.raft :as raft]
-            [fluree.server.consensus.network.tcp :as ftcp]
-            [fluree.server.consensus.raft.core :as raft-helpers]
-            [fluree.server.consensus.protocol :as txproto]
             [fluree.server.consensus.network.multi-addr :as multi-addr]
+            [fluree.server.consensus.network.tcp :as ftcp]
+            [fluree.server.consensus.protocol :as txproto]
+            [fluree.server.consensus.raft.core :as raft-helpers]
             [fluree.server.io.file :as io-file]))
 
 (set! *warn-on-reflection* true)
@@ -22,14 +22,14 @@
   [group conn-type ledger-id tx-id txn opts]
   (log/debug "Consensus - queue new ledger:" ledger-id tx-id txn)
   (txproto/-new-entry-async
-    group
-    [:ledger-create {:txn         txn
-                     :conn-type   conn-type
-                     :size        (count txn)
-                     :tx-id       tx-id
-                     :ledger-id   ledger-id
-                     :opts        opts
-                     :instant     (System/currentTimeMillis)}]))
+   group
+   [:ledger-create {:txn         txn
+                    :conn-type   conn-type
+                    :size        (count txn)
+                    :tx-id       tx-id
+                    :ledger-id   ledger-id
+                    :opts        opts
+                    :instant     (System/currentTimeMillis)}]))
 
 (defn queue-new-transaction
   "Queues a new transaction into the consensus layer for processing.
@@ -37,14 +37,14 @@
   [group conn-type ledger-id tx-id txn opts]
   (log/trace "queue-new-transaction txn:" txn)
   (txproto/-new-entry-async
-    group
-    [:tx-queue {:txn            txn
-                :conn-type      conn-type
-                :size           (count txn)
-                :tx-id          tx-id
-                :ledger-id      ledger-id
-                :opts           opts
-                :instant        (System/currentTimeMillis)}]))
+   group
+   [:tx-queue {:txn            txn
+               :conn-type      conn-type
+               :size           (count txn)
+               :tx-id          tx-id
+               :ledger-id      ledger-id
+               :opts           opts
+               :instant        (System/currentTimeMillis)}]))
 
 (defn data-version
   [group]
@@ -64,21 +64,21 @@
    :state-atom     state-machine-atom
    :storage-read   (or storage-group-read
                        (io-file/connection-storage-read
-                         log-directory
-                         encryption-key))
+                        log-directory
+                        encryption-key))
    :storage-write  (or storage-group-write
                        (io-file/connection-storage-write
-                         log-directory
-                         encryption-key))
+                        log-directory
+                        encryption-key))
    :storage-exists (or storage-group-exists
                        (io-file/connection-storage-exists?
-                         log-directory))
+                        log-directory))
    :storage-delete (or storage-group-delete
                        (io-file/connection-storage-delete
-                         log-directory))
+                        log-directory))
    :storage-list   (or storage-group-list
                        (io-file/connection-storage-list
-                         log-directory))})
+                        log-directory))})
 
 (defn add-ledger-storage-fns
   "Functions that write and read ledger data. Either supplied with config, or generated
@@ -86,14 +86,14 @@
   [{:keys [encryption-key ledger-directory
            storage-ledger-read storage-ledger-write] :as raft-config}]
   (assoc raft-config
-    :storage-ledger-read (or storage-ledger-read
-                             (io-file/connection-storage-read
-                               ledger-directory
-                               encryption-key))
-    :storage-ledger-write (or storage-ledger-write
-                              (io-file/connection-storage-write
-                                ledger-directory
-                                encryption-key))))
+         :storage-ledger-read (or storage-ledger-read
+                                  (io-file/connection-storage-read
+                                   ledger-directory
+                                   encryption-key))
+         :storage-ledger-write (or storage-ledger-write
+                                   (io-file/connection-storage-write
+                                    ledger-directory
+                                    encryption-key))))
 
 (defn add-state-machine
   "Add state machine configuration options needed for raft"
@@ -110,16 +110,16 @@
                               :consensus/ledger-write         storage-ledger-write
                               :consensus/state-change-fn-atom raft-helpers/state-change-fn-atom}]
     (assoc raft-config :state-machine-atom state-machine-atom
-                       :state-machine (raft-helpers/handler handler state-machine-config))))
+           :state-machine (raft-helpers/handler handler state-machine-config))))
 
 (defn add-snapshot-config
   [{:keys [state-machine-atom log-directory] :as raft-config}]
   (let [snapshot-config (build-snapshot-config raft-config)]
     (assoc raft-config :snapshot-write (raft-helpers/snapshot-writer snapshot-config)
-                       :snapshot-reify (raft-helpers/snapshot-reify snapshot-config)
-                       :snapshot-xfer (raft-helpers/snapshot-xfer snapshot-config)
-                       :snapshot-install (raft-helpers/snapshot-installer snapshot-config)
-                       :snapshot-list-indexes (raft-helpers/snapshot-list-indexes snapshot-config))))
+           :snapshot-reify (raft-helpers/snapshot-reify snapshot-config)
+           :snapshot-xfer (raft-helpers/snapshot-xfer snapshot-config)
+           :snapshot-install (raft-helpers/snapshot-installer snapshot-config)
+           :snapshot-list-indexes (raft-helpers/snapshot-list-indexes snapshot-config))))
 
 (defn add-server-configs
   [{:keys [consensus-this-server consensus-servers] :as raft-state}]
@@ -139,18 +139,17 @@
         this-server-cfg    (raft-helpers/validated-this-server-config this-server-map server-configs-map)]
     (raft-helpers/validated-raft-servers server-configs-map)
     (assoc raft-state :this-server this-server
-                      :servers servers
-                      :this-server-config this-server-cfg
-                      :server-configs server-configs-map
-                      :port (:port this-server-cfg))))
+           :servers servers
+           :this-server-config this-server-cfg
+           :server-configs server-configs-map
+           :port (:port this-server-cfg))))
 
 (defn add-leader-change-fn
   [{:keys [this-server join? leader-change-fn] :as raft-config}]
   (let [raft-initialized-chan (async/promise-chan)
         leader-change-fn*     (raft-helpers/leader-change-fn this-server raft-initialized-chan join? leader-change-fn)]
     (assoc raft-config :raft-initialized-chan raft-initialized-chan
-                       :leader-change-fn leader-change-fn*)))
-
+           :leader-change-fn leader-change-fn*)))
 
 (defn canonicalize-directories
   [{:keys [log-directory ledger-directory this-server] :as raft-config}]
@@ -161,8 +160,7 @@
                                   (str "./data/" (name this-server) "/ledger/"))
                               io-file/canonicalize-path)]
     (assoc raft-config :log-directory log-directory*
-                       :ledger-directory* ledger-directory*)))
-
+           :ledger-directory* ledger-directory*)))
 
 (defn start
   [handler {:keys [log-history entries-max storage-type catch-up-rounds]
@@ -204,6 +202,5 @@
                                           ;; TODO - these following keyword renaming from config's should be updated downstream to use the same names so renaming didn't need to happen
                                           :state-atom (:state-machine-atom raft-config*)
                                           :raft-initialized (:raft-initialized-chan raft-config*)))] ;; added in (add-leader-change-fn ...)
-
 
     (raft-helpers/map->RaftGroup final-map)))

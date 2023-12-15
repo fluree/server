@@ -49,13 +49,13 @@
                (-> create-res :body json/read-value (select-keys ["ledger" "t"]))))))
     (testing "transact"
       (let [txn-req (<!! (cred/generate
-                           {"ledger"   ledger-name
-                            "@context" ["https://ns.flur.ee" default-context]
-                            "insert"   [{"id"      "ex:cred-test"
-                                         "type"    "schema:Test"
-                                         "ex:name" "cred test"
-                                         "ex:foo"  1}]}
-                           (:private auth)))
+                          {"ledger"   ledger-name
+                           "@context" ["https://ns.flur.ee" default-context]
+                           "insert"   [{"id"      "ex:cred-test"
+                                        "type"    "schema:Test"
+                                        "ex:name" "cred test"
+                                        "ex:foo"  1}]}
+                          (:private auth)))
             txn-res (api-post :transact
                               {:body    (json/write-value-as-string txn-req)
                                :headers json-headers})]
@@ -65,12 +65,12 @@
                (-> txn-res :body json/read-value (select-keys ["ledger" "t"]))))))
     (testing "query"
       (let [query-req (<!! (cred/generate
-                             {"@context" default-context
-                              "from"     ledger-name
-                              "select"   {"?t" ["*"]}
-                              "where"    {"@id"  "?t"
-                                          "type" "schema:Test"}}
-                             (:private auth)))
+                            {"@context" default-context
+                             "from"     ledger-name
+                             "select"   {"?t" ["*"]}
+                             "where"    {"@id"  "?t"
+                                         "type" "schema:Test"}}
+                            (:private auth)))
             query-res (api-post :query
                                 {:body    (json/write-value-as-string query-req)
                                  :headers json-headers})]
@@ -83,11 +83,11 @@
 
     (testing "history"
       (let [history-req (<!! (cred/generate
-                               {"@context" default-context
-                                "from"     ledger-name
-                                "history"  "ex:cred-test"
-                                "t"        {"from" 1}}
-                               (:private auth)))
+                              {"@context" default-context
+                               "from"     ledger-name
+                               "history"  "ex:cred-test"
+                               "t"        {"from" 1}}
+                              (:private auth)))
 
             history-res (api-post :history
                                   {:body    (json/write-value-as-string history-req)

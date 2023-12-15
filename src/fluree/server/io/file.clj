@@ -2,9 +2,9 @@
   (:require [clojure.core.async :as async]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [robert.bruce :refer [try-try-again]]
             [fluree.db.util.log :as log]
-            [fluree.server.io.crypto :as crypto])
+            [fluree.server.io.crypto :as crypto]
+            [robert.bruce :refer [try-try-again]])
   (:import (java.io ByteArrayOutputStream File FileNotFoundException)))
 
 (set! *warn-on-reflection* true)
@@ -17,7 +17,6 @@
   (if (boolean (re-find #"^[./]" path))
     path
     (str "./" path)))
-
 
 (defn key->unix-path
   "Given an optional base-path and our key, returns the storage path as a
@@ -34,8 +33,6 @@
          split-key (str/split key #"_")
          file      (apply io/file base-path split-key)]
      (.toString ^File file))))
-
-
 
 (defn read-file
   "Returns nil if file does not exist."
@@ -62,7 +59,6 @@
        (key->unix-path base-path)
        read-file))
 
-
 (defn connection-storage-read
   "Default function for connection storage."
   ([base-path] (connection-storage-read base-path nil))
@@ -73,7 +69,6 @@
                        (when data (crypto/decrypt-bytes data encryption-key)))))
      (fn [key]
        (async/thread (storage-read base-path key))))))
-
 
 (defn write-file
   [^bytes val path]
@@ -173,7 +168,6 @@
       (let [files (-> full-path io/file file-seq)]
         (map (fn [^File f] {:name (.getName f), :url (.toURI f), :size (.length f)})
              files)))))
-
 
 (defn connection-storage-list
   [base-path]

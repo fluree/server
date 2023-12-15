@@ -1,11 +1,11 @@
 (ns fluree.server.consensus.handlers.ledger-created
   (:require [clojure.core.async :as async]
             [clojure.java.io :as io]
-            [fluree.server.consensus.handlers.new-commit :as new-commit]
             [fluree.db.util.filesystem :as fs]
             [fluree.db.util.log :as log]
             [fluree.server.components.subscriptions :as subs]
-            [fluree.server.components.watcher :as watcher])
+            [fluree.server.components.watcher :as watcher]
+            [fluree.server.consensus.handlers.new-commit :as new-commit])
   (:import (java.io File)))
 
 (set! *warn-on-reflection* true)
@@ -20,7 +20,6 @@
                          " as it is no longer queued for creation.")
                     {:status 500 :error :consensus/unexpected-error})))
   create-result)
-
 
 (defn add-ledger-to-state
   [{:keys [consensus/state-atom] :as _config}
@@ -48,13 +47,11 @@
                   :error  :db/unexpected-error}
                  e)))))
 
-
 (defn return-success-response
   [watcher {:keys [ledger-id server tx-id] :as params} state-map]
   (log/info (str "New Ledger successfully created by server " server ": " ledger-id " with tx-id: " tx-id "."))
   (watcher/deliver-watch watcher tx-id params)
   (get-in state-map [:ledgers ledger-id]))
-
 
 (defn clean-up-files
   [{:keys [fluree/conn] :as _config} {:keys [ledger-id] :as _params}]
@@ -64,7 +61,6 @@
     (doseq [^File file files]
       (log/info (str "After exception creating ledger " ledger-id ", removing: " (.getPath file)))
       (io/delete-file file true))))
-
 
 (defn handler
   "Adds a new ledger along with its transaction into the state machine in a queue.

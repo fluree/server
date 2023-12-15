@@ -1,30 +1,30 @@
 (ns fluree.server.components.http
   (:require
-    [clojure.core.async :as async :refer [<!!]]
-    [donut.system :as ds]
-    [fluree.db.query.fql.syntax :as fql]
-    [fluree.db.query.history :as fqh]
-    [fluree.db.validation :as v]
-    [fluree.db.json-ld.credential :as cred]
-    [fluree.db.util.log :as log]
-    [fluree.server.components.subscriptions :as subscriptions]
-    [fluree.server.handlers.ledger :as ledger]
-    [fluree.server.handlers.create :as create]
-    [fluree.server.handlers.remote-resource :as remote]
-    [fluree.server.handlers.transact :as srv-tx]
-    [malli.core :as m]
-    [muuntaja.core :as muuntaja]
-    [muuntaja.format.core :as mf]
-    [muuntaja.format.json :as mfj]
-    [reitit.coercion.malli :as rcm]
-    [reitit.ring :as ring]
-    [reitit.ring.coercion :as coercion]
-    [reitit.ring.middleware.exception :as exception]
-    [reitit.ring.middleware.muuntaja :as muuntaja-mw]
-    [reitit.swagger :as swagger]
-    [reitit.swagger-ui :as swagger-ui]
-    [ring.adapter.jetty9 :as http]
-    [ring.middleware.cors :as rmc])
+   [clojure.core.async :as async :refer [<!!]]
+   [donut.system :as ds]
+   [fluree.db.json-ld.credential :as cred]
+   [fluree.db.query.fql.syntax :as fql]
+   [fluree.db.query.history :as fqh]
+   [fluree.db.util.log :as log]
+   [fluree.db.validation :as v]
+   [fluree.server.components.subscriptions :as subscriptions]
+   [fluree.server.handlers.create :as create]
+   [fluree.server.handlers.ledger :as ledger]
+   [fluree.server.handlers.remote-resource :as remote]
+   [fluree.server.handlers.transact :as srv-tx]
+   [malli.core :as m]
+   [muuntaja.core :as muuntaja]
+   [muuntaja.format.core :as mf]
+   [muuntaja.format.json :as mfj]
+   [reitit.coercion.malli :as rcm]
+   [reitit.ring :as ring]
+   [reitit.ring.coercion :as coercion]
+   [reitit.ring.middleware.exception :as exception]
+   [reitit.ring.middleware.muuntaja :as muuntaja-mw]
+   [reitit.swagger :as swagger]
+   [reitit.swagger-ui :as swagger-ui]
+   [ring.adapter.jetty9 :as http]
+   [ring.middleware.cors :as rmc])
   (:import (java.io InputStream)))
 
 (set! *warn-on-reflection* true)
@@ -137,11 +137,11 @@
 
 (def query-coercer
   (rcm/create
-    {:strip-extra-keys false
-     :error-keys #{}
-     :encode-error (fn [explained]
-                     {:error :db/invalid-query
-                      :message (v/format-explained-errors explained nil)})}))
+   {:strip-extra-keys false
+    :error-keys #{}
+    :encode-error (fn [explained]
+                    {:error :db/invalid-query
+                     :message (v/format-explained-errors explained nil)})}))
 
 (def query-endpoint
   {:summary    "Endpoint for submitting queries"
@@ -151,7 +151,6 @@
                 500 {:body ErrorResponse}}
    :coercion   ^:replace  query-coercer
    :handler    #'ledger/query})
-
 
 (def history-endpoint
   {:summary    "Endpoint for submitting history queries"
@@ -217,10 +216,10 @@
 
 (def json-format
   (mf/map->Format
-    {:name    "application/json"
-     :matches #"^application/(.+\+)?json$" ; match application/ld+json too
-     :decoder [mfj/decoder {:decode-key-fn false}] ; leave keys as strings
-     :encoder [mfj/encoder]}))
+   {:name    "application/json"
+    :matches #"^application/(.+\+)?json$" ; match application/ld+json too
+    :decoder [mfj/decoder {:decode-key-fn false}] ; leave keys as strings
+    :encoder [mfj/encoder]}))
 
 (def sparql-format
   (mf/map->Format
@@ -245,63 +244,62 @@
       {;; provide websocket callbacks
        :on-connect  (fn on-connect [ws]
                       (subscriptions/client-message
-                        {:msg-type             :on-connect
-                         :http/ws              ws
-                         :http/sub-id          subscription-id
-                         :http/sub-chan        subscription-chan
-                         :fluree/subscriptions subscriptions
-                         :fluree/connection    conn}))
+                       {:msg-type             :on-connect
+                        :http/ws              ws
+                        :http/sub-id          subscription-id
+                        :http/sub-chan        subscription-chan
+                        :fluree/subscriptions subscriptions
+                        :fluree/connection    conn}))
        :on-text     (fn on-text [ws text-message]
                       (subscriptions/client-message
-                        {:msg-type             :on-text
-                         :payload              text-message
-                         :http/ws              ws
-                         :http/sub-id          subscription-id
-                         :http/sub-chan        subscription-chan
-                         :fluree/subscriptions subscriptions
-                         :fluree/connection    conn}))
+                       {:msg-type             :on-text
+                        :payload              text-message
+                        :http/ws              ws
+                        :http/sub-id          subscription-id
+                        :http/sub-chan        subscription-chan
+                        :fluree/subscriptions subscriptions
+                        :fluree/connection    conn}))
        :on-bytes    (fn on-bytes [ws payload offset len]
                       (subscriptions/client-message
-                        {:msg-type             :on-bytes
-                         :payload              payload
-                         :offset               offset
-                         :len                  len
-                         :http/ws              ws
-                         :http/sub-id          subscription-id
-                         :http/sub-chan        subscription-chan
-                         :fluree/subscriptions subscriptions
-                         :fluree/connection    conn}))
+                       {:msg-type             :on-bytes
+                        :payload              payload
+                        :offset               offset
+                        :len                  len
+                        :http/ws              ws
+                        :http/sub-id          subscription-id
+                        :http/sub-chan        subscription-chan
+                        :fluree/subscriptions subscriptions
+                        :fluree/connection    conn}))
        :on-close    (fn on-close [ws status-code reason]
                       (subscriptions/client-message
-                        {:msg-type             :on-close
-                         :status-code          status-code
-                         :reason               reason
-                         :http/ws              ws
-                         :http/sub-id          subscription-id
-                         :http/sub-chan        subscription-chan
-                         :fluree/subscriptions subscriptions
-                         :fluree/connection    conn}))
+                       {:msg-type             :on-close
+                        :status-code          status-code
+                        :reason               reason
+                        :http/ws              ws
+                        :http/sub-id          subscription-id
+                        :http/sub-chan        subscription-chan
+                        :fluree/subscriptions subscriptions
+                        :fluree/connection    conn}))
        :on-ping     (fn on-ping [ws payload]
                       (subscriptions/client-message
-                        {:msg-type             :on-ping
-                         :payload              payload
-                         :http/ws              ws
-                         :http/sub-id          subscription-id
-                         :http/sub-chan        subscription-chan
-                         :fluree/subscriptions subscriptions
-                         :fluree/connection    conn}))
+                       {:msg-type             :on-ping
+                        :payload              payload
+                        :http/ws              ws
+                        :http/sub-id          subscription-id
+                        :http/sub-chan        subscription-chan
+                        :fluree/subscriptions subscriptions
+                        :fluree/connection    conn}))
        :on-error    (fn on-error [ws e]
                       (subscriptions/client-message
-                        {:msg-type             :on-error
-                         :error                e
-                         :http/ws              ws
-                         :http/sub-id          subscription-id
-                         :http/sub-chan        subscription-chan
-                         :fluree/subscriptions subscriptions
-                         :fluree/connection    conn}))
+                       {:msg-type             :on-error
+                        :error                e
+                        :http/ws              ws
+                        :http/sub-id          subscription-id
+                        :http/sub-chan        subscription-chan
+                        :fluree/subscriptions subscriptions
+                        :fluree/connection    conn}))
        :subprotocol (first provided-subprotocols)
        :extensions  provided-extensions})))
-
 
 (defn debug-middleware
   "Put this in anywhere in your middleware chain to get some insight into what's
@@ -323,11 +321,11 @@
   (log/debug "HTTP server running with Fluree connection:" conn
              "- middleware:" middleware "- routes:" routes)
   (let [exception-middleware      (exception/create-exception-middleware
-                                    (merge
-                                      exception/default-handlers
-                                      {::exception/default
-                                       (partial exception/wrap-log-to-console
-                                                exception/http-response-handler)}))
+                                   (merge
+                                    exception/default-handlers
+                                    {::exception/default
+                                     (partial exception/wrap-log-to-console
+                                              exception/http-response-handler)}))
         ;; Exception middleware should always be first AND last.
         ;; The last (highest sort order) one ensures that middleware that comes
         ;; after it will not be skipped on response if handler code throws an
@@ -345,65 +343,65 @@
                                    [400 coercion/coerce-request-middleware]
                                    [1000 exception-middleware]]
         fluree-middleware         (sort-middleware-by-weight
-                                    (concat default-fluree-middleware
-                                            middleware))]
+                                   (concat default-fluree-middleware
+                                           middleware))]
     (ring/ring-handler
-      (ring/router
-        [["/swagger.json"
-          {:get {:no-doc  true
-                 :swagger {:info {:title "Fluree HTTP API"}}
-                 :handler (swagger/create-swagger-handler)}}]
-         ["/fluree" {:middleware fluree-middleware}
-          ["/create"
-           {:post {:summary    "Endpoint for creating new ledgers"
-                   :parameters {:body CreateRequestBody}
-                   :responses  {201 {:body CreateResponseBody}
-                                400 {:body ErrorResponse}
-                                500 {:body ErrorResponse}}
-                   :handler    #'create/default}}]
-          ["/transact"
-           {:post {:summary    "Endpoint for submitting transactions"
-                   :parameters {:body TransactRequestBody}
-                   :responses  {200 {:body TransactResponseBody}
-                                400 {:body ErrorResponse}
-                                500 {:body ErrorResponse}}
-                   :handler    #'srv-tx/default}}]
-          ["/query"
-           {:get  query-endpoint
-            :post query-endpoint}]
-          ["/history"
-           {:get  history-endpoint
-            :post history-endpoint}]
-          ["/remoteResource"
-           {:post {:summary "Remote connection resource read"
-                   :parameters {:body DefaultResourceRequestBody}
-                   :handler #'remote/read-handler}}]]]
-        {:data {:coercion   (reitit.coercion.malli/create
-                              {:strip-extra-keys false})
-                :muuntaja   (muuntaja/create
-                              (-> muuntaja/default-options
-                                  (assoc-in
-                                   [:formats "application/json"]
-                                   json-format)
-                                  (assoc-in
-                                   [:formats "application/sparql-query"]
-                                   sparql-format)))
-                :middleware [swagger/swagger-feature
-                             muuntaja-mw/format-negotiate-middleware
-                             muuntaja-mw/format-response-middleware
-                             muuntaja-mw/format-request-middleware]}})
-      (ring/routes
-        (ring/ring-handler
-          (ring/router
-            (concat
-              [["/fluree/subscribe" {:get (fn [req]
-                                            (if (http/ws-upgrade-request? req)
-                                              (http/ws-upgrade-response (websocket-handler conn subscriptions))
-                                              {:status 400
-                                               :body   "Invalid websocket upgrade request"}))}]
-               routes])))
-        (swagger-ui/create-swagger-ui-handler
-          {:path   "/"
-           :config {:validatorUrl     nil
-                    :operationsSorter "alpha"}})
-        (ring/create-default-handler)))))
+     (ring/router
+      [["/swagger.json"
+        {:get {:no-doc  true
+               :swagger {:info {:title "Fluree HTTP API"}}
+               :handler (swagger/create-swagger-handler)}}]
+       ["/fluree" {:middleware fluree-middleware}
+        ["/create"
+         {:post {:summary    "Endpoint for creating new ledgers"
+                 :parameters {:body CreateRequestBody}
+                 :responses  {201 {:body CreateResponseBody}
+                              400 {:body ErrorResponse}
+                              500 {:body ErrorResponse}}
+                 :handler    #'create/default}}]
+        ["/transact"
+         {:post {:summary    "Endpoint for submitting transactions"
+                 :parameters {:body TransactRequestBody}
+                 :responses  {200 {:body TransactResponseBody}
+                              400 {:body ErrorResponse}
+                              500 {:body ErrorResponse}}
+                 :handler    #'srv-tx/default}}]
+        ["/query"
+         {:get  query-endpoint
+          :post query-endpoint}]
+        ["/history"
+         {:get  history-endpoint
+          :post history-endpoint}]
+        ["/remoteResource"
+         {:post {:summary "Remote connection resource read"
+                 :parameters {:body DefaultResourceRequestBody}
+                 :handler #'remote/read-handler}}]]]
+      {:data {:coercion   (reitit.coercion.malli/create
+                           {:strip-extra-keys false})
+              :muuntaja   (muuntaja/create
+                           (-> muuntaja/default-options
+                               (assoc-in
+                                [:formats "application/json"]
+                                json-format)
+                               (assoc-in
+                                [:formats "application/sparql-query"]
+                                sparql-format)))
+              :middleware [swagger/swagger-feature
+                           muuntaja-mw/format-negotiate-middleware
+                           muuntaja-mw/format-response-middleware
+                           muuntaja-mw/format-request-middleware]}})
+     (ring/routes
+      (ring/ring-handler
+       (ring/router
+        (concat
+         [["/fluree/subscribe" {:get (fn [req]
+                                       (if (http/ws-upgrade-request? req)
+                                         (http/ws-upgrade-response (websocket-handler conn subscriptions))
+                                         {:status 400
+                                          :body   "Invalid websocket upgrade request"}))}]
+          routes])))
+      (swagger-ui/create-swagger-ui-handler
+       {:path   "/"
+        :config {:validatorUrl     nil
+                 :operationsSorter "alpha"}})
+      (ring/create-default-handler)))))

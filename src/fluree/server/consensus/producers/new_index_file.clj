@@ -19,7 +19,6 @@
     ;; returns promise
     (raft-core/leader-new-command! config :new-index-file file-event*)))
 
-
 (defn push-new-index-files
   "Monitors for new index files pushed onto the changes channel.
 

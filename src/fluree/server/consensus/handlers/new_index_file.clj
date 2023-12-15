@@ -24,7 +24,6 @@
       (catch Exception e
         (log/error e "Consensus: Unexpected error writing new index file: " (ex-message e))))))
 
-
 (defn handler
   "Does a no-op and returns params untouched for handling by the processor.
 
