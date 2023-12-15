@@ -33,14 +33,3 @@
     (log/debug "history - query results:" results)
     {:status 200
      :body   results}))
-
-(defhandler default-context
-  [{:keys [fluree/conn] {{:keys [ledger t] :as body} :body} :parameters}]
-  (log/debug "default-context handler got request:" body)
-  (let [ledger* (->> ledger (fluree/load conn) deref!)
-        results (if t
-                  (-> ledger* (fluree/default-context-at-t t) deref)
-                  (-> ledger* fluree/db fluree/default-context))]
-    (log/debug "default-context for ledger" ledger results)
-    {:status 200
-     :body   results}))

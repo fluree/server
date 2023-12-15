@@ -374,13 +374,6 @@
           ["/history"
            {:get  history-endpoint
             :post history-endpoint}]
-          ["/defaultContext"
-           {:get {:summary    "Endpoint for retrieving default contexts"
-                  :parameters {:body DefaultContextRequestBody}
-                  :responses  {200 {:body DefaultContextResponseBody}
-                               400 {:body ErrorResponse}
-                               500 {:body ErrorResponse}}
-                  :handler    #'ledger/default-context}}]
           ["/remoteResource"
            {:post {:summary "Remote connection resource read"
                    :parameters {:body DefaultResourceRequestBody}

@@ -1,7 +1,9 @@
 (ns fluree.server.integration.basic-query-test
   (:require [clojure.edn :as edn]
-            [clojure.test :refer :all]
-            [fluree.server.integration.test-system :refer :all]
+            [clojure.test :refer [deftest is testing use-fixtures]]
+            [fluree.server.integration.test-system
+             :as test-system
+             :refer [api-post create-rand-ledger json-headers run-test-server]]
             [jsonista.core :as json]))
 
 (use-fixtures :once run-test-server)
@@ -12,7 +14,7 @@
           txn-req     {:body
                        (json/write-value-as-string
                          {"ledger"   ledger-name
-                          "@context" "https://ns.flur.ee"
+                          "@context" ["https://ns.flur.ee" test-system/default-context]
                           "insert"   [{"id"      "ex:query-test"
                                        "type"    "schema:Test"
                                        "ex:name" "query-test"}]})
@@ -21,9 +23,10 @@
           _           (assert (= 200 (:status txn-res)))
           query-req   {:body
                        (json/write-value-as-string
-                         {"from"   ledger-name
-                          "select" '{?t ["*"]}
-                          "where"  '{"id" ?t, "type" "schema:Test"}})
+                         {"@context" test-system/default-context
+                          "from"     ledger-name
+                          "select"   '{?t ["*"]}
+                          "where"    '{"id" ?t, "type" "schema:Test"}})
                        :headers json-headers}
           query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res)))
@@ -37,7 +40,7 @@
           txn-req     {:body
                        (json/write-value-as-string
                          {"ledger"   ledger-name
-                          "@context" "https://ns.flur.ee"
+                          "@context" ["https://ns.flur.ee" test-system/default-context]
                           "insert"   {"@graph"
                                       [{"id"      "ex:query-test"
                                         "type"    "schema:Test"
@@ -50,11 +53,12 @@
           _           (assert (= 200 (:status txn-res)))
           query-req   {:body
                        (json/write-value-as-string
-                         {"from"   ledger-name
-                          "select" "?n"
-                          "where"  [["union"
-                                     {"id" "?s", "ex:name" "?n"}
-                                     {"id" "?s", "ex:fname" "?n"}]]})
+                         {"@context" test-system/default-context
+                          "from"     ledger-name
+                          "select"   "?n"
+                          "where"    [["union"
+                                       {"id" "?s", "ex:name" "?n"}
+                                       {"id" "?s", "ex:fname" "?n"}]]})
                        :headers json-headers}
           query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res)))
@@ -66,7 +70,7 @@
           txn-req     {:body
                        (json/write-value-as-string
                          {"ledger"   ledger-name
-                          "@context" "https://ns.flur.ee"
+                          "@context" ["https://ns.flur.ee" test-system/default-context]
                           "insert"   {"@graph"
                                       [{"id"          "ex:brian",
                                         "type"        "ex:User",
@@ -86,12 +90,13 @@
                        :headers json-headers}
           txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
-          query       {"from"   ledger-name
-                       "select" '[?name ?favColor]
-                       "where"  '[{"id" ?s
-                                   "rdf:type" "ex:User"
-                                   "schema:name" ?name}
-                                  ["optional" {"id" ?s, "ex:favColor" ?favColor}]]}
+          query       {"@context" test-system/default-context
+                       "from"     ledger-name
+                       "select"   '[?name ?favColor]
+                       "where"    '[{"id"          ?s
+                                     "rdf:type"    "ex:User"
+                                     "schema:name" ?name}
+                                    ["optional" {"id" ?s, "ex:favColor" ?favColor}]]}
           query-req   {:body
                        (json/write-value-as-string query)
                        :headers json-headers}
@@ -109,7 +114,7 @@
           txn-req     {:body
                        (json/write-value-as-string
                          {"ledger"   ledger-name
-                          "@context" "https://ns.flur.ee"
+                          "@context" ["https://ns.flur.ee" test-system/default-context]
                           "insert"   [{"id"      "ex:query-test"
                                        "type"    "schema:Test"
                                        "ex:name" "query-test"}]})
@@ -118,7 +123,8 @@
           _           (assert (= 200 (:status txn-res)))
           query-req   {:body
                        (json/write-value-as-string
-                         {"from"      ledger-name
+                         {"@context"  test-system/default-context
+                          "from"      ledger-name
                           "selectOne" '{?t ["*"]}
                           "where"     '{"id" ?t, "type" "schema:Test"}})
                        :headers json-headers}
@@ -131,23 +137,22 @@
 
   (testing "bind query works"
     (let [ledger-name (create-rand-ledger "query-endpoint-bind-test")
+          context     {"id"     "@id"
+                       "type"   "@type"
+                       "xsd"    "http://www.w3.org/2001/XMLSchema#"
+                       "rdf"    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                       "rdfs"   "http://www.w3.org/2000/01/rdf-schema#"
+                       "sh"     "http://www.w3.org/ns/shacl#"
+                       "schema" "http://schema.org/"
+                       "skos"   "http://www.w3.org/2008/05/skos#"
+                       "wiki"   "https://www.wikidata.org/wiki/"
+                       "f"      "https://ns.flur.ee/ledger#"
+                       "ex"     "http://example.org/"}
           txn-req     {:headers json-headers
                        :body
                        (json/write-value-as-string
                          {"ledger"   ledger-name
-                          "@context" "https://ns.flur.ee"
-                          "defaultContext"
-                          {"id"     "@id"
-                           "type"   "@type"
-                           "xsd"    "http://www.w3.org/2001/XMLSchema#"
-                           "rdf"    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-                           "rdfs"   "http://www.w3.org/2000/01/rdf-schema#"
-                           "sh"     "http://www.w3.org/ns/shacl#"
-                           "schema" "http://schema.org/"
-                           "skos"   "http://www.w3.org/2008/05/skos#"
-                           "wiki"   "https://www.wikidata.org/wiki/"
-                           "f"      "https://ns.flur.ee/ledger#"
-                           "ex"     "http://example.org/"}
+                          "@context" ["https://ns.flur.ee" context]
                           "insert"
                           {"@graph"
                            [{"id"          "ex:freddy"
@@ -180,12 +185,13 @@
           _         (assert (= 200 (:status txn-res)))
           query-req {:body
                      (json/write-value-as-string
-                       {"from"    ledger-name
-                        "select"  ["?name" "?age" "?canVote"]
-                        "where"   [{"schema:name" "?name"
-                                    "schema:age" "?age"}
+                       {"@context" context
+                        "from"     ledger-name
+                        "select"   ["?name" "?age" "?canVote"]
+                        "where"    [{"schema:name" "?name"
+                                     "schema:age"  "?age"}
                                    ["bind" "?canVote" "(>= ?age 18)"]]
-                        "orderBy" ["?name"]})
+                        "orderBy"  ["?name"]})
                      :headers json-headers}
           query-res (api-post :query query-req)]
       (is (= 200 (:status query-res))

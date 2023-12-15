@@ -1,6 +1,8 @@
 (ns fluree.server.integration.history-query-test
-  (:require [clojure.test :refer :all]
-            [fluree.server.integration.test-system :refer :all]
+  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+            [fluree.server.integration.test-system
+             :as test-system
+             :refer [api-post json-headers run-test-server]]
             [jsonista.core :as json]
             [clojure.edn :as edn]))
 
@@ -12,9 +14,6 @@
 (def mem-addr-regex
   (re-pattern "fluree:memory://[a-f0-9]{64}"))
 
-(def context-id-regex
-  (re-pattern "fluree:context:[a-f0-9]{64}"))
-
 (def db-id-regex
   (re-pattern "fluree:db:sha256:[a-z2-7]{52,53}"))
 
@@ -23,8 +22,8 @@
     (let [ledger-name   "history-query-json-test"
           txn-req       {:body
                          (json/write-value-as-string
-                           {"ledger" ledger-name
-                            "@context" "https://ns.flur.ee"
+                           {"ledger"   ledger-name
+                            "@context" ["https://ns.flur.ee" test-system/default-context]
                             "insert"   [{"id"      "ex:query-test"
                                          "type"    "schema:Test"
                                          "ex:name" "query-test"}]})
@@ -33,8 +32,8 @@
           _             (assert (= 201 (:status txn-res)))
           txn2-req      {:body
                          (json/write-value-as-string
-                           {"ledger" ledger-name
-                            "@context" "https://ns.flur.ee"
+                           {"ledger"   ledger-name
+                            "@context" ["https://ns.flur.ee" test-system/default-context]
                             "insert"   [{"id"           "ex:query-test"
                                          "ex:test-type" "integration"}]})
                          :headers json-headers}
@@ -42,7 +41,8 @@
           _             (assert (= 200 (:status txn2-res)))
           query-req     {:body
                          (json/write-value-as-string
-                           {"from"           ledger-name
+                           {"@context"       test-system/default-context
+                            "from"           ledger-name
                             "commit-details" true
                             "t"              {"at" "latest"}})
                          :headers json-headers}
@@ -55,7 +55,6 @@
              ["f:address"]           #(re-matches mem-addr-regex %)
              ["f:alias"]             #(= % ledger-name)
              ["f:branch"]            #(= % "main")
-             ["f:defaultContext"]    #(re-matches context-id-regex (get % "id"))
              ["f:previous"]          #(or (nil? %)
                                           (re-matches commit-id-regex (get % "id")))
              ["f:time"]              pos-int?
