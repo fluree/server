@@ -1,7 +1,6 @@
 (ns fluree.server.handlers.transact
   (:require [clojure.core.async :as async]
             [fluree.crypto :as crypto]
-            [fluree.db.api.transact :as transact-api]
             [fluree.db.conn.proto :as conn-proto]
             [fluree.db.constants :as const]
             [fluree.db.json-ld.api :as fluree]

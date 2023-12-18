@@ -1,7 +1,7 @@
 (ns fluree.server.handlers.remote-resource
   (:require [clojure.string :as str]
             [fluree.db.conn.proto :as conn-proto]
-            [fluree.db.json-ld.api :as fluree]
+            [fluree.db.json-ld.api :as-alias fluree]
             [fluree.db.nameservice.core :as nameservice]
             [fluree.db.util.async :refer [<? <?? go-try]]
             [fluree.db.util.log :as log]

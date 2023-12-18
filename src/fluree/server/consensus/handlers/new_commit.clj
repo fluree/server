@@ -34,7 +34,7 @@
   local-storage. If using a networked file system (e.g. S3, IPFS) the
   file is already stored by the leader with the respective service."
   [{:keys [consensus/raft-state fluree/conn] :as config}
-   {:keys [data-file-meta commit-file-meta context-file-meta server ledger-id] :as commit-result}]
+   {:keys [data-file-meta commit-file-meta context-file-meta server] :as commit-result}]
   (go-try
     (let [this-server (:this-server raft-state)]
       (when (not= server this-server)

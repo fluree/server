@@ -205,7 +205,7 @@
   (or (get @client-event-loops this-server)
       (let [new-state (swap! client-event-loops
                              (fn [loops]
-                               (if-let [existing (get loops this-server)]
+                               (if (contains? loops this-server)
                                  loops
                                  (assoc loops this-server (ntcp/event-loop)))))]
         (get new-state this-server))))

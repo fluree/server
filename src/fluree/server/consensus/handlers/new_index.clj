@@ -5,7 +5,7 @@
 
 (defn handler
   "Registers a new index point in the state via an updated commit file."
-  [{:keys [:consensus/state-atom :consensus/raft-state] :as config} {:keys [ledger-id tx-id] :as params}]
+  [{:keys [consensus/state-atom] :as _config} {:keys [ledger-id tx-id] :as params}]
   (log/debug "Queuing new transaction into state machine with params: " params)
   (try
     (let [max-queue 100 ;; TODO - elevate this to a configuration option

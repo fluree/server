@@ -2,7 +2,6 @@
   (:require [clojure.core.async :as async]
             [fluree.db.constants :as const]
             [fluree.db.json-ld.api :as fluree]
-            [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [fluree.raft.leader :refer [is-leader?]]
             [fluree.server.consensus.core :as consensus]
@@ -92,7 +91,7 @@
   "Adds a new ledger along with its transaction into the state machine in a queue.
   The consensus leader is responsible for creating all new ledgers, and will get
   to it ASAP."
-  [{:keys [consensus/state-atom] :as _config} {:keys [ledger-id tx-id] :as params}]
+  [{:keys [consensus/state-atom] :as _config} {:keys [ledger-id] :as params}]
   (log/debug (str "Queuing new ledger into state machine with params: " params))
   (try
     (swap! state-atom update-in

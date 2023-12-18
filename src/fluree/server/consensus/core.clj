@@ -113,7 +113,7 @@
            :state-machine (raft-helpers/handler handler state-machine-config))))
 
 (defn add-snapshot-config
-  [{:keys [state-machine-atom log-directory] :as raft-config}]
+  [raft-config]
   (let [snapshot-config (build-snapshot-config raft-config)]
     (assoc raft-config :snapshot-write (raft-helpers/snapshot-writer snapshot-config)
            :snapshot-reify (raft-helpers/snapshot-reify snapshot-config)

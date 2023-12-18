@@ -1,9 +1,7 @@
 (ns fluree.server.integration.test-system
   (:require [clj-http.client :as http]
-            [clojure.edn :as edn]
             [donut.system :as ds]
             [fluree.db.util.json :as json]
-            [fluree.db.util.log :as log]
             [fluree.server.main :as sys])
   (:import (java.net ServerSocket)))
 

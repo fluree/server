@@ -69,7 +69,7 @@
 (defn establish-subscription
   "Establish a new communication subscription with a client using async chan
   to send messages"
-  [{:keys [sub-atom] :as subscriptions} websocket sub-id sub-chan opts]
+  [{:keys [sub-atom] :as _subscriptions} websocket sub-id sub-chan opts]
   (log/debug "Establishing new subscription id:" sub-id "with opts" opts)
   (swap! sub-atom update-in [:subs sub-id]
          (fn [{:keys [chan ws] :as existing-sub}]
@@ -91,7 +91,7 @@
 
 (defn subscribe-ledger
   "Subscribe to ledger"
-  [{:keys [sub-atom] :as subscriptions} sub-id {:keys [ledger serialization] :as request}]
+  [{:keys [sub-atom] :as _subscriptions} sub-id {:keys [ledger serialization] :as request}]
   (log/debug "Subscribe websocket request by sub-id" sub-id "request:" request)
   (swap! sub-atom update-in [:subs sub-id]
          (fn [existing-sub]
@@ -101,7 +101,7 @@
 
 (defn unsubscribe-ledger
   "Unsubscribe from ledger"
-  [{:keys [sub-atom] :as subscriptions} sub-id {:keys [ledger] :as request}]
+  [{:keys [sub-atom] :as _subscriptions} sub-id {:keys [ledger] :as request}]
   (log/debug "Unsubscribe websocket request by sub-id:" sub-id "request:" request)
   (swap! sub-atom update-in [:subs sub-id :ledgers]
          (fn [ledger-subs]
@@ -133,7 +133,7 @@
   (log/debug "Sending ledger message for:" ledger-id "with message:" message)
   (let [{:keys [closed? subs]} @sub-atom]
     (when-not closed?
-      (doseq [[sub-id {:keys [ws ledgers]}] subs]
+      (doseq [[sub-id {:keys [ledgers]}] subs]
         (when (contains? ledgers ledger-id)
           ;; TODO - use ledger subscription opts to filter out messages, permission
           (send-message subscriptions sub-id message))))))
@@ -194,7 +194,7 @@
       (log/error e "Error with :on-text message from websocket subscriber:" sub-id))))
 
 (defmethod client-message :on-bytes
-  [{:keys [http/sub-id payload offset len]}]
+  [{:keys [http/sub-id _payload _offset _len]}]
   (log/info "websocket :on-bytes (no-op) message for sub-id:" sub-id))
 
 ;; pong handled automatically, no response needed

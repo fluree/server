@@ -1,6 +1,5 @@
 (ns fluree.server.integration.basic-transaction-test
-  (:require [clojure.edn :as edn]
-            [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [fluree.server.integration.test-system
              :refer [api-post create-rand-ledger json-headers run-test-server]
              :as test-system]

@@ -3,7 +3,7 @@
             [fluree.server.consensus.raft.core :as raft]))
 
 (defn consensus-push-tx-exception
-  [{:keys [:consensus/state-atom :consensus/raft-state :fluree/conn] :as config}
+  [{:keys [consensus/raft-state] :as config}
    {:keys [ledger-id tx-id] :as _params}
    tx-exception]
   (let [created-body {:ledger-id  ledger-id

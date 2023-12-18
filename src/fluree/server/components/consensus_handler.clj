@@ -1,6 +1,5 @@
 (ns fluree.server.components.consensus-handler
-  (:require [donut.system :as ds]
-            [fluree.db.util.log :as log]
+  (:require [fluree.db.util.log :as log]
             [fluree.server.components.http :as http-routes]
             [fluree.server.consensus.handlers.create-ledger :as create-ledger]
             [fluree.server.consensus.handlers.ledger-created :as ledger-created]
@@ -120,7 +119,7 @@
     (if-let [{:keys [handler processor]} (get routes event)]
       (if handler
         (let [handler-resp (do-handler! event handler config parameters)]
-          (if processor
+          (when processor
             (future
               ;; processor and broadcaster handled in a background thread, not part of return response
               (do-processor! event processor config handler-resp)))

@@ -236,9 +236,9 @@
   "Function used to consume inbound server messages.
 
   client-id should be an approved client-id from the initial
-  client negotiation process, can be can used to validate incoming
+  client negotiation process, can be used to validate incoming
   messages are labeled as coming from the correct client."
-  [raft key-storage-read-fn conn message]
+  [raft _key-storage-read-fn conn message]
   (try
     (let [message'  (nippy/thaw message)
           [header data] message'
@@ -327,7 +327,7 @@
      resp-chan))
   ([group entry timeout-ms callback]
    (go-try (let [{:keys [this-server] :as raft} (:raft group)
-                 leader (<! (leader-async group))]
+                 leader (<? (leader-async group))]
              (if (= this-server leader)
                (raft/new-entry raft entry callback timeout-ms)
                (let [id           (str (UUID/randomUUID))
@@ -373,7 +373,7 @@
      resp-chan))
   ([group newServer timeout-ms callback]
    (go-try (let [raft'  (:raft group)
-                 leader (<! (leader-async group))
+                 leader (<? (leader-async group))
                  id     (str (UUID/randomUUID))]
              (if (= (:this-server raft') leader)
                (let [command-chan (-> group :command-chan)]
@@ -396,7 +396,7 @@
      resp-chan))
   ([group server timeout-ms callback]
    (go-try (let [raft'  (:raft group)
-                 leader (<! (leader-async group))
+                 leader (<? (leader-async group))
                  id     (str (UUID/randomUUID))]
              (if (= (:this-server raft') leader)
                (let [command-chan (-> group :command-chan)]
