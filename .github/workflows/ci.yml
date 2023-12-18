@@ -35,6 +35,16 @@ jobs:
           cljfmt: 'latest'
       - run: make cljfmt-check
 
+  clj-kondo-lint:
+    name: clj-kondo lint
+    runs-on: [ linux, large ]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: DeLaGuardo/setup-clojure@12.1
+        with:
+          clj-kondo: 'latest'
+      - run: make clj-kondo-lint-ci
+
   test:
     name: run tests
     needs: docker-build-cache
@@ -51,7 +61,7 @@ jobs:
           target: builder
           load: true
       - name: Run tests
-        run: docker run fluree/server make ci
+        run: docker run fluree/server make test
 
   notifications:
     name: send notifications
