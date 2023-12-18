@@ -30,6 +30,10 @@ pt: pending-tests
 eastwood:
 	clojure -M:dev:test:eastwood
 
+.PHONY: cljfmt-check
+cljfmt-check:
+	cljfmt check src test build.clj
+
 .PHONY: ci
 ci: test eastwood
 
