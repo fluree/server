@@ -108,7 +108,7 @@
                          :headers json-headers}
                 txn-res (api-post :transact txn-req)]
             (is (not= 200 (:status txn-res))
-                (str "transaction policy opts should have prevented modification, instead response was: " (pr-str txn-res)))
+                "transaction policy opts prevented modification")
             (let [query-req {:body
                              (json/write-value-as-string
                                {"@context" test-system/default-context
@@ -119,11 +119,10 @@
                                             "did"  alice-did}})
                              :headers json-headers}
                   query-res (api-post :history query-req)]
-              (is (= 200 (:status query-res))
-                  (str "History query response was: " (pr-str query-res)))
+              (is (= 200 (:status query-res)))
               (is (= [{"id" "ex:bob", "type" "ex:User"}]
                      (-> query-res :body json/read-value first (get "f:assert")))
-                  "policy opts should have prevented seeing bob's secret"))))
+                  "policy opts prevented seeing bob's secret"))))
         (testing "credential requests"
           (let [txn-req (<!! (cred/generate
                                {"@context" ["https://ns.flur.ee" test-system/default-context]
@@ -134,7 +133,7 @@
                 txn-res (api-post :transact {:body    (json/write-value-as-string txn-req)
                                              :headers json-headers})]
             (is (not= 200 (:status txn-res))
-                (str "transaction policy opts should have prevented modification, instead response was: " (pr-str txn-res)))
+                "transaction policy opts prevented modification")
             (let [query-req (<!! (cred/generate
                                    {"@context" test-system/default-context
                                     "from"     ledger-name
@@ -143,11 +142,10 @@
                                    (:private auth)))
                   query-res (api-post :history {:body (json/write-value-as-string query-req)
                                                 :headers json-headers})]
-              (is (= 200 (:status query-res))
-                  (str "History query response was: " (pr-str query-res)))
+              (is (= 200 (:status query-res)))
               (is (= [{"id" "ex:bob", "type" "ex:User"}]
                      (-> query-res :body json/read-value first (get "f:assert")))
-                  "policy opts should have prevented seeing bob's secret"))))
+                  "policy opts prevented seeing bob's secret"))))
         (testing "JWS requests"
           (let [txn-req {"@context" ["https://ns.flur.ee" test-system/default-context]
                          "ledger"   ledger-name
@@ -158,7 +156,7 @@
                                                         (:private auth))
                                              :headers json-headers})]
             (is (not= 200 (:status txn-res))
-                (str "transaction policy opts should have prevented modification, instead response was: " (pr-str txn-res)))
+                "transaction policy opts prevented modification")
             (let [query-req {"@context" test-system/default-context
                              "from"     ledger-name
                              "history"  "ex:bob"
@@ -168,11 +166,10 @@
                                                           (json/write-value-as-string query-req)
                                                           (:private auth)))
                                                 :headers json-headers})]
-              (is (= 200 (:status query-res))
-                  (str "History query response was: " (pr-str query-res)))
+              (is (= 200 (:status query-res)))
               (is (= [{"id" "ex:bob", "type" "ex:User"}]
                      (-> query-res :body json/read-value first (get "f:assert")))
-                  "policy opts should have prevented seeing bob's secret"))))))))
+                  "policy opts prevented seeing bob's secret"))))))))
 
 #_(deftest ^:integration ^:edn policy-opts-edn-test
    (testing "policy-enforcing opts are correctly handled"
