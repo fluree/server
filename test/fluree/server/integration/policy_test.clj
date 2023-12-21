@@ -1,9 +1,12 @@
 (ns fluree.server.integration.policy-test
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [clojure.core.async :refer [<!!]]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [clojure.edn :as edn]
+            [fluree.crypto :as crypto]
+            [fluree.db.json-ld.credential :as cred]
             [fluree.server.integration.test-system
              :as test-system
-             :refer [api-post create-rand-ledger json-headers run-test-server]]
+             :refer [auth api-post create-rand-ledger json-headers run-test-server]]
             [jsonista.core :as json]))
 
 (use-fixtures :once run-test-server)
@@ -11,7 +14,7 @@
 (deftest ^:integration ^:json policy-opts-json-test
   (testing "policy-enforcing opts are correctly handled"
     (let [ledger-name  (create-rand-ledger "policy-opts-test")
-          alice-did    "did:fluree:Tf6i5oh2ssYNRpxxUM2zea1Yo7x4uRqyTeU"
+          alice-did    (:id auth)
           txn-req      {:body
                         (json/write-value-as-string
                           {"ledger"   ledger-name
@@ -93,33 +96,80 @@
                   "ex:secret" "alice's NEW secret"}}
                (-> query-res :body json/read-value set))
             "alice's secret should be modified")
-        (let [txn-req {:body
-                       (json/write-value-as-string
-                         {"@context" ["https://ns.flur.ee" test-system/default-context]
-                          "ledger"   ledger-name
-                          "insert"   [{"id" "ex:bob"}
-                                      "ex:secret" "bob's new secret"]
-                          "opts"     {"role" "ex:userRole"
-                                      "did"  alice-did}})
-                       :headers json-headers}
-              txn-res (api-post :transact txn-req)]
-          (is (not= 200 (:status txn-res))
-              (str "transaction policy opts should have prevented modification, instead response was: " (pr-str txn-res)))
-          (let [query-req {:body
-                           (json/write-value-as-string
-                             {"@context" test-system/default-context
-                              "from"     ledger-name
-                              "history"  "ex:bob"
-                              "t"        {"from" 1}
-                              "opts"     {"role" "ex:userRole"
-                                          "did"  alice-did}})
-                           :headers json-headers}
-                query-res (api-post :history query-req)]
-            (is (= 200 (:status query-res))
-                (str "History query response was: " (pr-str query-res)))
-            (is (= [{"id" "ex:bob", "type" "ex:User"}]
-                   (-> query-res :body json/read-value first (get "f:assert")))
-                "policy opts should have prevented seeing bob's secret")))))))
+        (testing "plain requests"
+          (let [txn-req {:body
+                         (json/write-value-as-string
+                           {"@context" ["https://ns.flur.ee" test-system/default-context]
+                            "ledger"   ledger-name
+                            "insert"   [{"id" "ex:bob"}
+                                        "ex:secret" "bob's new secret"]
+                            "opts"     {"role" "ex:userRole"
+                                        "did"  alice-did}})
+                         :headers json-headers}
+                txn-res (api-post :transact txn-req)]
+            (is (not= 200 (:status txn-res))
+                "transaction policy opts prevented modification")
+            (let [query-req {:body
+                             (json/write-value-as-string
+                               {"@context" test-system/default-context
+                                "from"     ledger-name
+                                "history"  "ex:bob"
+                                "t"        {"from" 1}
+                                "opts"     {"role" "ex:userRole"
+                                            "did"  alice-did}})
+                             :headers json-headers}
+                  query-res (api-post :history query-req)]
+              (is (= 200 (:status query-res)))
+              (is (= [{"id" "ex:bob", "type" "ex:User"}]
+                     (-> query-res :body json/read-value first (get "f:assert")))
+                  "policy opts prevented seeing bob's secret"))))
+        (testing "credential requests"
+          (let [txn-req (<!! (cred/generate
+                               {"@context" ["https://ns.flur.ee" test-system/default-context]
+                                "ledger"   ledger-name
+                                "insert"   [{"id" "ex:bob"}
+                                            "ex:secret" "bob's new secret"]}
+                               (:private auth)))
+                txn-res (api-post :transact {:body    (json/write-value-as-string txn-req)
+                                             :headers json-headers})]
+            (is (not= 200 (:status txn-res))
+                "transaction policy opts prevented modification")
+            (let [query-req (<!! (cred/generate
+                                   {"@context" test-system/default-context
+                                    "from"     ledger-name
+                                    "history"  "ex:bob"
+                                    "t"        {"from" 1}}
+                                   (:private auth)))
+                  query-res (api-post :history {:body (json/write-value-as-string query-req)
+                                                :headers json-headers})]
+              (is (= 200 (:status query-res)))
+              (is (= [{"id" "ex:bob", "type" "ex:User"}]
+                     (-> query-res :body json/read-value first (get "f:assert")))
+                  "policy opts prevented seeing bob's secret"))))
+        (testing "JWS requests"
+          (let [txn-req {"@context" ["https://ns.flur.ee" test-system/default-context]
+                         "ledger"   ledger-name
+                         "insert"   [{"id" "ex:bob"}
+                                     "ex:secret" "bob's new secret"]}
+                txn-res (api-post :transact {:body    (crypto/create-jws
+                                                        (json/write-value-as-string txn-req)
+                                                        (:private auth))
+                                             :headers json-headers})]
+            (is (not= 200 (:status txn-res))
+                "transaction policy opts prevented modification")
+            (let [query-req {"@context" test-system/default-context
+                             "from"     ledger-name
+                             "history"  "ex:bob"
+                             "t"        {"from" 1}}
+                  query-res (api-post :history {:body (json/write-value-as-string
+                                                        (crypto/create-jws
+                                                          (json/write-value-as-string query-req)
+                                                          (:private auth)))
+                                                :headers json-headers})]
+              (is (= 200 (:status query-res)))
+              (is (= [{"id" "ex:bob", "type" "ex:User"}]
+                     (-> query-res :body json/read-value first (get "f:assert")))
+                  "policy opts prevented seeing bob's secret"))))))))
 
 #_(deftest ^:integration ^:edn policy-opts-edn-test
    (testing "policy-enforcing opts are correctly handled"

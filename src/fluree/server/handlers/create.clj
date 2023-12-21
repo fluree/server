@@ -17,11 +17,10 @@
 (set! *warn-on-reflection* true)
 
 (defn queue-consensus
-  [consensus conn watcher ledger tx-id txn txn-context]
+  [consensus conn watcher ledger tx-id txn opts]
   (let [conn-type       (conn-proto/-method conn)
         ;; initial response is not completion, but acknowledgement of persistence
-        persist-resp-ch (consensus/queue-new-ledger consensus conn-type ledger
-                                                    tx-id txn txn-context nil)]
+        persist-resp-ch (consensus/queue-new-ledger consensus conn-type ledger tx-id txn opts)]
 
     (go
       (let [persist-resp (<! persist-resp-ch)]
@@ -31,13 +30,13 @@
           (watcher/deliver-watch watcher tx-id persist-resp))))))
 
 (defn create-ledger
-  [p consensus conn watcher expanded-txn txn-context]
+  [p consensus conn watcher expanded-txn opts]
   (let [ledger-id     (-> expanded-txn (get const/iri-ledger) (get 0) (get "@value"))
         tx-id         (derive-tx-id expanded-txn)
         final-resp-ch (watcher/create-watch watcher tx-id)]
 
     ;; register ledger creation into consensus
-    (queue-consensus consensus conn watcher ledger-id tx-id expanded-txn txn-context)
+    (queue-consensus consensus conn watcher ledger-id tx-id expanded-txn opts)
 
     ;; wait for final response from consensus and deliver to promise
     (go
@@ -85,6 +84,6 @@
     (or (not (deref! (fluree/exists? conn ledger-id)))
         (throw-ledger-exists ledger-id))
     ;; kick of async process that will eventually deliver resp or exception to resp-p
-    (create-ledger resp-p consensus conn watcher expanded-txn txn-context)
+    (create-ledger resp-p consensus conn watcher expanded-txn {:context txn-context})
     {:status 201
      :body   (deref! resp-p)}))

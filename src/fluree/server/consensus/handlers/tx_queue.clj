@@ -68,7 +68,7 @@
   (= :leader (:status raft-state)))
 
 (defn do-transaction
-  [{:keys [:fluree/conn] :as config} {:keys [ledger-id tx-id txn txn-context] :as params}]
+  [{:keys [:fluree/conn] :as config} {:keys [ledger-id tx-id txn opts] :as params}]
   (let [start-time (System/currentTimeMillis)
         _          (log/debug "Starting transaction processing for ledger:" ledger-id
                               "with tx-id" tx-id ". Transaction sat in queue for"
@@ -88,7 +88,7 @@
                     resp))]
     (-> ledger
         fluree/db
-        (fluree/stage txn {:context txn-context})
+        (fluree/stage txn opts)
         deref!
         (commit!))))
 

@@ -37,21 +37,22 @@
 (defn create-and-commit
   "Returns promise with eventual response, which could be an exception."
   [{:keys [fluree/conn] :as config}
-   {:keys [ledger-id txn txn-context tx-id] :as _params}]
+   {:keys [ledger-id txn opts tx-id] :as _params}]
   (log/trace "Creating ledger" ledger-id "with txn:" txn)
-  (let [opts    (parse-opts txn)
-        ledger  (deref! (fluree/create conn ledger-id opts))
-        commit! (fn [db]
-                  (let [index-files-ch (async/chan)
-                        _              (push-new-index-files config index-files-ch) ;; monitor for new index files and push across network
-                        resp           (fluree/commit! ledger db {:file-data?     true
-                                                                  :index-files-ch index-files-ch})]
+  (let [create-opts (parse-opts txn)
+        ledger      (deref! (fluree/create conn ledger-id create-opts))
+        commit!     (fn [db]
+                      (let [index-files-ch (async/chan)
+                            ;; monitor for new index files and push across network
+                            _              (push-new-index-files config index-files-ch)
+                            resp           (fluree/commit! ledger db {:file-data?     true
+                                                                      :index-files-ch index-files-ch})]
                     (log/debug "New ledger" ledger-id "created with tx-id: " tx-id)
                     resp))]
     ;; following uses :file-data? and will return map with {:keys [db data-file commit-file]}
     (-> ledger
         fluree/db
-        (fluree/stage txn {:context txn-context})
+        (fluree/stage txn opts)
         deref!
         commit!)))
 
