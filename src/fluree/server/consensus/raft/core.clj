@@ -173,10 +173,10 @@
 (defn snapshot-writer
   "Wraps snapshot-writer* in the logic that determines whether all nodes or
   only the leader should write snapshots."
-  [{:keys [only-leader-snapshots] :as config}]
+  [{:keys [shared-storage?] :as config}]
   (let [writer (snapshot-writer* config)]
     (fn [index callback]
-      (if only-leader-snapshots
+      (if shared-storage?
         (when (is-leader? config)
           (writer index callback))
         (writer index callback)))))
@@ -439,7 +439,7 @@
 
 
 (defrecord RaftGroup [state-atom event-chan command-chan this-server port
-                      close raft raft-initialized open-api private-keys]
+                      close raft raft-initialized private-keys]
   TxGroup
   (-add-server-async [group server] (add-server-async group server))
   (-remove-server-async [group server] (remove-server-async group server))

@@ -11,10 +11,16 @@
   (log/debug "Starting raft consensus with config:" config)
   (let [handler (consensus-handler/create-handler consensus-handler/default-routes)]
     (consensus/start handler (assoc config :join? false
-                                           :ledger-directory conn-storage-path
+                                           :conn-storage-path conn-storage-path
                                            :fluree/conn connection
                                            :fluree/watcher watcher
                                            :fluree/subscriptions subscriptions))))
+
+(def ^:const replicate-file-conn-types
+  "These connection types will replicate the data on every fluree/server that is
+  part of the network. Other connection types (e.g. S3, IPFS) should not be replicated
+  as they are being stored by a central file service"
+  #{:file :memory})
 
 (def consensus
   #::ds{:start  (fn [{{:keys [config fluree/connection fluree/watcher fluree/subscriptions conn-storage-path]} ::ds/config}]
