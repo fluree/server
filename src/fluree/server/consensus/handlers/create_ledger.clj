@@ -46,8 +46,8 @@
                             _              (push-new-index-files config index-files-ch)
                             resp           (fluree/commit! ledger db {:file-data?     true
                                                                       :index-files-ch index-files-ch})]
-                    (log/debug "New ledger" ledger-id "created with tx-id: " tx-id)
-                    resp))]
+                        (log/debug "New ledger" ledger-id "created with tx-id: " tx-id)
+                        resp))]
     ;; following uses :file-data? and will return map with {:keys [db data-file commit-file]}
     (-> ledger
         fluree/db
