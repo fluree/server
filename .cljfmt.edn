@@ -1,0 +1,8 @@
+{:remove-multiple-non-indenting-spaces? false ; enable this when cljfmt supports aligning let forms
+ :sort-ns-references?                   true
+ :parallel?                             true
+ :extra-indents
+ {go-try [[:block 0]] ; makes go-try indent like go
+  try*   [[:block 0]] ; makes try* indent like try
+  catch* [[:block 1]] ; makes catch* indent like catch (but w/o exception type identifier)
+  case+  [[:block 1]]}} ; makes case+ indent like case
