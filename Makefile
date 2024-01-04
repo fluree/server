@@ -26,16 +26,17 @@ pending-tests:
 .PHONY: pt
 pt: pending-tests
 
-.PHONY: eastwood
-eastwood:
-	clojure -M:dev:test:eastwood
+.PHONY: clj-kondo-lint
+clj-kondo-lint:
+	clj-kondo --lint src:test:build.clj
+
+.PHONY: clj-kondo-lint-ci
+clj-kondo-lint-ci:
+	clj-kondo --lint src:test:build.clj --config .clj-kondo/ci-config.edn
 
 .PHONY: cljfmt-check
 cljfmt-check:
 	cljfmt check src test build.clj
-
-.PHONY: ci
-ci: test eastwood
 
 .PHONY: clean
 clean:
