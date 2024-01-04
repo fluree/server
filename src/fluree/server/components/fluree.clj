@@ -1,7 +1,7 @@
 (ns fluree.server.components.fluree
   (:require [donut.system :as ds]
-            [fluree.db.json-ld.api :as db]
             [fluree.db.conn.proto :as conn-proto]
+            [fluree.db.json-ld.api :as db]
             [fluree.db.util.log :as log]))
 
 (def conn

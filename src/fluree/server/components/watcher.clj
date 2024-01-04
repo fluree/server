@@ -23,7 +23,6 @@
                   (close instance))
         :config {:max-tx-wait-ms (ds/ref [:env :http/server :max-tx-wait-ms])}})
 
-
 ;; This atom maps a request's unique id (e.g. tx-id) to a promise that will be delivere
 (def watcher-atom (atom {}))
 

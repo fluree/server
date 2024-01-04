@@ -10,8 +10,8 @@
             [fluree.db.util.log :as log]
             [fluree.json-ld.processor.api :as jld-processor]
             [fluree.server.components.watcher :as watcher]
-            [fluree.server.handlers.shared :refer [defhandler deref!]]
-            [fluree.server.consensus.core :as consensus]))
+            [fluree.server.consensus.core :as consensus]
+            [fluree.server.handlers.shared :refer [defhandler deref!]]))
 
 (set! *warn-on-reflection* true)
 
@@ -48,16 +48,16 @@
         (cond
           (= :timeout final-resp)
           (deliver p (ex-info
-                       (str "Timeout waiting for transaction to complete for: "
-                            ledger-id " with tx-id: " tx-id)
-                       {:status 408 :error :db/response-timeout}))
+                      (str "Timeout waiting for transaction to complete for: "
+                           ledger-id " with tx-id: " tx-id)
+                      {:status 408 :error :db/response-timeout}))
 
           (nil? final-resp)
           (deliver p (ex-info
-                       (str "Unexpected close waiting for ledger transaction to complete for: "
-                            ledger-id " with tx-id: " tx-id
-                            ". Transaction may have processed, check ledger for confirmation.")
-                       {:status 500 :error :db/response-closed}))
+                      (str "Unexpected close waiting for ledger transaction to complete for: "
+                           ledger-id " with tx-id: " tx-id
+                           ". Transaction may have processed, check ledger for confirmation.")
+                      {:status 500 :error :db/response-closed}))
 
           (util/exception? final-resp)
           (deliver p final-resp)

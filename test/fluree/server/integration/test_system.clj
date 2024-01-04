@@ -1,6 +1,6 @@
 (ns fluree.server.integration.test-system
-  (:require [clojure.edn :as edn]
-            [clj-http.client :as http]
+  (:require [clj-http.client :as http]
+            [clojure.edn :as edn]
             [donut.system :as ds]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]

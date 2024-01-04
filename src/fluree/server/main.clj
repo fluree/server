@@ -1,16 +1,16 @@
 (ns fluree.server.main
-  (:require [clojure.java.io :as io]
-            [clojure.string :as str]
+  (:require [aero.core :as aero]
             [clojure.edn :as edn]
-            [jsonista.core :as json]
-            [aero.core :as aero]
+            [clojure.java.io :as io]
+            [clojure.string :as str]
             [donut.system :as ds]
             [fluree.db.util.log :as log]
             [fluree.server.components.consensus :as consensus]
+            [fluree.server.components.fluree :as fluree]
             [fluree.server.components.http :as http]
-            [fluree.server.components.watcher :as watcher]
             [fluree.server.components.subscriptions :as subscriptions]
-            [fluree.server.components.fluree :as fluree])
+            [fluree.server.components.watcher :as watcher]
+            [jsonista.core :as json])
   (:import (java.io PushbackReader))
   (:gen-class))
 
@@ -33,7 +33,6 @@
 (defn env-config [& [profile]]
   (aero/read-config (io/resource "config.edn")
                     (when profile {:profile profile})))
-
 
 (def base-system
   {::ds/defs

@@ -5,10 +5,10 @@
             [fluree.db.util.core :as util]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
-            [fluree.server.handlers.shared :refer [deref!]]
             [fluree.server.consensus.producers.new-commit :refer [consensus-push-commit]]
+            [fluree.server.consensus.producers.new-index-file :refer [push-new-index-files]]
             [fluree.server.consensus.producers.tx-exception :refer [consensus-push-tx-exception]]
-            [fluree.server.consensus.producers.new-index-file :refer [push-new-index-files]]))
+            [fluree.server.handlers.shared :refer [deref!]]))
 
 (set! *warn-on-reflection* true)
 
@@ -23,8 +23,6 @@
    :tx-id     tx-id
    :ledger-id ledger-id
    :instant   (System/currentTimeMillis)})
-
-
 
 ;; holds a 'lock' per ledger while processing a transaction
 (def tx-processing-lock (atom {}))
@@ -44,7 +42,6 @@
         success?  (= tx-id (get-in new-state [ledger-id :tx-id]))]
     success?))
 
-
 (defn- update-lock
   "If after a transaction is processed there is another transaction
   in the queue, updates the lock for the new transaction."
@@ -52,12 +49,10 @@
   (swap! tx-processing-lock assoc ledger-id {:tx-id      tx-id
                                              :start-time (System/currentTimeMillis)}))
 
-
 (defn- release-lock
   "Releases lock for a ledger."
   [ledger-id]
   (swap! tx-processing-lock dissoc ledger-id))
-
 
 (defn my-responsibility?
   "Returns true if this server is currently responsible for processing
@@ -91,7 +86,6 @@
         (fluree/stage txn opts)
         deref!
         (commit!))))
-
 
 (defn get-next-transaction
   "Checks the consensus state machine to see if any more transactions
@@ -164,7 +158,6 @@
             (release-lock ledger-id)
             :success))))))
 
-
 (defn processor
   "Processes a new transaction request.
 
@@ -175,7 +168,6 @@
   (log/debug "starting processor for ledger-id:" ledger-id)
   (when (my-responsibility? raft-state ledger-id)
     (process-transactions config params)))
-
 
 (defn handler
   "Stores a new transaction into the queue. Exerts backpressure if too many transactions

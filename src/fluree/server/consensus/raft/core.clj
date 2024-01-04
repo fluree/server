@@ -1,14 +1,14 @@
 (ns fluree.server.consensus.raft.core
-  (:require [fluree.raft :as raft]
-            [taoensso.nippy :as nippy]
-            [clojure.core.async :as async :refer [<! <!! go go-loop]]
+  (:require [clojure.core.async :as async :refer [<! <!! go go-loop]]
             [clojure.pprint :as cprint]
-            [fluree.db.util.log :as log]
             [clojure.string :as str]
             [fluree.db.util.async :refer [go-try <? <??]]
-            [fluree.server.consensus.protocol :as txproto :refer [TxGroup]]
+            [fluree.db.util.log :as log]
+            [fluree.raft :as raft]
+            [fluree.raft.leader :as raft-leader]
             [fluree.server.consensus.network.tcp :as ftcp]
-            [fluree.raft.leader :as raft-leader])
+            [fluree.server.consensus.protocol :as txproto :refer [TxGroup]]
+            [taoensso.nippy :as nippy])
   (:import (java.util UUID)))
 
 (set! *warn-on-reflection* true)
@@ -32,7 +32,6 @@
           ba   (<!! (storage-read file))]
       {:parts 1
        :data  ba})))
-
 
 (defn snapshot-installer
   "Installs a new snapshot being sent from a different server.
@@ -59,7 +58,6 @@
       ;;   investigate streaming multipart uploads or similar.
       (<?? (storage-write file snapshot-data)))))
 
-
 (defn snapshot-reify
   "Reifies a snapshot, should populate whatever data is needed into an initialized state machine
   that is used for raft.
@@ -77,14 +75,12 @@
         (reset! state-atom state))
       (catch Exception e (log/error e "Error reifying snapshot: " snapshot-id)))))
 
-
 (defn- return-snapshot-id
   "Takes file map (from storage subsystem) and returns log id (typically same
   as start index) from the file name as a long integer."
   [file]
   (when-let [match (re-find #"^([0-9]+)\.snapshot$" (:name file))]
     (Long/parseLong (second match))))
-
 
 (defn- purge-snapshots
   [{:keys [path storage-list storage-delete max-snapshots]}]
@@ -100,12 +96,10 @@
                                 (str snapshot ".snapshot")])]
         (storage-delete file)))))
 
-
 (defn get-raft-state
   "Returns current raft state to callback."
   [raft callback]
   (raft/get-raft-state (:raft raft) callback))
-
 
 (defn leader-async
   "Returns leader as a core async channel once available.
@@ -132,7 +126,6 @@
              (<! (async/timeout 100))
              (recur (inc retries)))))))))
 
-
 (defn is-leader?-async
   [raft]
   (go
@@ -141,14 +134,12 @@
         leader
         (= (:this-server raft) leader)))))
 
-
 (defn is-leader?
   [raft]
   (let [leader? (<!! (is-leader?-async raft))]
     (if (instance? Throwable leader?)
       (throw leader?)
       leader?)))
-
 
 (defn snapshot-writer*
   "Blocking until write succeeds. An error will stop RAFT entirely."
@@ -169,7 +160,6 @@
       (callback)
       (purge-snapshots (assoc config :max-snapshots max-snapshots)))))
 
-
 (defn snapshot-writer
   "Wraps snapshot-writer* in the logic that determines whether all nodes or
   only the leader should write snapshots."
@@ -180,7 +170,6 @@
         (when (is-leader? config)
           (writer index callback))
         (writer index callback)))))
-
 
 (defn snapshot-list-indexes
   "Lists all stored snapshot indexes, sorted ascending. Used for bootstrapping a
@@ -200,10 +189,8 @@
            sort
            vec))))
 
-
 ;; Holds state change functions that are registered
 (def state-change-fn-atom (atom {}))
-
 
 (defn register-state-change-fn
   "Registers function to be called with every state monitor change. id provided is used to un-register function
@@ -215,15 +202,12 @@
   [id]
   (swap! state-change-fn-atom dissoc id))
 
-
 (defn unregister-all-state-change-fn
   []
   (reset! state-change-fn-atom {}))
 
-
 ;; map of request-ids to a response channel that will contain the response eventually
 (def pending-responses (atom {}))
-
 
 (defn send-rpc
   "Sends rpc call to specified server.
@@ -248,7 +232,6 @@
           (swap! pending-responses dissoc msg-id)
           (log/debug "Connection to" server "is closed, unable to send rpc." header))))))
 
-
 (defn message-consume
   "Function used to consume inbound server messages.
 
@@ -268,8 +251,8 @@
             (swap! pending-responses dissoc msg-id)
             (callback data)))
         (let [resp-header (assoc header :op (keyword (str (name op) "-response"))
-                                        :to (:from header)
-                                        :from (:to header))
+                                 :to (:from header)
+                                 :from (:to header))
               callback    (fn [x]
                             (ftcp/send-message write-chan resp-header x))]
           (case op
@@ -283,7 +266,6 @@
             ;; else
             (raft/invoke-rpc raft op data callback)))))
     (catch Exception e (log/error e "Error consuming new message! Ignoring."))))
-
 
 ;; start with a default state when no other state is present (initialization)
 ;; useful for setting a base 'version' in state
@@ -302,7 +284,6 @@
     ;; close tcp server
     (server-shutdown)))
 
-
 (defn get-raft-state-async
   "Returns current raft state as a core async channel."
   [raft]
@@ -313,19 +294,16 @@
                            (async/close! resp-chan)))
     resp-chan))
 
-
 (defn monitor-raft
   "Monitor raft events and state for debugging"
   ([raft] (monitor-raft raft (fn [x] (cprint/pprint x))))
   ([raft callback]
    (raft/monitor-raft (:raft raft) callback)))
 
-
 (defn monitor-raft-stop
   "Stops current raft monitor"
   [raft]
   (raft/monitor-raft (:raft raft) nil))
-
 
 (defn state
   [raft]
@@ -333,7 +311,6 @@
     (if (instance? Throwable state)
       (throw state)
       state)))
-
 
 ;; TODO configurable timeout
 (defn new-entry-async
@@ -360,7 +337,6 @@
                  ;; send command to leader
                  (send-rpc raft leader :new-command command-data nil)))))))
 
-
 (defn leader-new-command!
   "Issue a new command but only if currently the leader, else returns an exception.
 
@@ -382,7 +358,6 @@
                        {:status 400
                         :error  :consensus/not-leader})))
      p)))
-
 
 (defn add-server-async
   "Sends a command to the leader. If no callback provided, returns a core async promise channel
@@ -407,7 +382,6 @@
                    ;; send command to leader
                    (send-rpc raft' leader :add-server [id newServer] nil)))))))
 
-
 (defn remove-server-async
   "Sends a command to the leader. If no callback provided, returns a core async promise channel
   that will eventually contain a response."
@@ -431,12 +405,10 @@
                    ;; send command to leader
                    (send-rpc raft' leader :remove-server [id server] nil)))))))
 
-
 (defn local-state
   "Returns local, current state from state machine"
   [raft]
   @(:state-atom raft))
-
 
 (defrecord RaftGroup [state-atom event-chan command-chan this-server port
                       close raft raft-initialized open-api private-keys]
@@ -516,7 +488,6 @@
                       {:status 400 :error :db/invalid-configuration})))
     this-server-cfg))
 
-
 (defn launch-network-connections
   "Fires up network and provides it the handler for new events/commands"
   [{:keys [this-server-config server-configs join? storage-ledger-read] :as _raft-config} raft-instance]
@@ -535,7 +506,6 @@
     (doseq [connect-to connect-servers]
       (log/debug "Raft: attempting connection to server: " connect-to)
       (ftcp/launch-client-connection this-server-config connect-to handler-fn))))
-
 
 (defn handler
   "Raft calls the state-machine handler with two args, the first is 'command' which

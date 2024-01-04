@@ -32,39 +32,39 @@
   (log/debug "multi-addr -> map input: " multi-addr)
   (when-not (str/starts-with? multi-addr "/")
     (invalid-address-shutdown
-      (str "Error in multi-address type in: " multi-addr)))
+     (str "Error in multi-address type in: " multi-addr)))
   (let [[_ address-type host protocol port alias? alias] (str/split multi-addr #"/")
         port* (try (Integer/parseInt port)
                    (catch Exception _
                      (invalid-address-shutdown
-                       (str "Error in multi-address port in: " multi-addr
-                            " Port value must be an integer. "
-                            "Supplied: " port))))]
+                      (str "Error in multi-address port in: " multi-addr
+                           " Port value must be an integer. "
+                           "Supplied: " port))))]
     (when-not ({"ip4" "dns4" "ip6" "dns6"} address-type)
       (invalid-address-shutdown
-        (str "Error in multi-address type in: " multi-addr
-             " Fluree only supports the ipv4, ipv6, dns4 or dns6 at the moment.")))
+       (str "Error in multi-address type in: " multi-addr
+            " Fluree only supports the ipv4, ipv6, dns4 or dns6 at the moment.")))
     (when-not (= "tcp" protocol)
       (invalid-address-shutdown
-        (str "Error in multi-address protocol in: " multi-addr
-             " Fluree only supports the tcp protocol at the moment.")))
+       (str "Error in multi-address protocol in: " multi-addr
+            " Fluree only supports the tcp protocol at the moment.")))
     (when (= "ip6" address-type)
       (when-not (re-matches ipv6-regex host)
         (invalid-address-shutdown
-          (str "Error in multi-address ip6 host address in: " multi-addr
-               " Invalid ipv6 address."))))
+         (str "Error in multi-address ip6 host address in: " multi-addr
+              " Invalid ipv6 address."))))
     (when (= "ip4" address-type)
       (when-not (re-matches ipv4-regex host)
         (invalid-address-shutdown
-          (str "Error in multi-address ip4 host address in: " multi-addr
-               " Invalid ipv4 address."))))
+         (str "Error in multi-address ip4 host address in: " multi-addr
+              " Invalid ipv4 address."))))
     (when (and alias? (not= "alias" alias?))
       (invalid-address-shutdown
-        (str "Error in multi-address ip4 host address in: " multi-addr
-             " Fluree only supports 'alias' name as a way of specifying
+       (str "Error in multi-address ip4 host address in: " multi-addr
+            " Fluree only supports 'alias' name as a way of specifying
              a server alias.")))
 
     (cond-> {:multi-addr multi-addr
              :host       host
              :port       port*}
-            alias (assoc :alias alias))))
+      alias (assoc :alias alias))))

@@ -1,6 +1,6 @@
 (ns fluree.server.io.crypto
-  (:require [fluree.db.util.log :as log]
-            [fluree.crypto :as crypto])
+  (:require [fluree.crypto :as crypto]
+            [fluree.db.util.log :as log])
   (:import (java.nio ByteBuffer)
            (java.security SecureRandom)
            (javax.crypto BadPaddingException)))

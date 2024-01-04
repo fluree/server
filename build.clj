@@ -6,6 +6,6 @@
 (def version (format "0.1.%s" (b/git-count-revs nil)))
 
 (defn uber [_]
-      (bb/uber {:lib     lib
-                :version version
-                :main    'fluree.server.main}))
+  (bb/uber {:lib     lib
+            :version version
+            :main    'fluree.server.main}))

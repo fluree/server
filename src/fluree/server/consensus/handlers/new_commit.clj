@@ -8,7 +8,6 @@
             [fluree.server.components.subscriptions :as subs]
             [fluree.server.components.watcher :as watcher]))
 
-
 (set! *warn-on-reflection* true)
 
 ;; TODO - file-path, write-file, and store-ledger-files are all used for :ledger-created as well - consolidate
@@ -22,7 +21,6 @@
     (when (= "file" conn-type)
       (file-conn/address-full-path conn path))))
 
-
 (defn write-file
   "Only writes file to disk if address is of type 'file'
 
@@ -30,7 +28,6 @@
   [config {:keys [address json] :as _file-meta}]
   (when-let [file-path (file-path config address)]
     (fs/write-file file-path (.getBytes ^String json))))
-
 
 (defn store-ledger-files
   "Persist both the data-file and commit-file to disk only if redundant
@@ -50,7 +47,6 @@
         (write-file config commit-file-meta)
         (<? (nameservice/push! conn commit-file-meta)))
       commit-result)))
-
 
 (defn update-ledger-state
   "Updates the latest commit in the ledger, and removes the processed transaction in the queue"
@@ -78,8 +74,6 @@
                  {:status 500
                   :error  :db/unexpected-error}
                  e)))))
-
-
 
 (defn handler
   "Adds a new commit for a ledger into state machine and stores associated files

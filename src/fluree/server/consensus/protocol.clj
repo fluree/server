@@ -1,7 +1,7 @@
 (ns fluree.server.consensus.protocol
-  (:require [clojure.string :as str]
+  (:require [clojure.core.async :as async]
+            [clojure.string :as str]
             [fluree.db.util.core :as util]
-            [clojure.core.async :as async]
             [fluree.db.util.log :as log]))
 
 (set! *warn-on-reflection* true)
@@ -9,7 +9,6 @@
 ;; To allow for pluggable consensus, we have a TxGroup protocol.
 ;; In order to allow for a new consensus type, we need to create a record with all of the following methods.
 ;; Currently, we support a RaftGroup and SoloGroup.
-
 
 (defprotocol TxGroup
   (-add-server-async [group server])
@@ -22,9 +21,7 @@
   (-active-servers [group] "Returns list of active server-ids. If raft, servers with active leases.")
   (-start-up-activities [group conn system shutdown join?]))
 
-
 ;; STATE MACHINE COMMANDS - for generic state machine
-
 
 ;; get, assoc, dissoc functions
 
@@ -81,7 +78,6 @@
   ([raft ks swap-v compare-ks compare-v]
    (let [command [:cas-in ks swap-v compare-ks compare-v]]
      (-new-entry-async raft command))))
-
 
 ;; version, this-server commands
 
@@ -145,7 +141,6 @@ or this server is not responsible for this ledger, will return false. Else true 
   (let [ks [:networks network :ledgers ledger-id]]
     (kv-dissoc-in group ks)))
 
-
 ;; Network commands
 
 (defn network-list
@@ -158,7 +153,6 @@ or this server is not responsible for this ledger, will return false. Else true 
   [group-raft network]
   (kv-assoc-in group-raft [:networks network :initialized?] true))
 
-
 ;; Ledger commands
 
 (defn ledger-list*
@@ -166,28 +160,27 @@ or this server is not responsible for this ledger, will return false. Else true 
   [current-state]
   (let [networks (-> current-state :networks (keys))]
     (reduce
-      (fn [acc network]
-        (let [ledgers  (get-in current-state [:networks network :ledgers])
-              ledgers' (filter #(#{:ready :initialize :reindex}
-                                 (:status (get ledgers %))) (keys ledgers))]
-          (reduce #(conj %1 [network %2]) acc ledgers')))
-      [] networks)))
+     (fn [acc network]
+       (let [ledgers  (get-in current-state [:networks network :ledgers])
+             ledgers' (filter #(#{:ready :initialize :reindex}
+                                (:status (get ledgers %))) (keys ledgers))]
+         (reduce #(conj %1 [network %2]) acc ledgers')))
+     [] networks)))
 
 (defn all-ledger-list*
   "Returns a list of all ledgers for all networks as a two-tuple, [network ledger-id]."
   [current-state]
   (let [networks (-> current-state :networks (keys))]
     (reduce
-      (fn [acc network]
-        (let [ledgers (keys (get-in current-state [:networks network :ledgers]))]
-          (reduce #(conj %1 [network %2]) acc ledgers)))
-      [] networks)))
+     (fn [acc network]
+       (let [ledgers (keys (get-in current-state [:networks network :ledgers]))]
+         (reduce #(conj %1 [network %2]) acc ledgers)))
+     [] networks)))
 
 (defn all-ledger-list
   "Returns a list of all ledgers for all networks as a two-tuple, [network ledger-id]."
   [group]
   (all-ledger-list* (-local-state group)))
-
 
 (defn ledger-list
   "Returns a list of ready ledgers for all networks as a two-tuple, [network ledger-id]."
@@ -266,9 +259,9 @@ or this server is not responsible for this ledger, will return false. Else true 
                             (vals)
                             (#(mapcat vals %)))]
     (reduce
-      (fn [acc {:keys [network ledger-id command]}]
-        (conj acc [network ledger-id command]))
-      [] initialize-cmds)))
+     (fn [acc {:keys [network ledger-id command]}]
+       (conj acc [network ledger-id command]))
+     [] initialize-cmds)))
 
 ;; private key commands
 
@@ -329,9 +322,7 @@ or this server is not responsible for this ledger, will return false. Else true 
                       :ledger-id ledger-id
                       :instant   (System/currentTimeMillis)}))
 
-
 ;; Block commands
-
 
 (defn block-height*
   "Returns block height given the group's state atom."
@@ -356,7 +347,6 @@ or this server is not responsible for this ledger, will return false. Else true 
    (register-genesis-block-async group network ledger-id 1))
   ([group network ledger-id block]
    (kv-assoc-in-async group [:networks network :ledgers ledger-id :block] block)))
-
 
 ;; storage commands
 

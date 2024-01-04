@@ -5,10 +5,10 @@
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [fluree.raft.leader :refer [is-leader?]]
-            [fluree.server.handlers.shared :refer [deref!]]
             [fluree.server.consensus.core :as consensus]
             [fluree.server.consensus.producers.new-index-file :refer [push-new-index-files]]
-            [fluree.server.consensus.raft.core :as raft]))
+            [fluree.server.consensus.raft.core :as raft]
+            [fluree.server.handlers.shared :refer [deref!]]))
 
 (set! *warn-on-reflection* true)
 
@@ -75,7 +75,6 @@
     ;; returns promise
     (raft/leader-new-command! config :ledger-created created-body)))
 
-
 (defn processor
   "Processes create-ledger request.
 
@@ -88,7 +87,6 @@
            (push-consensus config params)
            deref!)
       false)))
-
 
 (defn handler
   "Adds a new ledger along with its transaction into the state machine in a queue.
