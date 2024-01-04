@@ -1,6 +1,8 @@
 (ns fluree.server.integration.sparql-test
-  (:require [clojure.test :refer :all]
-            [fluree.server.integration.test-system :refer :all]
+  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+            [fluree.server.integration.test-system
+             :refer [api-post create-rand-ledger json-headers run-test-server
+                     sparql-headers]]
             [jsonista.core :as json]))
 
 (use-fixtures :once run-test-server)

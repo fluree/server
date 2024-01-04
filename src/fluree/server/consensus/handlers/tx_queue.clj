@@ -1,9 +1,7 @@
 (ns fluree.server.consensus.handlers.tx-queue
   (:require [clojure.core.async :as async]
-            [fluree.db.constants :as const]
             [fluree.db.json-ld.api :as fluree]
             [fluree.db.util.core :as util]
-            [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.producers.new-commit :refer [consensus-push-commit]]
             [fluree.server.consensus.producers.new-index-file :refer [push-new-index-files]]
@@ -17,12 +15,12 @@
   ;; This map is created in the 'transact' http handler via
   ;; fluree.server.consensus.core/queue-new-transaction
 
-  {:txn       txn
-   :conn-type conn-type
-   :size      (count txn)
-   :tx-id     tx-id
-   :ledger-id ledger-id
-   :instant   (System/currentTimeMillis)})
+  '{:txn       txn
+    :conn-type conn-type
+    :size      (count txn)
+    :tx-id     tx-id
+    :ledger-id ledger-id
+    :instant   (System/currentTimeMillis)})
 
 ;; holds a 'lock' per ledger while processing a transaction
 (def tx-processing-lock (atom {}))
@@ -59,7 +57,7 @@
   transactions for this particular ledger.
 
   For now, only the leader is responsible."
-  [raft-state ledger-id]
+  [raft-state _ledger-id]
   (= :leader (:status raft-state)))
 
 (defn do-transaction
@@ -91,7 +89,7 @@
   "Checks the consensus state machine to see if any more transactions
   are queued for the ledger. If so, return it and updates the lock
   to reflect the new transaction being worked on."
-  [{:keys [:consensus/state-atom :consensus/raft-state] :as config} processed-tx-ids ledger-id]
+  [{:keys [consensus/state-atom] :as _config} processed-tx-ids ledger-id]
   (let [queue             (vals (get-in @state-atom [:tx-queue ledger-id]))
         processed-tx-ids' (set processed-tx-ids)]
     (->> queue
@@ -164,7 +162,7 @@
   Only the leader creates new ledgers.
 
   Return value is not used."
-  [{:keys [:consensus/raft-state] :as config} {:keys [ledger-id] :as params}]
+  [{:keys [consensus/raft-state] :as config} {:keys [ledger-id] :as params}]
   (log/debug "starting processor for ledger-id:" ledger-id)
   (when (my-responsibility? raft-state ledger-id)
     (process-transactions config params)))
@@ -172,7 +170,7 @@
 (defn handler
   "Stores a new transaction into the queue. Exerts backpressure if too many transactions
   are already queued."
-  [{:keys [:consensus/state-atom :consensus/raft-state] :as _config} {:keys [ledger-id tx-id] :as params}]
+  [{:keys [consensus/state-atom] :as _config} {:keys [ledger-id tx-id] :as params}]
   (log/debug "Queuing new transaction into state machine with params: " params)
   (try
     (let [max-queue 100 ;; TODO - elevate this to a configuration option

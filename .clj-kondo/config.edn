@@ -1,0 +1,1 @@
+{:lint-as {fluree.server.handlers.shared/defhandler clojure.core/defn}}

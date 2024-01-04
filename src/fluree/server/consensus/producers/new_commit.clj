@@ -11,7 +11,7 @@
   This is called with new commits immediately after processing a transaction.
 
   Returns promise that will have the eventual response once committed."
-  [{:keys [:consensus/state-atom :consensus/raft-state :fluree/conn] :as config}
+  [{:keys [consensus/raft-state] :as config}
    {:keys [ledger-id tx-id] :as _params}
    {:keys [db data-file-meta commit-file-meta context-file-meta]}]
   (let [created-body {:ledger-id         ledger-id
@@ -21,8 +21,8 @@
                       ;; below is metadata for quickly validating into the state machine, not retained
                       :t                 (:t db) ;; for quickly validating this is the next 'block'
                       :tx-id             tx-id ;; for quickly removing from the queue
-                      :server            (consensus/this-server raft-state) ;; for quickly ensuring this server *is* still the leader
-                      }]
+                      :server            (consensus/this-server raft-state)}] ;; for quickly ensuring this server *is* still the leader
+
     ;; returns promise
     (raft/leader-new-command! config :new-commit created-body)))
 
@@ -35,8 +35,7 @@
   This is called with updated commits generated from the indexing process.
 
   Returns promise that will have the eventual response once committed."
-  [{:keys [:consensus/state-atom :consensus/raft-state :fluree/conn] :as config}
-   {:keys [commit-res context-res db] :as _params}]
+  [config {:keys [commit-res context-res db] :as _params}]
   (let [ledger    (:ledger db)
         ledger-id (ledger-proto/-alias ledger)]
     (consensus-push-commit config

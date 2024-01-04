@@ -6,5 +6,6 @@
 .clj-kondo/metosin
 .DS_Store
 /.eastwood
-/.clj-kondo/
+/.clj-kondo/*
+!/.clj-kondo/config.edn
 /.lsp/
