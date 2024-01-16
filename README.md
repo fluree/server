@@ -78,3 +78,10 @@ The most common environment variables to set would include:
 - If a server fails, it is auto-detected and the work of the server is redistributed to the remaining servers in the cluster
 - If a server joins, work is redistributed to include the new server
 
+## Development
+
+### Git hooks
+
+- Run `bb git-hooks install`
+    - This will set up a pre-commit git hook that checks your staged changes
+      with cljfmt and clj-kondo.

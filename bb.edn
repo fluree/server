@@ -1,0 +1,6 @@
+{:paths ["bb"]
+ :pods  {clj-kondo/clj-kondo {:version "2023.12.15"}}
+ :deps  {dev.weavejester/cljfmt {:git/url "https://github.com/cap10morgan/cljfmt.git"
+                                 :git/sha "acc6a7d1e5a7e3391419ac731bf8a2774b8c4a13"}}
+ :tasks {git-hooks {:requires ([git-hooks :as gh])
+                    :task     (apply gh/hook *command-line-args*)}}}
