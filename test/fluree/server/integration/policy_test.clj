@@ -147,12 +147,25 @@
                   "policy opts prevented seeing bob's secret"))))
         (testing "JWS requests"
           (let [txn-req {"@context" ["https://ns.flur.ee" test-system/default-context]
+                         "ledger" ledger-name
+                         "insert" {"id" "ex:alice"
+                                   "ex:secret" "Alice's new secret"}}
+                txn-res (api-post :transact {:body (json/write-value-as-string
+                                                    (crypto/create-jws
+                                                     (json/write-value-as-string txn-req)
+                                                     (:private auth)))
+                                             :headers json-headers})]
+            (is (= 200
+                   (:status txn-res))
+                "authorized transaction"))
+          (let [txn-req {"@context" ["https://ns.flur.ee" test-system/default-context]
                          "ledger"   ledger-name
                          "insert"   [{"id" "ex:bob"}
                                      "ex:secret" "bob's new secret"]}
-                txn-res (api-post :transact {:body    (crypto/create-jws
-                                                       (json/write-value-as-string txn-req)
-                                                       (:private auth))
+                txn-res (api-post :transact {:body    (json/write-value-as-string
+                                                       (crypto/create-jws
+                                                        (json/write-value-as-string txn-req)
+                                                        (:private auth)))
                                              :headers json-headers})]
             (is (not= 200 (:status txn-res))
                 "transaction policy opts prevented modification")
