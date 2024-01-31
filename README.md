@@ -82,6 +82,6 @@ The most common environment variables to set would include:
 
 ### Git hooks
 
-- Run `bb git-hooks install`
+- Run `bb run git-hooks install`
     - This will set up a pre-commit git hook that checks your staged changes
       with cljfmt and clj-kondo.
