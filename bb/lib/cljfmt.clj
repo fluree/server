@@ -3,6 +3,10 @@
             [clojure.string :as str]
             [lib.path :as path]))
 
+(defn- nil-or-zero?
+  [v]
+  (or (nil? v) (zero? v)))
+
 (defn check
   "Runs cljfmt check on all files (recursively) in dir. Returns a collection of
   any files that failed the check."
@@ -10,7 +14,7 @@
   (let [cljfmt-opts {:paths [dir], :diff? false}
         {:keys [counts incorrect error] :as _result} (fmt/check cljfmt-opts)]
     #_(println "cljfmt results:" (pr-str result))
-    (if (and (zero? (:incorrect counts)) (zero? (:error counts)))
+    (if (and (nil-or-zero? (:incorrect counts)) (nil-or-zero? (:error counts)))
       []
       (let [->proj-path (partial path/tmp->project-rel
                                  (if (str/ends-with? dir "/")
