@@ -146,16 +146,32 @@
                      (-> query-res :body json/read-value first (get "f:assert")))
                   "policy opts prevented seeing bob's secret"))))
         (testing "JWS requests"
-          (let [txn-req {"@context" ["https://ns.flur.ee" test-system/default-context]
-                         "ledger"   ledger-name
-                         "insert"   [{"id" "ex:bob"}
-                                     "ex:secret" "bob's new secret"]}
-                txn-res (api-post :transact {:body    (crypto/create-jws
+          (testing "authorized signer"
+            (let [txn-req {"@context" ["https://ns.flur.ee" test-system/default-context]
+                           "ledger" ledger-name
+                           "insert" {"id" "ex:alice"
+                                     "ex:secret" "Alice's new secret"}}
+                  txn-res (api-post :transact {:body (json/write-value-as-string
+                                                      (crypto/create-jws
                                                        (json/write-value-as-string txn-req)
-                                                       (:private auth))
-                                             :headers json-headers})]
-            (is (not= 200 (:status txn-res))
-                "transaction policy opts prevented modification")
+                                                       (:private auth)))
+                                               :headers json-headers})]
+              (is (= 200
+                     (:status txn-res))
+                  "txn signed by authorized user succeeds")))
+          (testing "unauthorized signer"
+            (let [txn-req {"@context" ["https://ns.flur.ee" test-system/default-context]
+                           "ledger"   ledger-name
+                           "insert"   [{"id" "ex:bob"}
+                                       "ex:secret" "bob's new secret"]}
+                  txn-res (api-post :transact {:body    (json/write-value-as-string
+                                                         (crypto/create-jws
+                                                          (json/write-value-as-string txn-req)
+                                                          (:private auth)))
+                                               :headers json-headers})]
+              (is (not= 200 (:status txn-res))
+                  "transaction policy opts prevented modification")))
+          (testing "query results filtered based on authorization"
             (let [query-req {"@context" test-system/default-context
                              "from"     ledger-name
                              "history"  "ex:bob"
