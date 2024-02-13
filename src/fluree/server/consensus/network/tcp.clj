@@ -129,7 +129,7 @@
   [this-server client remote-server]
   (async/go
     (let [{:keys [write-chan read-chan]} client
-          conn-id (rand-int (Integer/MAX_VALUE))
+          conn-id (rand-int Integer/MAX_VALUE)
           conn    {:id         conn-id
                    :from       this-server
                    :to         remote-server
