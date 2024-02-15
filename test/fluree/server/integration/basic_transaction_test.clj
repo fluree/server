@@ -134,6 +134,42 @@
                   :body
                   json/read-value))))))
 
+(deftest ^:integration ^:json transaction-with-ordered-list
+  (testing ""
+    (let [ledger-name (create-rand-ledger "transact-endpoint-json-test")
+          req1        {"@context" [test-system/default-context {"ex:items2" {"@container" "@list"}}]
+                       "ledger"   ledger-name
+                       "insert"   {"id"        "ex:list-test"
+                                   "ex:items1" {"@list" ["zero" "one" "two" "three"]}
+                                   "ex:items2" ["four" "five" "six" "seven"]}}
+
+          q1 {"@context" test-system/default-context
+              "from"     ledger-name
+              "select"   {"ex:list-test" ["*"]}}
+
+          req2   {"@context" [test-system/default-context {"ex:items2" {"@container" "@list"}}]
+                  "ledger" ledger-name
+                  "where" {"@id" "ex:list-test" "ex:items1" "?items1" "ex:items2" "?items2"}
+                  "delete" {"id" "ex:list-test"
+                            "ex:items1" "?items1"
+                            "ex:items2" "?items2"}}]
+      (is (= 200
+             (-> (api-post :transact {:body (json/write-value-as-string req1), :headers json-headers})
+                 :status)))
+      (is (= [{"id" "ex:list-test",
+               "ex:items1" ["zero" "one" "two" "three"]
+               "ex:items2" ["four" "five" "six" "seven"]}]
+             (-> (api-post :query {:body (json/write-value-as-string q1) :headers json-headers})
+                 :body
+                 json/read-value)))
+      (is (= 200
+             (-> (api-post :transact {:body (json/write-value-as-string req2) :headers json-headers})
+                 :status)))
+      (is (= [{"id" "ex:list-test"}]
+             (-> (api-post :query {:body (json/write-value-as-string q1) :headers json-headers})
+                 :body
+                 json/read-value))))))
+
 #_(deftest ^:integration ^:edn transaction-edn-test
     (testing "can transact in EDN"
       (let [ledger-name (create-rand-ledger "transact-endpoint-edn-test")
