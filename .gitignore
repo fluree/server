@@ -9,3 +9,4 @@
 /.clj-kondo/*
 !/.clj-kondo/config.edn
 /.lsp/
+/.dir-locals.el
