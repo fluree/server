@@ -60,7 +60,7 @@
             (log/info "Ledger created:" ledger-id)
             (deliver p {:ledger ledger-id
                         :commit (:address commit-file-meta)
-                        :t      (- t)
+                        :t      t
                         :tx-id  tx-id})))))))
 
 (defn throw-ledger-exists
