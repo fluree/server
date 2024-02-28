@@ -1,41 +1,22 @@
 (ns fluree.server.consensus.handlers.new-commit
   (:require [clojure.core.async :as async]
-            [clojure.string :as str]
             [fluree.db.nameservice.core :as nameservice]
+            [fluree.db.storage :as storage]
             [fluree.db.util.async :refer [<? go-try]]
-            [fluree.db.util.filesystem :as fs]
             [fluree.db.util.log :as log]
             [fluree.server.components.subscriptions :as subs]
             [fluree.server.components.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
 
-(defn address-path
-  [address]
-  (let [[_ _ path] (str/split address #":")]
-    path))
-(defn address-full-path
-  [{:keys [storage-path] :as _conn} address]
-  (str (fs/local-path storage-path) "/" (address-path address)))
-
-;; TODO - file-path, write-file, and store-ledger-files are all used for :ledger-created as well - consolidate
-(defn file-path
-  "Returns canonical path to write a commit/data file to disk but
-  only if the conn type is of type 'file' - else assumes it is using
-  networked storage (e.g. S3, IPFS) and does not need to write out file."
-  [{:keys [fluree/conn] :as _config} address]
-  (let [[_ conn-type path] (re-find #"^fluree:([^:]+)://(.+)" address)]
-    (log/debug "Consensus write file with address: " address " of conn type: " conn-type)
-    (when (and path (= "file" conn-type))
-      (address-full-path conn path))))
-
 (defn write-file
   "Only writes file to disk if address is of type 'file'
 
   See fluree.db.conn.file namespace for key/vals contained in `file-meta` map."
-  [config {:keys [address json] :as _file-meta}]
-  (when-let [file-path (file-path config address)]
-    (async/<!! (fs/write-file file-path (.getBytes ^String json)))))
+  [{:keys [fluree/conn]} {:keys [address json] :as _file-meta}]
+  (let [{:keys [method local]} (storage/parse-address address)]
+    (when (= "file" method)
+      (async/<!! (storage/write (:store conn) local json)))))
 
 (defn store-ledger-files
   "Persist both the data-file and commit-file to disk only if redundant
