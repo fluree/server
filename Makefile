@@ -2,7 +2,7 @@ SOURCES := $(shell find src)
 RESOURCES := $(shell find resources)
 
 target/server-%.jar: $(SOURCES) $(RESOURCES)
-	clojure -T:build uber
+	clojure -X:deps prep && clojure -T:build uber
 
 uberjar: target/server-%.jar
 
@@ -17,7 +17,7 @@ docker-push:
 
 .PHONY: test
 test:
-	clojure -X:test
+	clojure -X:deps prep && clojure -X:test
 
 .PHONY: pending-tests
 pending-tests:
