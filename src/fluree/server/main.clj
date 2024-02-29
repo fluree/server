@@ -10,6 +10,7 @@
             [fluree.server.components.http :as http]
             [fluree.server.components.subscriptions :as subscriptions]
             [fluree.server.components.watcher :as watcher]
+            [fluree.server.components.migrate :as migrate]
             [jsonista.core :as json])
   (:import (java.io PushbackReader))
   (:gen-class))
@@ -81,6 +82,11 @@
 (defmethod ds/named-system :docker
   [_]
   (ds/system :prod {[:env] (env-config :docker)}))
+
+(defmethod ds/named-system :migrate
+  [_]
+  (ds/system {[:http]     ::disabled
+              [:migrator] migrate/sid-migrator}))
 
 (defn run-server
   "Runs an HTTP API server in a thread, with :profile from opts or :dev by
