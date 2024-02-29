@@ -88,6 +88,18 @@
   (ds/system {[:http]     ::disabled
               [:migrator] migrate/sid-migrator}))
 
+(defmethod ds/named-system :migrate/prod
+  [_]
+  (ds/system :migrate {[:env] (env-config :prod)}))
+
+(defmethod ds/named-system :migrate/docker
+  [_]
+  (ds/system :migrate {[:env] (env-config :docker)}))
+
+(defmethod ds/named-system :migrate/dev
+  [_]
+  (ds/system :migrate {[:env] (env-config :dev)}))
+
 (defn run-server
   "Runs an HTTP API server in a thread, with :profile from opts or :dev by
   default. Any other keys in opts override config from the profile.
@@ -101,6 +113,15 @@
 
 (defn -main
   [& args]
-  (let [profile (or (-> args first keyword) :prod)]
-    (log/info "Starting fluree/server with profile:" profile)
-    (ds/start profile)))
+  (let [first-arg (first args)]
+    (if (= first-arg "migrate")
+      (let [second-arg (second args)
+            profile    (if second-arg
+                         (keyword first-arg second-arg)
+                         :migrate/prod)]
+        (log/info "Migrating ledgers with profile:" profile)
+        (ds/start profile))
+      (let [profile (or (keyword first-arg)
+                        :prod)]
+        (log/info "Starting fluree/server with profile:" profile)
+        (ds/start profile)))))
