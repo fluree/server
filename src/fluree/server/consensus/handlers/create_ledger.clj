@@ -61,11 +61,10 @@
   Returns promise that will have the eventual response once committed."
   [{:keys [consensus/raft-state] :as config}
    {:keys [ledger-id tx-id] :as _params}
-   {:keys [db data-file-meta commit-file-meta context-file-meta]}]
+   {:keys [db data-file-meta commit-file-meta]}]
   (let [created-body {:ledger-id         ledger-id
                       :data-file-meta    data-file-meta
                       :commit-file-meta  commit-file-meta
-                      :context-file-meta context-file-meta
                       ;; below is metadata for quickly validating into the state machine, not retained
                       :t                 (:t db) ;; for quickly validating this is the next 'block'
                       :tx-id             tx-id ;; for quickly removing from the queue
