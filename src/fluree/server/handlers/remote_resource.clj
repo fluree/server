@@ -10,7 +10,7 @@
 (defn read-latest-commit
   [conn resource-name]
   (go-try
-    (let [commit-addr (<? (nameservice/lookup-commit conn resource-name nil))
+    (let [commit-addr (<? (nameservice/lookup-commit conn resource-name))
           _           (when-not commit-addr
                         (throw (ex-info (str "Unable to load. No commit exists for: " alias)
                                         {:status 400 :error :db/invalid-commit-address})))
