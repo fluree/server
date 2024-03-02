@@ -1,5 +1,5 @@
 (ns fluree.server.consensus.producers.new-index-file
-  (:require [clojure.core.async :as async]
+  (:require [clojure.core.async :as async :refer [<! go-loop]]
             [fluree.db.util.core :as util]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.core :as consensus]
@@ -24,9 +24,9 @@
 
   Sends them out one at a time for now, but network interaction optimization
   would be likely if we batched them up to a specific size."
-  [config index-files-ch]
-  (async/go-loop []
-    (let [next-file-event (async/<! index-files-ch)]
+  [index-files-ch config]
+  (go-loop []
+    (let [next-file-event (<! index-files-ch)]
       ;; if chan is closed, will stop monitoring loop
       (when next-file-event
         (log/debug "About to push new index file event through consensus: " next-file-event)
@@ -37,3 +37,8 @@
               :new-index-file (push-index-file config next-file-event)
               :new-commit (consensus-push-index-commit config (:data next-file-event)))
             (recur)))))))
+
+(defn monitor-chan
+  [config]
+  (doto (async/chan)
+    (push-new-index-files config)))

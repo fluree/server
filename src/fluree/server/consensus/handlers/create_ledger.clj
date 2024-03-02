@@ -5,7 +5,7 @@
             [fluree.db.util.log :as log]
             [fluree.raft.leader :refer [is-leader?]]
             [fluree.server.consensus.core :as consensus]
-            [fluree.server.consensus.producers.new-index-file :refer [push-new-index-files]]
+            [fluree.server.consensus.producers.new-index-file :as new-index-file]
             [fluree.server.consensus.raft.core :as raft]
             [fluree.server.handlers.shared :refer [deref!]]))
 
@@ -41,9 +41,7 @@
   (let [create-opts (parse-opts txn)
         ledger      (deref! (fluree/create conn ledger-id create-opts))
         commit!     (fn [db]
-                      (let [index-files-ch (async/chan)
-                            ;; monitor for new index files and push across network
-                            _              (push-new-index-files config index-files-ch)
+                      (let [index-files-ch (new-index-file/monitor-chan config)
                             resp           (fluree/commit! ledger db {:file-data?     true
                                                                       :index-files-ch index-files-ch})]
                         (log/debug "New ledger" ledger-id "created with tx-id: " tx-id)

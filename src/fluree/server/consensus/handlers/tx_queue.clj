@@ -1,10 +1,9 @@
 (ns fluree.server.consensus.handlers.tx-queue
-  (:require [clojure.core.async :as async]
-            [fluree.db.json-ld.api :as fluree]
+  (:require [fluree.db.json-ld.api :as fluree]
             [fluree.db.util.core :as util]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.producers.new-commit :refer [consensus-push-commit]]
-            [fluree.server.consensus.producers.new-index-file :refer [push-new-index-files]]
+            [fluree.server.consensus.producers.new-index-file :as new-index-file]
             [fluree.server.consensus.producers.tx-exception :refer [consensus-push-tx-exception]]
             [fluree.server.handlers.shared :refer [deref!]]))
 
@@ -71,11 +70,9 @@
                      (throw (ex-info "Ledger does not exist" {:ledger ledger-id})))
 
         commit! (fn [db]
-                  (let [index-files-ch (async/chan)
-                        ;; monitor for new index files and push across network
-                        _    (push-new-index-files config index-files-ch)
-                        resp (fluree/commit! ledger db {:file-data?     true
-                                                        :index-files-ch index-files-ch})]
+                  (let [index-files-ch (new-index-file/monitor-chan config)
+                        resp           (fluree/commit! ledger db {:file-data?     true
+                                                                  :index-files-ch index-files-ch})]
                     (log/debug "New commit for ledger" ledger-id "with tx-id: " tx-id
                                "processed in" (- (System/currentTimeMillis) start-time) "milliseconds.")
                     resp))]
