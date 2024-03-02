@@ -1,7 +1,6 @@
 (ns fluree.server.handlers.transact
   (:require [clojure.core.async :as async]
             [fluree.crypto :as crypto]
-            [fluree.db.conn.proto :as conn-proto]
             [fluree.db.constants :as const]
             [fluree.db.json-ld.api :as fluree]
             [fluree.db.util.context :as ctx-util]
@@ -20,9 +19,8 @@
 
 (defn queue-consensus
   [consensus conn watcher ledger tx-id expanded-txn opts]
-  (let [conn-type       (conn-proto/-method conn)
-        ;; initial response is not completion, but acknowledgement of persistence
-        persist-resp-ch (consensus/queue-new-transaction consensus conn-type ledger tx-id
+  (let [;; initial response is not completion, but acknowledgement of persistence
+        persist-resp-ch (consensus/queue-new-transaction consensus ledger tx-id
                                                          expanded-txn opts)]
     (async/go
       (let [persist-resp (async/<! persist-resp-ch)]

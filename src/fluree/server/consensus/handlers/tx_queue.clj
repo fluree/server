@@ -15,7 +15,6 @@
   ;; fluree.server.consensus.core/queue-new-transaction
 
   '{:txn       txn
-    :conn-type conn-type
     :size      (count txn)
     :tx-id     tx-id
     :ledger-id ledger-id
