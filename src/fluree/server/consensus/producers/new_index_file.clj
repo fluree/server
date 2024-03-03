@@ -38,7 +38,15 @@
               :new-commit (consensus-push-index-commit config (:data next-file-event)))
             (recur)))))))
 
+(def index-file-xf
+  (map (fn [event-data]
+         (assoc event-data :event :new-index-file))))
+
 (defn monitor-chan
   [config]
-  (doto (async/chan)
+  (doto (async/chan 512 index-file-xf) ; The buffer prevents the consensus group
+                                       ; from slowing the indexer's progress
+                                       ; initially while still allowing the
+                                       ; group to catch up if it falls too far
+                                       ; behind
     (push-new-index-files config)))
