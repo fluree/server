@@ -1,5 +1,5 @@
 (ns fluree.server.consensus.producers.new-commit
-  (:require [fluree.db.ledger.proto :as ledger-proto]
+  (:require [fluree.db.ledger :as ledger]
             [fluree.server.consensus.core :as consensus]
             [fluree.server.consensus.raft.core :as raft]))
 
@@ -36,7 +36,7 @@
   Returns promise that will have the eventual response once committed."
   [config {:keys [commit-res db] :as _params}]
   (let [ledger    (:ledger db)
-        ledger-id (ledger-proto/-alias ledger)]
+        ledger-id (ledger/-alias ledger)]
     (consensus-push-commit config
                            {:ledger-id ledger-id}
                            {:db                db
