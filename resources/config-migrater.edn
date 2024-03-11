@@ -1,0 +1,3 @@
+#:fluree{:migrater       {:ledgers #env FLUREE_MIGRATE_LEDGERS}
+         :commit-options {:did     #env FLUREE_DID
+                          :private #env FLUREE_PRIVATE_KEY}}

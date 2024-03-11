@@ -35,6 +35,13 @@
   (aero/read-config (io/resource "config.edn")
                     (when profile {:profile profile})))
 
+(defn migrate-config [& [profile]]
+  (merge (env-config profile)
+         (-> "config-migrater.edn"
+             io/resource
+             aero/read-config
+             (update-in [:fluree/migrater :ledgers] str/split #","))))
+
 (def base-system
   {::ds/defs
    {:env    {:http/server       {}
@@ -85,20 +92,21 @@
 
 (defmethod ds/named-system :migrate
   [_]
-  (ds/system {[:http]     ::disabled
-              [:migrator] migrate/sid-migrator}))
+  (ds/system :base {[:http :server]     ::disabled
+                    [:http :handler]    ::disabled
+                    [:fluree :migrator] migrate/sid-migrater}))
 
 (defmethod ds/named-system :migrate/prod
   [_]
-  (ds/system :migrate {[:env] (env-config :prod)}))
+  (ds/system :migrate {[:env] (migrate-config :prod)}))
 
 (defmethod ds/named-system :migrate/docker
   [_]
-  (ds/system :migrate {[:env] (env-config :docker)}))
+  (ds/system :migrate {[:env] (migrate-config :docker)}))
 
 (defmethod ds/named-system :migrate/dev
   [_]
-  (ds/system :migrate {[:env] (env-config :dev)}))
+  (ds/system :migrate {[:env] (migrate-config :dev)}))
 
 (defn run-server
   "Runs an HTTP API server in a thread, with :profile from opts or :dev by

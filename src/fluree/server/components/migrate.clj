@@ -31,7 +31,7 @@
            (async/close! resp-ch)))))))
 
 (defn sid-migrate-ledgers
-  [conn consensus-config ledgers]
+  [conn consensus-config commit-opts ledgers]
   (go-try
     (let [index-files-ch (async/chan)
           resp-ch        (async/chan)]
@@ -40,7 +40,7 @@
         (if alias
           (let [address (<? (nameservice/primary-address conn alias nil))]
             (log/info "Migrating ledger" alias "at address" address)
-            (<? (sid/migrate conn address index-files-ch))
+            (<? (sid/migrate conn address commit-opts index-files-ch))
             (if-let [_resp (<? resp-ch)]
               (do (log/info "Ledger" alias "migrated successfully")
                   (recur r))
@@ -48,12 +48,13 @@
           (do (<? resp-ch)
               (log/info "All ledgers migrated successfully")))))))
 
-(def sid-migrator
-  #::ds{:env    {:fluree/ledgers []}
-        :config {:fluree/connection       (ds/ref [:fluree :conn])
-                 :fluree/consensus-config (ds/ref [:env :fluree/consensus])}
-        :start  (fn [{{:keys [fluree/connection fluree/consensus-config] :as _cfg}
-                     ::ds/config
-                     {:keys [fluree/ledgers]}
-                     ::ds/env}]
-                  (<?? (sid-migrate-ledgers connection consensus-config ledgers)))})
+(def sid-migrater
+  #::ds{:config {:fluree/connection       (ds/ref [:fluree :conn])
+                 :fluree/consensus-config (ds/ref [:env :fluree/consensus])
+                 :fluree/migrater         (ds/ref [:env :fluree/migrater])
+                 :fluree/commit-opts      (ds/ref [:env :fluree/commit-options])}
+        :start  (fn [{{:keys [fluree/connection fluree/consensus-config fluree/migrater
+                             fluree/commit-opts]}
+                     ::ds/config}]
+                  (<?? (sid-migrate-ledgers connection consensus-config commit-opts
+                                            (:ledgers migrater))))})
