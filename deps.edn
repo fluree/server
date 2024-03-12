@@ -52,6 +52,14 @@
   :run-dev
   {:exec-fn   fluree.server.main/run-server
    :exec-args {:profile :dev}}
+  
+  :run-docker
+  {:exec-fn   fluree.server.main/run-server
+   :exec-args {:profile :docker}}
+  
+  :run-remote
+  {:exec-fn   fluree.server.main/run-server
+   :exec-args {:profile :remote}}
 
   :test
   {:extra-paths ["test"]
