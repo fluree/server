@@ -16,7 +16,6 @@
   {:ledger-create          {:summary         "Request to create a new ledger. Generates :ledger-created event when successful"
                             :parameters      {:ledger    ::http-routes/ledger
                                               :txn       ::http-routes/txn
-                                              :conn-type keyword?
                                               :size      pos-int?
                                               :instant   pos-int?}
                             :auth            {} ;; specific authorization logic to determine if action is allowed.
@@ -26,7 +25,6 @@
    :ledger-created         {:summary    "A new ledger has been created by a ledger node, register."
                             :parameters {:ledger    ::http-routes/ledger
                                          :txn       ::http-routes/txn
-                                         :conn-type keyword?
                                          :size      pos-int?
                                          :instant   pos-int?}
                             :auth       {} ;; specific authorization logic to determine if action is allowed.

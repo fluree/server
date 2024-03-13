@@ -1,5 +1,5 @@
 (ns fluree.server.consensus.producers.new-commit
-  (:require [fluree.db.ledger.proto :as ledger-proto]
+  (:require [fluree.db.ledger :as ledger]
             [fluree.server.consensus.core :as consensus]
             [fluree.server.consensus.raft.core :as raft]))
 
@@ -13,11 +13,10 @@
   Returns promise that will have the eventual response once committed."
   [{:keys [consensus/raft-state] :as config}
    {:keys [ledger-id tx-id] :as _params}
-   {:keys [db data-file-meta commit-file-meta context-file-meta]}]
+   {:keys [db data-file-meta commit-file-meta]}]
   (let [created-body {:ledger-id         ledger-id
                       :data-file-meta    data-file-meta
                       :commit-file-meta  commit-file-meta
-                      :context-file-meta context-file-meta
                       ;; below is metadata for quickly validating into the state machine, not retained
                       :t                 (:t db) ;; for quickly validating this is the next 'block'
                       :tx-id             tx-id ;; for quickly removing from the queue
@@ -35,11 +34,10 @@
   This is called with updated commits generated from the indexing process.
 
   Returns promise that will have the eventual response once committed."
-  [config {:keys [commit-res context-res db] :as _params}]
+  [config {:keys [commit-res db] :as _params}]
   (let [ledger    (:ledger db)
-        ledger-id (ledger-proto/-alias ledger)]
+        ledger-id (ledger/-alias ledger)]
     (consensus-push-commit config
                            {:ledger-id ledger-id}
                            {:db                db
-                            :context-file-meta context-res
                             :commit-file-meta  commit-res})))

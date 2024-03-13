@@ -80,6 +80,10 @@ The most common environment variables to set would include:
 
 ## Development
 
+### Dependencies
+
+Run `make prepare` to compile the required dependencies to enable Clojure development.
+
 ### Git hooks
 
 - Run `bb run git-hooks install`

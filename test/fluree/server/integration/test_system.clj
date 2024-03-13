@@ -88,16 +88,15 @@
 (defn create-rand-ledger
   [name-root]
   (let [ledger-name (str name-root "-" (random-uuid))
-        req         (json/stringify
-                     {"ledger"   ledger-name
-                      "@context" ["https://ns.flur.ee"
-                                  default-context
-                                  {"foo" "http://foobar.com/"}]
-                      "insert"   [{"id"       "foo:create-test"
-                                   "type"     "foo:test"
-                                   "foo:name" "create-endpoint-test"}]})
-        res         (update (api-post :create {:body req :headers json-headers})
-                            :body json/parse)]
+        req         {"ledger"   ledger-name
+                     "@context" ["https://ns.flur.ee"
+                                 default-context
+                                 {"foo" "http://foobar.com/"}]
+                     "insert"   [{"id"       "foo:create-test"
+                                  "type"     "foo:test"
+                                  "foo:name" "create-endpoint-test"}]}
+        res         (-> (api-post :create {:body (json/stringify req) :headers json-headers})
+                        (update :body json/parse))]
     (if (= 201 (:status res))
       (get-in res [:body :ledger])
       (throw (ex-info "Error creating random ledger" res)))))
