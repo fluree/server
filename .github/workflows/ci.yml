@@ -32,6 +32,7 @@ jobs:
           java-version: '21'
       - uses: DeLaGuardo/setup-clojure@12.5
         with:
+          cli: 'latest'
           cljfmt: 'latest'
       - run: make cljfmt-check
 
@@ -42,6 +43,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: DeLaGuardo/setup-clojure@12.5
         with:
+          cli: 'latest'
           clj-kondo: 'latest'
       - run: make clj-kondo-lint-ci
 
