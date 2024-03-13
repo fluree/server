@@ -92,9 +92,11 @@
 
 (defmethod ds/named-system :migrate
   [_]
-  (ds/system :base {[:http :server]     ::disabled
-                    [:http :handler]    ::disabled
-                    [:fluree :migrator] migrate/sid-migrater}))
+  (ds/system :base {[:http :server]      ::disabled
+                    [:http :handler]     ::disabled
+                    [:fluree :consensus] ::disabled
+                    [:fluree :watcher]   ::disabled
+                    [:fluree :migrator]  migrate/sid-migrater}))
 
 (defmethod ds/named-system :migrate/prod
   [_]
