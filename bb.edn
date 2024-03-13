@@ -3,4 +3,6 @@
  :deps  {dev.weavejester/cljfmt {:git/url "https://github.com/cap10morgan/cljfmt.git"
                                  :git/sha "61841ae45c5a6ff7e1fa0b4bc284c3af54f4324b"}}
  :tasks {git-hooks {:requires ([git-hooks :as gh])
-                    :task     (apply gh/hook *command-line-args*)}}}
+                    :task     (apply gh/hook *command-line-args*)}
+         lint      {:requires ([lint])
+                    :task     (lint/run-all ".")}}}
