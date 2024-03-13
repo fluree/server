@@ -80,8 +80,13 @@ The most common environment variables to set would include:
 
 ## Development
 
+### Code linting
+
+- Code linters can be run via `bb run lint`
+    - This will run cljfmt and clj-kondo on the entire codebase
+
 ### Git hooks
 
 - Run `bb run git-hooks install`
     - This will set up a pre-commit git hook that checks your staged changes
-      with cljfmt and clj-kondo.
+      with cljfmt and clj-kondo before allowing them to be committed.
