@@ -1,8 +1,12 @@
 SOURCES := $(shell find src)
 RESOURCES := $(shell find resources)
 
-target/server-%.jar: $(SOURCES) $(RESOURCES)
-	clojure -X:deps prep && clojure -T:build uber
+.PHONY: prepare
+prepare:
+	clojure -X:deps prep
+
+target/server-%.jar: $(SOURCES) $(RESOURCES) prepare
+	clojure -T:build uber
 
 uberjar: target/server-%.jar
 
@@ -14,10 +18,6 @@ docker-run:
 
 docker-push:
 	docker buildx build --platform linux/amd64,linux/arm64 -t fluree/server:latest -t fluree/server:$(shell git rev-parse HEAD) --build-arg="PROFILE=prod" --push .
-
-.PHONY: prepare
-prepare:
-	clojure -X:deps prep
 
 .PHONY: test
 test: prepare
