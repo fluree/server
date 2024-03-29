@@ -4,7 +4,7 @@
             [fluree.db.util.log :as log]
             [fluree.server.consensus.core :as consensus]
             [fluree.server.consensus.producers.new-commit :refer [consensus-push-index-commit]]
-            [fluree.server.consensus.raft.core :as raft-core]))
+            [fluree.server.consensus.raft :as raft]))
 
 (set! *warn-on-reflection* true)
 
@@ -17,7 +17,7 @@
   [{:keys [:consensus/raft-state] :as config} file-event]
   (let [file-event* (assoc file-event :server (consensus/this-server raft-state))]
     ;; returns promise
-    (raft-core/leader-new-command! config :new-index-file file-event*)))
+    (raft/leader-new-command! config :new-index-file file-event*)))
 
 (defn push-new-index-files
   "Monitors for new index files pushed onto the changes channel.

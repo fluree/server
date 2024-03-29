@@ -8,7 +8,7 @@
             [fluree.server.handlers.create :as create-handler]
             [fluree.server.components.consensus :as consensus]
             [fluree.server.components.consensus-handler :as consensus-handler]
-            [fluree.server.consensus.raft.core]
+            [fluree.server.consensus.raft]
             [clojure.java.io :as io]
             [fluree.server.main :as server]
             [fluree.db.util.log :as log]))
@@ -96,7 +96,7 @@
                      :group)
         callback (fn [state]
                    (deliver p (dissoc state :config)))]
-    (fluree.server.consensus.raft.core/get-raft-state raft-map callback)
+    (fluree.server.consensus.raft/get-raft-state raft-map callback)
     p))
 
 (defn start-server

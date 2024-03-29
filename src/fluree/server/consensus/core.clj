@@ -6,7 +6,7 @@
             [fluree.server.consensus.network.multi-addr :as multi-addr]
             [fluree.server.consensus.network.tcp :as ftcp]
             [fluree.server.consensus.protocol :as txproto]
-            [fluree.server.consensus.raft.core :as raft-helpers]
+            [fluree.server.consensus.raft :as raft-helpers]
             [fluree.server.io.file :as io-file]))
 
 (set! *warn-on-reflection* true)

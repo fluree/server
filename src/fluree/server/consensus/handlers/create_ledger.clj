@@ -6,7 +6,7 @@
             [fluree.raft.leader :refer [is-leader?]]
             [fluree.server.consensus.core :as consensus]
             [fluree.server.consensus.producers.new-index-file :as new-index-file]
-            [fluree.server.consensus.raft.core :as raft]
+            [fluree.server.consensus.raft :as raft]
             [fluree.server.handlers.shared :refer [deref!]]))
 
 (set! *warn-on-reflection* true)

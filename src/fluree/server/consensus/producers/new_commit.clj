@@ -1,7 +1,7 @@
 (ns fluree.server.consensus.producers.new-commit
   (:require [fluree.db.ledger :as ledger]
             [fluree.server.consensus.core :as consensus]
-            [fluree.server.consensus.raft.core :as raft]))
+            [fluree.server.consensus.raft :as raft]))
 
 (set! *warn-on-reflection* true)
 

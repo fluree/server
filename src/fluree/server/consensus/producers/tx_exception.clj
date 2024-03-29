@@ -1,6 +1,6 @@
 (ns fluree.server.consensus.producers.tx-exception
   (:require [fluree.server.consensus.core :as consensus]
-            [fluree.server.consensus.raft.core :as raft]))
+            [fluree.server.consensus.raft :as raft]))
 
 (defn consensus-push-tx-exception
   [{:keys [consensus/raft-state] :as config}

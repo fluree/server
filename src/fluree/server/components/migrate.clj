@@ -7,7 +7,7 @@
             [fluree.db.util.core :as util]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.producers.new-index-file :as new-index-file]
-            [fluree.server.consensus.raft.core :refer [is-leader?]]))
+            [fluree.server.consensus.raft :refer [is-leader?]]))
 
 ;; TODO: this function is unused, but would be necessary if migrating through
 ;; consensus

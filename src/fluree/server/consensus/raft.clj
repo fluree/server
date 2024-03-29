@@ -1,4 +1,4 @@
-(ns fluree.server.consensus.raft.core
+(ns fluree.server.consensus.raft
   (:require [clojure.core.async :as async :refer [<! <!! go go-loop]]
             [clojure.pprint :as cprint]
             [clojure.string :as str]
