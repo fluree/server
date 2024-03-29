@@ -8,9 +8,9 @@
             [fluree.server.components.consensus :as consensus]
             [fluree.server.components.fluree :as fluree]
             [fluree.server.components.http :as http]
+            [fluree.server.components.migrate :as migrate]
             [fluree.server.components.subscriptions :as subscriptions]
             [fluree.server.components.watcher :as watcher]
-            [fluree.server.components.migrate :as migrate]
             [jsonista.core :as json])
   (:import (java.io PushbackReader))
   (:gen-class))

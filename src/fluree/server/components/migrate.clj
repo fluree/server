@@ -1,13 +1,13 @@
 (ns fluree.server.components.migrate
   (:require [clojure.core.async :as async :refer [<! >! go-loop]]
             [donut.system :as ds]
-            [fluree.server.consensus.raft.core :refer [is-leader?]]
-            [fluree.db.util.core :as util]
-            [fluree.db.util.async :refer [<?? <? go-try]]
             [fluree.db.json-ld.migrate.sid :as sid]
             [fluree.db.nameservice.core :as nameservice]
+            [fluree.db.util.async :refer [<?? <? go-try]]
+            [fluree.db.util.core :as util]
+            [fluree.db.util.log :as log]
             [fluree.server.consensus.producers.new-index-file :as new-index-file]
-            [fluree.db.util.log :as log]))
+            [fluree.server.consensus.raft.core :refer [is-leader?]]))
 
 ;; TODO: this function is unused, but would be necessary if migrating through
 ;; consensus
@@ -71,8 +71,8 @@
                  :fluree/migrater    (ds/ref [:env :fluree/migrater])
                  :fluree/commit-opts (ds/ref [:env :fluree/commit-options])}
         :start  (fn [{{:keys [fluree/connection fluree/migrater
-                             fluree/commit-opts]}
-                     ::ds/config}]
+                              fluree/commit-opts]}
+                      ::ds/config}]
                   (let [{:keys [ledgers]} migrater]
                     (log/info "Beginning migration for ledger aliases:" ledgers)
                     (<?? (sid-migrate-ledgers connection commit-opts ledgers))))})
