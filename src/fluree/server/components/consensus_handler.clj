@@ -1,6 +1,6 @@
 (ns fluree.server.components.consensus-handler
   (:require [fluree.db.util.log :as log]
-            [fluree.server.components.http :as http-routes]
+            [fluree.server.components.http :as-alias http-routes]
             [fluree.server.consensus.handlers.create-ledger :as create-ledger]
             [fluree.server.consensus.handlers.ledger-created :as ledger-created]
             [fluree.server.consensus.handlers.new-commit :as new-commit]
