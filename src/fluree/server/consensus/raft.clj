@@ -597,11 +597,11 @@
            :ledger-directory* ledger-directory*)))
 
 (defn start
-  [handler {:keys [log-history entries-max storage-type catch-up-rounds]
-            :or   {log-history     10
-                   entries-max     50
-                   catch-up-rounds 10}
-            :as   raft-config}]
+  [event-handler-fn {:keys [log-history entries-max storage-type catch-up-rounds]
+                     :or   {log-history     10
+                            entries-max     50
+                            catch-up-rounds 10}
+                     :as   raft-config}]
   (let [raft-config*           (-> raft-config
                                    (assoc :event-chan (async/chan)
                                           :command-chan (async/chan)
@@ -614,7 +614,7 @@
                                    (canonicalize-directories)
                                    (add-leader-change-fn)
                                    (add-ledger-storage-fns)
-                                   (add-state-machine handler)
+                                   (add-state-machine event-handler-fn)
                                    (add-snapshot-config))
         _                      (log/debug "Starting Raft with config:" raft-config*)
         raft                   (raft/start raft-config*)
