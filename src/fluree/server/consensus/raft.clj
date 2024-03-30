@@ -361,57 +361,6 @@
                         :error  :consensus/not-leader})))
      p)))
 
-(defn add-server-async
-  "Sends a command to the leader. If no callback provided, returns a core async promise channel
-  that will eventually contain a response."
-  ([group newServer] (add-server-async group newServer 5000))
-  ([group newServer timeout-ms]
-   (let [resp-chan (async/promise-chan)
-         callback  (fn [resp]
-                     (if (nil? resp)
-                       (async/close! resp-chan)
-                       (async/put! resp-chan resp)))]
-     (add-server-async group newServer timeout-ms callback)
-     resp-chan))
-  ([group newServer timeout-ms callback]
-   (go-try (let [raft'  (:raft group)
-                 leader (<? (leader-async group))
-                 id     (str (UUID/randomUUID))]
-             (if (= (:this-server raft') leader)
-               (let [command-chan (-> group :command-chan)]
-                 (async/put! command-chan [:add-server [id newServer] callback]))
-               (do (raft/register-callback raft' id timeout-ms callback)
-                   ;; send command to leader
-                   (send-rpc raft' leader :add-server [id newServer] nil)))))))
-
-(defn remove-server-async
-  "Sends a command to the leader. If no callback provided, returns a core async promise channel
-  that will eventually contain a response."
-  ([group server] (remove-server-async group server 5000))
-  ([group server timeout-ms]
-   (let [resp-chan (async/promise-chan)
-         callback  (fn [resp]
-                     (if (nil? resp)
-                       (async/close! resp-chan)
-                       (async/put! resp-chan resp)))]
-     (remove-server-async group server timeout-ms callback)
-     resp-chan))
-  ([group server timeout-ms callback]
-   (go-try (let [raft'  (:raft group)
-                 leader (<? (leader-async group))
-                 id     (str (UUID/randomUUID))]
-             (if (= (:this-server raft') leader)
-               (let [command-chan (-> group :command-chan)]
-                 (async/put! command-chan [:remove-server [id server] callback]))
-               (do (raft/register-callback raft' id timeout-ms callback)
-                   ;; send command to leader
-                   (send-rpc raft' leader :remove-server [id server] nil)))))))
-
-(defn local-state
-  "Returns local, current state from state machine"
-  [raft]
-  @(:state-atom raft))
-
 (defn raft-queue-new-ledger
   "Queues a new ledger into the consensus layer for processing.
   Returns a core async channel that will eventually contain true if successful."
