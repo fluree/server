@@ -5,7 +5,6 @@
             [fluree.raft :as raft]
             [fluree.server.consensus.network.multi-addr :as multi-addr]
             [fluree.server.consensus.network.tcp :as ftcp]
-            [fluree.server.consensus :as consensus]
             [fluree.server.consensus.raft :as raft-helpers]
             [fluree.server.io.file :as io-file]))
 
@@ -15,15 +14,6 @@
   "Returns current server's name."
   [raft-state]
   (:this-server raft-state))
-
-(defn data-version
-  [group]
-  (or (:version (raft-helpers/local-state group)) 1))
-
-(defn set-data-version
-  [group version]
-  (assert (number? version))
-  (consensus/kv-assoc-in group [:version] version))
 
 (defn build-snapshot-config
   "Returns a map of the necessary configurations for snapshot reading/writing, etc.
