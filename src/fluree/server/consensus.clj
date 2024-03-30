@@ -1,4 +1,4 @@
-(ns fluree.server.consensus.protocol
+(ns fluree.server.consensus
   (:require [clojure.core.async :as async]
             [clojure.string :as str]
             [fluree.db.util.core :as util]
@@ -355,4 +355,3 @@ or this server is not responsible for this ledger, will return false. Else true 
   [raft k data]
   (let [command [:storage-write k data]]
     (-new-entry-async raft command)))
-

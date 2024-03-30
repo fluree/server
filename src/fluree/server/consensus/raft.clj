@@ -7,7 +7,7 @@
             [fluree.raft :as raft]
             [fluree.raft.leader :as raft-leader]
             [fluree.server.consensus.network.tcp :as ftcp]
-            [fluree.server.consensus.protocol :as txproto :refer [TxGroup]]
+            [fluree.server.consensus :as consensus :refer [TxGroup]]
             [taoensso.nippy :as nippy])
   (:import (java.util UUID)))
 
@@ -421,7 +421,7 @@
   (-update-in [_ ks f] (swap! state-atom update-in ks f))
   (-is-leader? [_] (raft-leader/is-leader? @state-atom))
   (-active-servers [group]
-    (let [server-map   (txproto/kv-get-in group [:leases :servers])
+    (let [server-map   (consensus/kv-get-in group [:leases :servers])
           current-time (System/currentTimeMillis)]
       (reduce-kv (fn [acc server lease-data]
                    (if (>= (:expire lease-data) current-time)

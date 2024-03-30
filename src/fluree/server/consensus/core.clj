@@ -5,7 +5,7 @@
             [fluree.raft :as raft]
             [fluree.server.consensus.network.multi-addr :as multi-addr]
             [fluree.server.consensus.network.tcp :as ftcp]
-            [fluree.server.consensus.protocol :as txproto]
+            [fluree.server.consensus :as consensus]
             [fluree.server.consensus.raft :as raft-helpers]
             [fluree.server.io.file :as io-file]))
 
@@ -21,7 +21,7 @@
   Returns a core async channel that will eventually contain true if successful."
   [group ledger-id tx-id txn opts]
   (log/debug "Consensus - queue new ledger:" ledger-id tx-id txn)
-  (txproto/-new-entry-async
+  (consensus/-new-entry-async
    group
    [:ledger-create {:txn         txn
                     :size        (count txn)
@@ -35,7 +35,7 @@
   Returns a core async channel that will eventually contain a truthy value if successful."
   [group ledger-id tx-id txn opts]
   (log/trace "queue-new-transaction txn:" txn)
-  (txproto/-new-entry-async
+  (consensus/-new-entry-async
    group
    [:tx-queue {:txn            txn
                :size           (count txn)
@@ -51,7 +51,7 @@
 (defn set-data-version
   [group version]
   (assert (number? version))
-  (txproto/kv-assoc-in group [:version] version))
+  (consensus/kv-assoc-in group [:version] version))
 
 (defn build-snapshot-config
   "Returns a map of the necessary configurations for snapshot reading/writing, etc.
