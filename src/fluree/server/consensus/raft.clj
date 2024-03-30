@@ -413,21 +413,7 @@
 (defrecord RaftGroup [state-atom event-chan command-chan this-server port
                       close raft raft-initialized open-api private-keys]
   TxGroup
-  (-add-server-async [group server] (add-server-async group server))
-  (-remove-server-async [group server] (remove-server-async group server))
-  (-new-entry-async [group entry] (new-entry-async group entry))
-  (-local-state [group] (local-state group))
-  (-current-state [group] (state group))
-  (-update-in [_ ks f] (swap! state-atom update-in ks f))
-  (-is-leader? [_] (raft-leader/is-leader? @state-atom))
-  (-active-servers [group]
-    (let [server-map   (consensus/kv-get-in group [:leases :servers])
-          current-time (System/currentTimeMillis)]
-      (reduce-kv (fn [acc server lease-data]
-                   (if (>= (:expire lease-data) current-time)
-                     (conj acc server)
-                     acc))
-                 #{} server-map))))
+  (-new-entry-async [group entry] (new-entry-async group entry)))
 
 (defn leader-change-fn
   "Function called every time there is a leader change to provide any extra
