@@ -10,8 +10,6 @@
 
 (set! *warn-on-reflection* true)
 
-(declare create-handler default-routes)
-
 (def default-routes
   {:ledger-create          {:summary         "Request to create a new ledger. Generates :ledger-created event when successful"
                             :parameters      {:ledger    ::http-routes/ledger

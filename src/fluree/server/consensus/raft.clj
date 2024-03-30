@@ -542,7 +542,8 @@
                               :consensus/ledger-read          storage-ledger-read
                               :consensus/ledger-write         storage-ledger-write
                               :consensus/state-change-fn-atom state-change-fn-atom}]
-    (assoc raft-config :state-machine-atom state-machine-atom
+    (assoc raft-config
+           :state-machine-atom state-machine-atom
            :state-machine (handler config-handler state-machine-config))))
 
 (defn add-snapshot-config
