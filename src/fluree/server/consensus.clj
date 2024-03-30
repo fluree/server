@@ -7,5 +7,4 @@
 
 (defprotocol TxGroup
   (queue-new-ledger [group ledger-id tx-id txn opts])
-  (queue-new-transaction [group ledger-id tx-id txn opts])
-  (-new-entry-async [group entry] "Sends a command to the leader. If no callback provided, returns a core async promise channel that will eventually contain a response."))
+  (queue-new-transaction [group ledger-id tx-id txn opts]))

@@ -415,7 +415,7 @@
   Returns a core async channel that will eventually contain true if successful."
   [group ledger-id tx-id txn opts]
   (log/debug "Consensus - queue new ledger:" ledger-id tx-id txn)
-  (consensus/-new-entry-async
+  (new-entry-async
    group
    [:ledger-create {:txn         txn
                     :size        (count txn)
@@ -429,7 +429,7 @@
   Returns a core async channel that will eventually contain a truthy value if successful."
   [group ledger-id tx-id txn opts]
   (log/trace "queue-new-transaction txn:" txn)
-  (consensus/-new-entry-async
+  (new-entry-async
    group
    [:tx-queue {:txn            txn
                :size           (count txn)
@@ -444,8 +444,7 @@
   (queue-new-ledger [group ledger-id tx-id txn opts]
     (raft-queue-new-ledger group ledger-id tx-id txn opts))
   (queue-new-transaction [group ledger-id tx-id txn opts]
-    (raft-queue-new-transaction group ledger-id tx-id txn opts))
-  (-new-entry-async [group entry] (new-entry-async group entry)))
+    (raft-queue-new-transaction group ledger-id tx-id txn opts)))
 
 (defn leader-change-fn
   "Function called every time there is a leader change to provide any extra
