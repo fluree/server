@@ -8,7 +8,7 @@
             [fluree.db.util.log :as log]
             [fluree.json-ld.processor.api :as jld-processor]
             [fluree.server.components.watcher :as watcher]
-            [fluree.server.consensus.core :as consensus]
+            [fluree.server.consensus :as consensus]
             [fluree.server.handlers.shared :refer [defhandler deref!]]))
 
 (set! *warn-on-reflection* true)

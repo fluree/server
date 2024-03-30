@@ -16,34 +16,6 @@
   [raft-state]
   (:this-server raft-state))
 
-(defn queue-new-ledger
-  "Queues a new ledger into the consensus layer for processing.
-  Returns a core async channel that will eventually contain true if successful."
-  [group ledger-id tx-id txn opts]
-  (log/debug "Consensus - queue new ledger:" ledger-id tx-id txn)
-  (consensus/-new-entry-async
-   group
-   [:ledger-create {:txn         txn
-                    :size        (count txn)
-                    :tx-id       tx-id
-                    :ledger-id   ledger-id
-                    :opts        opts
-                    :instant     (System/currentTimeMillis)}]))
-
-(defn queue-new-transaction
-  "Queues a new transaction into the consensus layer for processing.
-  Returns a core async channel that will eventually contain a truthy value if successful."
-  [group ledger-id tx-id txn opts]
-  (log/trace "queue-new-transaction txn:" txn)
-  (consensus/-new-entry-async
-   group
-   [:tx-queue {:txn            txn
-               :size           (count txn)
-               :tx-id          tx-id
-               :ledger-id      ledger-id
-               :opts           opts
-               :instant        (System/currentTimeMillis)}]))
-
 (defn data-version
   [group]
   (or (:version (raft-helpers/local-state group)) 1))

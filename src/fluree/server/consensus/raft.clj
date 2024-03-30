@@ -410,9 +410,41 @@
   [raft]
   @(:state-atom raft))
 
+(defn raft-queue-new-ledger
+  "Queues a new ledger into the consensus layer for processing.
+  Returns a core async channel that will eventually contain true if successful."
+  [group ledger-id tx-id txn opts]
+  (log/debug "Consensus - queue new ledger:" ledger-id tx-id txn)
+  (consensus/-new-entry-async
+   group
+   [:ledger-create {:txn         txn
+                    :size        (count txn)
+                    :tx-id       tx-id
+                    :ledger-id   ledger-id
+                    :opts        opts
+                    :instant     (System/currentTimeMillis)}]))
+
+(defn raft-queue-new-transaction
+  "Queues a new transaction into the consensus layer for processing.
+  Returns a core async channel that will eventually contain a truthy value if successful."
+  [group ledger-id tx-id txn opts]
+  (log/trace "queue-new-transaction txn:" txn)
+  (consensus/-new-entry-async
+   group
+   [:tx-queue {:txn            txn
+               :size           (count txn)
+               :tx-id          tx-id
+               :ledger-id      ledger-id
+               :opts           opts
+               :instant        (System/currentTimeMillis)}]))
+
 (defrecord RaftGroup [state-atom event-chan command-chan this-server port
                       close raft raft-initialized open-api private-keys]
   TxGroup
+  (queue-new-ledger [group ledger-id tx-id txn opts]
+    (raft-queue-new-ledger group ledger-id tx-id txn opts))
+  (queue-new-transaction [group ledger-id tx-id txn opts]
+    (raft-queue-new-transaction group ledger-id tx-id txn opts))
   (-new-entry-async [group entry] (new-entry-async group entry)))
 
 (defn leader-change-fn
