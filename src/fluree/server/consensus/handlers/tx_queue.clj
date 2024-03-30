@@ -12,7 +12,7 @@
 (comment
   ;; Operations below use a tx-queue parameter map which looks like as follows.
   ;; This map is created in the 'transact' http handler via
-  ;; fluree.server.consensus.core/queue-new-transaction
+  ;; fluree.server.consensus/queue-new-transaction
 
   '{:txn       txn
     :size      (count txn)
