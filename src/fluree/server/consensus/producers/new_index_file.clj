@@ -2,7 +2,6 @@
   (:require [clojure.core.async :as async :refer [<! go-loop]]
             [fluree.db.util.core :as util]
             [fluree.db.util.log :as log]
-            [fluree.server.consensus.core :as consensus]
             [fluree.server.consensus.producers.new-commit :refer [consensus-push-index-commit]]
             [fluree.server.consensus.raft :as raft]))
 
@@ -15,7 +14,7 @@
   When it comes through consensus, and if it is the same as *this* server, we know we don't need to
   write the files as it is already done."
   [{:keys [:consensus/raft-state] :as config} file-event]
-  (let [file-event* (assoc file-event :server (consensus/this-server raft-state))]
+  (let [file-event* (assoc file-event :server (raft/this-server raft-state))]
     ;; returns promise
     (raft/leader-new-command! config :new-index-file file-event*)))
 

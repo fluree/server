@@ -2,7 +2,7 @@
   (:require [clojure.core.async :as async]
             [fluree.db.storage :as storage]
             [fluree.db.util.log :as log]
-            [fluree.server.consensus.core :as consensus]))
+            [fluree.server.consensus.raft :as raft]))
 
 (set! *warn-on-reflection* true)
 
@@ -14,7 +14,7 @@
    {:keys [server address data] :as _params}]
   (future
     (try
-      (if (= server (consensus/this-server raft-state))
+      (if (= server (raft/this-server raft-state))
         (log/debug "Consensus: new index file originated from this server, not writing: " address)
         (let [{:keys [local]} (storage/parse-address address)]
           (if local

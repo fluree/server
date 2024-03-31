@@ -7,13 +7,18 @@
             [fluree.raft :as raft]
             [fluree.raft.leader :as raft-leader]
             [fluree.server.consensus.network.tcp :as ftcp]
-            [fluree.server.consensus :as consensus :refer [TxGroup]]
+            [fluree.server.consensus :as consensus]
             [taoensso.nippy :as nippy]
             [fluree.server.io.file :as io-file]
             [fluree.server.consensus.network.multi-addr :as multi-addr])
   (:import (java.util UUID)))
 
 (set! *warn-on-reflection* true)
+
+(defn this-server
+  "Returns current server's name."
+  [raft-state]
+  (:this-server raft-state))
 
 (defn snapshot-xfer
   "Transfers snapshot from this server as leader, to a follower.
@@ -391,7 +396,7 @@
 
 (defrecord RaftGroup [state-atom event-chan command-chan this-server port
                       close raft raft-initialized open-api private-keys]
-  TxGroup
+  consensus/TxGroup
   (queue-new-ledger [group ledger-id tx-id txn opts]
     (raft-queue-new-ledger group ledger-id tx-id txn opts))
   (queue-new-transaction [group ledger-id tx-id txn opts]
