@@ -9,27 +9,11 @@
 ;; These operations get delivered via consensus, where they end up being picked up by a responsible
 ;; server from a queue, processed, and then the results broadcast back out.
 
-(def default-watcher-atom (atom {}))
-
-(defn close
-  [watcher]
-  (let [watcher-atom (:watcher-atom watcher)
-        watches (vals @watcher-atom)]
-    (run! async/close! watches)
-    (reset! watcher-atom {})))
-
-(def watcher
-  #::ds{:start  (fn [{{:keys [max-tx-wait-ms watcher-atom]
-                       :or   {max-tx-wait-ms 60000
-                              watcher-atom   default-watcher-atom}} ::ds/config}]
-                  {:max-tx-wait-ms max-tx-wait-ms
-                   :watcher-atom   watcher-atom})
-        :stop   (fn [{::ds/keys [instance]}]
-                  (close instance))
-        :config {:max-tx-wait-ms (ds/ref [:env :http/server :max-tx-wait-ms])}})
-
-;; This atom maps a request's unique id (e.g. tx-id) to a promise that will be delivere
-(def watcher-atom (atom {}))
+(defn new-watcher-atom
+  "This atom maps a request's unique id (e.g. tx-id) to a promise that will be
+  delivered"
+  []
+  (atom {}))
 
 (defn remove-watch
   [watcher id]
@@ -62,3 +46,24 @@
     (remove-watch watcher id)
     (async/put! resp-chan response)
     (async/close! resp-chan)))
+
+(defn watch
+  [{:keys [max-tx-wait-ms watcher-atom]
+    :or   {max-tx-wait-ms 60000}}]
+  {:max-tx-wait-ms max-tx-wait-ms
+   :watcher-atom   (or watcher-atom
+                       (new-watcher-atom))})
+
+(defn close
+  [watcher]
+  (let [watcher-atom (:watcher-atom watcher)
+        watches (vals @watcher-atom)]
+    (run! async/close! watches)
+    (reset! watcher-atom {})))
+
+(def watcher
+  #::ds{:start  (fn [{cfg ::ds/config}]
+                  (watch cfg))
+        :stop   (fn [{::ds/keys [instance]}]
+                  (close instance))
+        :config {:max-tx-wait-ms (ds/ref [:env :http/server :max-tx-wait-ms])}})
