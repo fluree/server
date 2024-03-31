@@ -4,7 +4,7 @@
             [fluree.db.util.filesystem :as fs]
             [fluree.db.util.log :as log]
             [fluree.server.components.subscriptions :as subs]
-            [fluree.server.components.watcher :as watcher]
+            [fluree.server.consensus.watcher :as watcher]
             [fluree.server.consensus.raft.handlers.new-commit :as new-commit])
   (:import (java.io File)))
 
