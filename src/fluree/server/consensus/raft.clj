@@ -291,16 +291,6 @@
     ;; close tcp server
     (server-shutdown)))
 
-(defn get-raft-state-async
-  "Returns current raft state as a core async channel."
-  [raft]
-  (let [resp-chan (async/promise-chan)]
-    (raft/get-raft-state (:raft raft)
-                         (fn [rs]
-                           (async/put! resp-chan rs)
-                           (async/close! resp-chan)))
-    resp-chan))
-
 (defn monitor-raft
   "Monitor raft events and state for debugging"
   ([raft] (monitor-raft raft (fn [x] (cprint/pprint x))))
@@ -311,13 +301,6 @@
   "Stops current raft monitor"
   [raft]
   (raft/monitor-raft (:raft raft) nil))
-
-(defn state
-  [raft]
-  (let [state (<!! (get-raft-state-async raft))]
-    (if (instance? Throwable state)
-      (throw state)
-      state)))
 
 ;; TODO configurable timeout
 (defn new-entry-async
