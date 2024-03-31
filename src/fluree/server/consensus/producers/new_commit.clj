@@ -1,6 +1,6 @@
 (ns fluree.server.consensus.producers.new-commit
   (:require [fluree.db.ledger :as ledger]
-            [fluree.server.consensus.raft :as raft]))
+            [fluree.server.consensus.raft.participant :as participant]))
 
 (set! *warn-on-reflection* true)
 
@@ -19,10 +19,10 @@
                       ;; below is metadata for quickly validating into the state machine, not retained
                       :t                 (:t db) ;; for quickly validating this is the next 'block'
                       :tx-id             tx-id ;; for quickly removing from the queue
-                      :server            (raft/this-server raft-state)}] ;; for quickly ensuring this server *is* still the leader
+                      :server            (participant/this-server raft-state)}] ;; for quickly ensuring this server *is* still the leader
 
     ;; returns promise
-    (raft/leader-new-command! config :new-commit created-body)))
+    (participant/leader-new-command! config :new-commit created-body)))
 
 ;; TODO - the return signature of updated commits from indexing is different than
 ;; TODO - the return values of commit! API, which the above function handles.

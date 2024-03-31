@@ -4,7 +4,7 @@
             [fluree.db.util.log :as log]
             [fluree.raft.leader :refer [is-leader?]]
             [fluree.server.consensus.producers.new-index-file :as new-index-file]
-            [fluree.server.consensus.raft :as raft]
+            [fluree.server.consensus.raft.participant :as participant]
             [fluree.server.handlers.shared :refer [deref!]]))
 
 (set! *warn-on-reflection* true)
@@ -64,10 +64,10 @@
                       ;; below is metadata for quickly validating into the state machine, not retained
                       :t                 (:t db) ;; for quickly validating this is the next 'block'
                       :tx-id             tx-id ;; for quickly removing from the queue
-                      :server            (raft/this-server raft-state)}] ;; for quickly ensuring this server *is* still the leader
+                      :server            (participant/this-server raft-state)}] ;; for quickly ensuring this server *is* still the leader
 
     ;; returns promise
-    (raft/leader-new-command! config :ledger-created created-body)))
+    (participant/leader-new-command! config :ledger-created created-body)))
 
 (defn processor
   "Processes create-ledger request.

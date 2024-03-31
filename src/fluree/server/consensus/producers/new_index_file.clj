@@ -3,7 +3,7 @@
             [fluree.db.util.core :as util]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.producers.new-commit :refer [consensus-push-index-commit]]
-            [fluree.server.consensus.raft :as raft]))
+            [fluree.server.consensus.raft.participant :as participant]))
 
 (set! *warn-on-reflection* true)
 
@@ -14,9 +14,9 @@
   When it comes through consensus, and if it is the same as *this* server, we know we don't need to
   write the files as it is already done."
   [{:keys [:consensus/raft-state] :as config} file-event]
-  (let [file-event* (assoc file-event :server (raft/this-server raft-state))]
+  (let [file-event* (assoc file-event :server (participant/this-server raft-state))]
     ;; returns promise
-    (raft/leader-new-command! config :new-index-file file-event*)))
+    (participant/leader-new-command! config :new-index-file file-event*)))
 
 (defn push-new-index-files
   "Monitors for new index files pushed onto the changes channel.
