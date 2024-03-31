@@ -1,11 +1,11 @@
-(ns fluree.server.consensus.handlers.ledger-created
+(ns fluree.server.consensus.raft.handlers.ledger-created
   (:require [clojure.core.async :as async]
             [clojure.java.io :as io]
             [fluree.db.util.filesystem :as fs]
             [fluree.db.util.log :as log]
             [fluree.server.components.subscriptions :as subs]
             [fluree.server.components.watcher :as watcher]
-            [fluree.server.consensus.handlers.new-commit :as new-commit])
+            [fluree.server.consensus.raft.handlers.new-commit :as new-commit])
   (:import (java.io File)))
 
 (set! *warn-on-reflection* true)

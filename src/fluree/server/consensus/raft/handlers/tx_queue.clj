@@ -1,10 +1,10 @@
-(ns fluree.server.consensus.handlers.tx-queue
+(ns fluree.server.consensus.raft.handlers.tx-queue
   (:require [fluree.db.json-ld.api :as fluree]
             [fluree.db.util.core :as util]
             [fluree.db.util.log :as log]
-            [fluree.server.consensus.producers.new-commit :refer [consensus-push-commit]]
-            [fluree.server.consensus.producers.new-index-file :as new-index-file]
-            [fluree.server.consensus.producers.tx-exception :refer [consensus-push-tx-exception]]
+            [fluree.server.consensus.raft.producers.new-commit :refer [consensus-push-commit]]
+            [fluree.server.consensus.raft.producers.new-index-file :as new-index-file]
+            [fluree.server.consensus.raft.producers.tx-exception :refer [consensus-push-tx-exception]]
             [fluree.server.handlers.shared :refer [deref!]]))
 
 (set! *warn-on-reflection* true)

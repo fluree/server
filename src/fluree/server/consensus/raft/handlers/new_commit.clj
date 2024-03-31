@@ -1,4 +1,4 @@
-(ns fluree.server.consensus.handlers.new-commit
+(ns fluree.server.consensus.raft.handlers.new-commit
   (:require [clojure.core.async :as async]
             [fluree.db.nameservice.core :as nameservice]
             [fluree.db.storage :as storage]

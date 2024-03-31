@@ -9,7 +9,8 @@
             [fluree.server.consensus :as consensus]
             [taoensso.nippy :as nippy]
             [fluree.server.io.file :as io-file]
-            [fluree.server.consensus.network.multi-addr :as multi-addr])
+            [fluree.server.consensus.network.multi-addr :as multi-addr]
+            [fluree.server.consensus.raft.handler :as raft-handler])
   (:import (java.util UUID)))
 
 (set! *warn-on-reflection* true)
@@ -558,12 +559,13 @@
            :ledger-directory* ledger-directory*)))
 
 (defn start
-  [event-handler-fn {:keys [log-history entries-max storage-type catch-up-rounds]
-                     :or   {log-history     10
-                            entries-max     50
-                            catch-up-rounds 10}
-                     :as   raft-config}]
-  (let [raft-config*           (-> raft-config
+  [{:keys [log-history entries-max storage-type catch-up-rounds]
+    :or   {log-history     10
+           entries-max     50
+           catch-up-rounds 10}
+    :as   raft-config}]
+  (let [event-handler-fn       (raft-handler/create-handler raft-handler/default-routes)
+        raft-config*           (-> raft-config
                                    (assoc :event-chan (async/chan)
                                           :command-chan (async/chan)
                                           :send-rpc-fn send-rpc

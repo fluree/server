@@ -1,4 +1,4 @@
-(ns fluree.server.consensus.producers.tx-exception
+(ns fluree.server.consensus.raft.producers.tx-exception
   (:require [fluree.server.consensus.raft.participant :as participant]))
 
 (defn consensus-push-tx-exception

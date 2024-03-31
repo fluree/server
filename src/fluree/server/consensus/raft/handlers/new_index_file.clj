@@ -1,4 +1,4 @@
-(ns fluree.server.consensus.handlers.new-index-file
+(ns fluree.server.consensus.raft.handlers.new-index-file
   (:require [clojure.core.async :as async]
             [fluree.db.storage :as storage]
             [fluree.db.util.log :as log]

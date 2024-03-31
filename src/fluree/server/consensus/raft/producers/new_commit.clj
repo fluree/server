@@ -1,4 +1,4 @@
-(ns fluree.server.consensus.producers.new-commit
+(ns fluree.server.consensus.raft.producers.new-commit
   (:require [fluree.db.ledger :as ledger]
             [fluree.server.consensus.raft.participant :as participant]))
 

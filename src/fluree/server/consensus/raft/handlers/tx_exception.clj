@@ -1,4 +1,4 @@
-(ns fluree.server.consensus.handlers.tx-exception
+(ns fluree.server.consensus.raft.handlers.tx-exception
   (:require [fluree.db.util.log :as log]
             [fluree.server.components.watcher :as watcher]))
 

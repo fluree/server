@@ -1,12 +1,12 @@
-(ns fluree.server.components.consensus-handler
+(ns fluree.server.consensus.raft.handler
   (:require [fluree.db.util.log :as log]
             [fluree.server.components.http :as-alias http-routes]
-            [fluree.server.consensus.handlers.create-ledger :as create-ledger]
-            [fluree.server.consensus.handlers.ledger-created :as ledger-created]
-            [fluree.server.consensus.handlers.new-commit :as new-commit]
-            [fluree.server.consensus.handlers.new-index-file :as new-index-file]
-            [fluree.server.consensus.handlers.tx-exception :as tx-exception]
-            [fluree.server.consensus.handlers.tx-queue :as tx-queue]))
+            [fluree.server.consensus.raft.handlers.create-ledger :as create-ledger]
+            [fluree.server.consensus.raft.handlers.ledger-created :as ledger-created]
+            [fluree.server.consensus.raft.handlers.new-commit :as new-commit]
+            [fluree.server.consensus.raft.handlers.new-index-file :as new-index-file]
+            [fluree.server.consensus.raft.handlers.tx-exception :as tx-exception]
+            [fluree.server.consensus.raft.handlers.tx-queue :as tx-queue]))
 
 (set! *warn-on-reflection* true)
 

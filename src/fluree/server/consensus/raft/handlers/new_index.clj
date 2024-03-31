@@ -1,4 +1,4 @@
-(ns fluree.server.consensus.handlers.new-index
+(ns fluree.server.consensus.raft.handlers.new-index
   (:require [fluree.db.util.log :as log]))
 
 (set! *warn-on-reflection* true)
