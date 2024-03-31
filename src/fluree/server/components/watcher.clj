@@ -9,9 +9,14 @@
 ;; These operations get delivered via consensus, where they end up being picked up by a responsible
 ;; server from a queue, processed, and then the results broadcast back out.
 
-(declare register-watch deliver-watch remove-watch close)
-
 (def default-watcher-atom (atom {}))
+
+(defn close
+  [watcher]
+  (let [watcher-atom (:watcher-atom watcher)
+        watches (vals @watcher-atom)]
+    (run! async/close! watches)
+    (reset! watcher-atom {})))
 
 (def watcher
   #::ds{:start  (fn [{{:keys [max-tx-wait-ms watcher-atom]
@@ -29,13 +34,6 @@
 (defn remove-watch
   [watcher id]
   (swap! (:watcher-atom watcher) dissoc id))
-
-(defn close
-  [watcher]
-  (let [watcher-atom (:watcher-atom watcher)
-        watches (vals @watcher-atom)]
-    (run! async/close! watches)
-    (reset! watcher-atom {})))
 
 (defn create-watch
   "Creates a new watch for transaction `id`.
