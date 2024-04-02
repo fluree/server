@@ -1,7 +1,7 @@
 (ns fluree.server.consensus.raft.participant
-  (:require [fluree.raft :as raft]
-            [fluree.raft.leader :as raft-leader]
-            [clojure.core.async :as async]))
+  (:require [clojure.core.async :as async]
+            [fluree.raft :as raft]
+            [fluree.raft.leader :as raft-leader]))
 
 (defn this-server
   "Returns current server's name."

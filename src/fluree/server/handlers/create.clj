@@ -7,8 +7,8 @@
    [fluree.db.util.core :as util]
    [fluree.db.util.log :as log]
    [fluree.json-ld.processor.api :as jld-processor]
-   [fluree.server.consensus.watcher :as watcher]
    [fluree.server.consensus :as consensus]
+   [fluree.server.consensus.watcher :as watcher]
    [fluree.server.handlers.shared :refer [deref! defhandler]]
    [fluree.server.handlers.transact :refer [derive-tx-id]]))
 

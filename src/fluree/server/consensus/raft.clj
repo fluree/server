@@ -5,12 +5,12 @@
             [fluree.db.util.async :refer [go-try <? <??]]
             [fluree.db.util.log :as log]
             [fluree.raft :as raft]
-            [fluree.server.consensus.network.tcp :as ftcp]
             [fluree.server.consensus :as consensus]
-            [taoensso.nippy :as nippy]
-            [fluree.server.io.file :as io-file]
             [fluree.server.consensus.network.multi-addr :as multi-addr]
-            [fluree.server.consensus.raft.handler :as raft-handler])
+            [fluree.server.consensus.network.tcp :as ftcp]
+            [fluree.server.consensus.raft.handler :as raft-handler]
+            [fluree.server.io.file :as io-file]
+            [taoensso.nippy :as nippy])
   (:import (java.util UUID)))
 
 (set! *warn-on-reflection* true)
@@ -321,7 +321,6 @@
                  (raft/register-callback raft id timeout-ms callback)
                  ;; send command to leader
                  (send-rpc raft leader :new-command command-data nil)))))))
-
 
 (defn raft-queue-new-ledger
   "Queues a new ledger into the consensus layer for processing.

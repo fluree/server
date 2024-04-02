@@ -3,8 +3,8 @@
             [fluree.db.json-ld.api :as fluree]
             [fluree.db.util.log :as log]
             [fluree.raft.leader :refer [is-leader?]]
-            [fluree.server.consensus.raft.producers.new-index-file :as new-index-file]
             [fluree.server.consensus.raft.participant :as participant]
+            [fluree.server.consensus.raft.producers.new-index-file :as new-index-file]
             [fluree.server.handlers.shared :refer [deref!]]))
 
 (set! *warn-on-reflection* true)
