@@ -1,4 +1,4 @@
-{:deps  {org.clojure/clojure            {:mvn/version "1.11.1"}
+{:deps  {org.clojure/clojure            {:mvn/version "1.11.2"}
          org.clojure/core.async         {:mvn/version "1.6.681"}
          com.fluree/db                  {:git/url "https://github.com/fluree/db.git"
                                          :git/sha "d2a12ce996f62bb56177d903da14debf19a327a7"}
@@ -20,17 +20,16 @@
          aero/aero                      {:mvn/version "1.1.6"}
 
          ;; logging
-         ch.qos.logback/logback-classic {:mvn/version "1.4.11"}
-         org.slf4j/slf4j-api            {:mvn/version "2.0.9"}
+         ch.qos.logback/logback-classic {:mvn/version "1.5.3"}
+         org.slf4j/slf4j-api            {:mvn/version "2.0.12"}
 
          ;; http
-         ;; ring-jetty9-adapter 0.30.x uses Jetty 12 & requires JDK 17+
+         ;; ring-jetty9-adapter 0.30.x+ uses Jetty 12 & requires JDK 17+
          ;; so we have to stay on 0.22.x b/c our minimum JDK version is 11
-         info.sunng/ring-jetty9-adapter ^{:antq/exclude "0.30.x"} {:mvn/version  "0.22.4"}
+         info.sunng/ring-jetty9-adapter ^{:antq/exclude "0.3*"} {:mvn/version "0.22.6"}
          metosin/reitit                 {:mvn/version "0.6.0"}
          metosin/muuntaja               {:mvn/version "0.6.8"}
-         metosin/malli                  {:git/url "https://github.com/metosin/malli.git"
-                                         :git/sha "4c788a674883cee3d737d6a91a2b235d6924b88a"}
+         metosin/malli                  {:mvn/version "0.14.0"}
          ring-cors/ring-cors            {:mvn/version "0.1.13"}
 
          ;; retries
@@ -45,7 +44,7 @@
 
   :dev
   {:extra-paths ["dev/src"]
-   :extra-deps  {org.clojure/tools.namespace {:mvn/version "1.4.4"}
+   :extra-deps  {org.clojure/tools.namespace {:mvn/version "1.5.0"}
                  clj-http/clj-http           {:mvn/version "3.12.3"}
                  criterium/criterium         {:mvn/version "0.4.6"}}}
 
