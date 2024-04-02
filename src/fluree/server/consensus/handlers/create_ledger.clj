@@ -1,6 +1,5 @@
 (ns fluree.server.consensus.handlers.create-ledger
-  (:require [clojure.core.async :as async]
-            [fluree.db.constants :as const]
+  (:require [fluree.db.constants :as const]
             [fluree.db.json-ld.api :as fluree]
             [fluree.db.util.log :as log]
             [fluree.raft.leader :refer [is-leader?]]
