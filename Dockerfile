@@ -5,7 +5,7 @@ WORKDIR /usr/src/fluree-server
 
 COPY deps.edn ./
 
-RUN clojure -P && clojure -A:build:test -P
+RUN clojure -X:deps prep && clojure -P && clojure -A:build:test -P
 
 COPY . ./
 

@@ -1,6 +1,6 @@
 (ns fluree.server.components.fluree
   (:require [donut.system :as ds]
-            [fluree.db.conn.proto :as conn-proto]
+            [fluree.db.connection :as connection]
             [fluree.db.json-ld.api :as db]
             [fluree.db.util.log :as log]))
 
@@ -10,5 +10,5 @@
                   @(db/connect options))
         :stop   (fn [{::ds/keys [instance]}]
                   ;; TODO: Add a close-connection fn to f.d.json-ld.api
-                  (when instance (conn-proto/-close instance)))
+                  (when instance (connection/-close instance)))
         :config {:options (ds/ref [:env :fluree/connection])}})

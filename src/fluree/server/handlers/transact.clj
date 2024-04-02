@@ -1,7 +1,6 @@
 (ns fluree.server.handlers.transact
   (:require [clojure.core.async :as async]
             [fluree.crypto :as crypto]
-            [fluree.db.conn.proto :as conn-proto]
             [fluree.db.constants :as const]
             [fluree.db.json-ld.api :as fluree]
             [fluree.db.util.context :as ctx-util]
@@ -19,10 +18,9 @@
   (-> txn jld-processor/canonize (crypto/sha2-256 :hex :string)))
 
 (defn queue-consensus
-  [consensus conn watcher ledger tx-id expanded-txn opts]
-  (let [conn-type       (conn-proto/-method conn)
-        ;; initial response is not completion, but acknowledgement of persistence
-        persist-resp-ch (consensus/queue-new-transaction consensus conn-type ledger tx-id
+  [consensus watcher ledger tx-id expanded-txn opts]
+  (let [;; initial response is not completion, but acknowledgement of persistence
+        persist-resp-ch (consensus/queue-new-transaction consensus ledger tx-id
                                                          expanded-txn opts)]
     (async/go
       (let [persist-resp (async/<! persist-resp-ch)]
@@ -32,13 +30,13 @@
           (watcher/deliver-watch watcher tx-id persist-resp))))))
 
 (defn transact!
-  [p consensus conn watcher expanded-txn opts]
+  [p consensus watcher expanded-txn opts]
   (let [ledger-id     (-> expanded-txn (get const/iri-ledger) (get 0) (get "@value"))
         tx-id         (derive-tx-id expanded-txn)
         final-resp-ch (watcher/create-watch watcher tx-id)]
 
     ;; register transaction into consensus
-    (queue-consensus consensus conn watcher ledger-id tx-id expanded-txn opts)
+    (queue-consensus consensus watcher ledger-id tx-id expanded-txn opts)
 
     ;; wait for final response from consensus and deliver to promise
     (async/go
@@ -67,7 +65,7 @@
                       "commit head:" (:address commit-file-meta))
             (deliver p {:ledger ledger-id
                         :commit (:address commit-file-meta)
-                        :t      (- t)
+                        :t      t
                         :tx-id  tx-id})))))))
 
 (defn throw-ledger-doesnt-exist
@@ -90,8 +88,8 @@
     (or (deref! (fluree/exists? conn ledger-id))
         (throw-ledger-doesnt-exist ledger-id))
     ;; kick of async process that will eventually deliver resp or exception to resp-p
-    (transact! resp-p consensus conn watcher expanded-txn (cond-> {:context txn-context}
-                                                            did (assoc :did did)))
+    (transact! resp-p consensus watcher expanded-txn (cond-> {:context txn-context}
+                                                       did (assoc :did did)))
 
     {:status 200
      :body   (deref! resp-p)}))
