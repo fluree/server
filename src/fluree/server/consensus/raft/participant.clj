@@ -48,6 +48,8 @@
    (assert-leader config command)
    (let [ch       (async/chan)
          callback (fn [resp]
-                    (async/put! ch resp #(async/close! ch)))]
+                    (async/put! ch resp
+                                (fn [_]
+                                  (async/close! ch))))]
      (new-command! config command params timeout-ms callback)
      ch)))
