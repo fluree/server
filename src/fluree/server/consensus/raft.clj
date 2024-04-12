@@ -451,7 +451,7 @@
 
 (defn build-snapshot-config
   "Returns a map of the necessary configurations for snapshot reading/writing, etc.
-  used automatically by the raft system to handle all snapshot activities automaticallly."
+  Used automatically by the raft system to handle all snapshot activities."
   [{:keys [encryption-key storage-group-read storage-group-write storage-group-exists
            storage-group-delete storage-group-list log-directory state-machine-atom] :as _raft-config}]
   {:path           "snapshots/"
