@@ -41,15 +41,17 @@
      p)))
 
 (defn leader-new-command!-async
+  "Like leader-new-command!, but returns a core.async promise channel instead of a
+  promise. Useful for cases where commands are executed in an asynchronous
+  context and backpressure is necessary to ensure that the consensus command
+  channels aren't overwhelmed with new commands"
   ([config command params]
    (leader-new-command!-async config command params 5000))
 
   ([config command params timeout-ms]
    (assert-leader config command)
-   (let [ch       (async/chan)
+   (let [ch       (async/promise-chan)
          callback (fn [resp]
-                    (async/put! ch resp
-                                (fn [_]
-                                  (async/close! ch))))]
+                    (async/put! ch resp))]
      (new-command! config command params timeout-ms callback)
      ch)))
