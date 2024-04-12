@@ -546,15 +546,29 @@
     (assoc raft-config :raft-initialized-chan raft-initialized-chan
            :leader-change-fn leader-change-fn*)))
 
+(defn default-data-directory
+  [server-name directory-type]
+  (str/join "/" ["." "data" server-name directory-type ""]))
+
+(defn default-log-directory
+  [server-name]
+  (default-data-directory server-name "raftlog"))
+
+(defn default-ledger-directory
+  [server-name]
+  (default-data-directory server-name "ledger"))
+
 (defn canonicalize-directories
   [{:keys [log-directory ledger-directory this-server] :as raft-config}]
-  (let [log-directory*    (-> (or log-directory
-                                  (str "./data/" (name this-server) "/raftlog/"))
+  (let [server-name       (name this-server)
+        log-directory*    (-> log-directory
+                              (or (default-log-directory server-name))
                               io-file/canonicalize-path)
-        ledger-directory* (-> (or ledger-directory
-                                  (str "./data/" (name this-server) "/ledger/"))
+        ledger-directory* (-> ledger-directory
+                              (or (default-ledger-directory server-name))
                               io-file/canonicalize-path)]
-    (assoc raft-config :log-directory log-directory*
+    (assoc raft-config
+           :log-directory log-directory*
            :ledger-directory* ledger-directory*)))
 
 (defn start
