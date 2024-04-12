@@ -28,7 +28,7 @@
   This is used in the consensus handler to issue additional raft commands after doing
   some work.
 
-  Returns a promise channel, which could contain an exception so be sure to check!"
+  Returns a promise, which could contain an exception so be sure to check!"
   ([config command params]
    (leader-new-command! config command params 5000))
 
