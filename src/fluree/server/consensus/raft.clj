@@ -322,7 +322,7 @@
                  ;; send command to leader
                  (send-rpc raft leader :new-command command-data nil)))))))
 
-(defn raft-queue-new-ledger
+(defn queue-new-ledger-raft
   "Queues a new ledger into the consensus layer for processing.
   Returns a core async channel that will eventually contain true if successful."
   [group ledger-id tx-id txn opts]
@@ -336,7 +336,7 @@
                     :opts        opts
                     :instant     (System/currentTimeMillis)}]))
 
-(defn raft-queue-new-transaction
+(defn queue-new-transaction-raft
   "Queues a new transaction into the consensus layer for processing.
   Returns a core async channel that will eventually contain a truthy value if successful."
   [group ledger-id tx-id txn opts]
@@ -354,9 +354,9 @@
                       close raft raft-initialized open-api private-keys]
   consensus/TxGroup
   (queue-new-ledger [group ledger-id tx-id txn opts]
-    (raft-queue-new-ledger group ledger-id tx-id txn opts))
+    (queue-new-ledger-raft group ledger-id tx-id txn opts))
   (queue-new-transaction [group ledger-id tx-id txn opts]
-    (raft-queue-new-transaction group ledger-id tx-id txn opts)))
+    (queue-new-transaction-raft group ledger-id tx-id txn opts)))
 
 (defn leader-change-fn
   "Function called every time there is a leader change to provide any extra
