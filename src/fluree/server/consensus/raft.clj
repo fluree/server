@@ -1,13 +1,15 @@
-(ns fluree.server.consensus.raft.core
+(ns fluree.server.consensus.raft
   (:require [clojure.core.async :as async :refer [<! <!! go go-loop]]
             [clojure.pprint :as cprint]
             [clojure.string :as str]
             [fluree.db.util.async :refer [go-try <? <??]]
             [fluree.db.util.log :as log]
             [fluree.raft :as raft]
-            [fluree.raft.leader :as raft-leader]
+            [fluree.server.consensus :as consensus]
+            [fluree.server.consensus.network.multi-addr :as multi-addr]
             [fluree.server.consensus.network.tcp :as ftcp]
-            [fluree.server.consensus.protocol :as txproto :refer [TxGroup]]
+            [fluree.server.consensus.raft.handler :as raft-handler]
+            [fluree.server.io.file :as io-file]
             [taoensso.nippy :as nippy])
   (:import (java.util UUID)))
 
@@ -284,16 +286,6 @@
     ;; close tcp server
     (server-shutdown)))
 
-(defn get-raft-state-async
-  "Returns current raft state as a core async channel."
-  [raft]
-  (let [resp-chan (async/promise-chan)]
-    (raft/get-raft-state (:raft raft)
-                         (fn [rs]
-                           (async/put! resp-chan rs)
-                           (async/close! resp-chan)))
-    resp-chan))
-
 (defn monitor-raft
   "Monitor raft events and state for debugging"
   ([raft] (monitor-raft raft (fn [x] (cprint/pprint x))))
@@ -304,13 +296,6 @@
   "Stops current raft monitor"
   [raft]
   (raft/monitor-raft (:raft raft) nil))
-
-(defn state
-  [raft]
-  (let [state (<!! (get-raft-state-async raft))]
-    (if (instance? Throwable state)
-      (throw state)
-      state)))
 
 ;; TODO configurable timeout
 (defn new-entry-async
@@ -337,97 +322,41 @@
                  ;; send command to leader
                  (send-rpc raft leader :new-command command-data nil)))))))
 
-(defn leader-new-command!
-  "Issue a new command but only if currently the leader, else returns an exception.
+(defn queue-new-ledger-raft
+  "Queues a new ledger into the consensus layer for processing.
+  Returns a core async channel that will eventually contain true if successful."
+  [group ledger-id tx-id txn opts]
+  (log/debug "Consensus - queue new ledger:" ledger-id tx-id txn)
+  (new-entry-async
+   group
+   [:ledger-create {:txn         txn
+                    :size        (count txn)
+                    :tx-id       tx-id
+                    :ledger-id   ledger-id
+                    :opts        opts
+                    :instant     (System/currentTimeMillis)}]))
 
-  This is used in the consensus handler to issue additional raft commands after doing
-  some work.
-
-  Returns a promise channel, which could contain an exception so be sure to check!"
-  ([config command params] (leader-new-command! config command params 5000))
-  ([{:keys [:consensus/command-chan :consensus/raft-state] :as _config} command params timeout-ms]
-   (let [entry     [command params]
-         raft-stub {:config {:command-chan command-chan}}
-         p         (promise)
-         callback  (fn [resp]
-                     (deliver p resp))]
-     (if (fluree.raft.leader/is-leader? raft-state)
-       (raft/new-entry raft-stub entry callback (or timeout-ms 5000))
-       (throw (ex-info (str "This server is no longer the leader! "
-                            "Unable to execute command: " command)
-                       {:status 400
-                        :error  :consensus/not-leader})))
-     p)))
-
-(defn add-server-async
-  "Sends a command to the leader. If no callback provided, returns a core async promise channel
-  that will eventually contain a response."
-  ([group newServer] (add-server-async group newServer 5000))
-  ([group newServer timeout-ms]
-   (let [resp-chan (async/promise-chan)
-         callback  (fn [resp]
-                     (if (nil? resp)
-                       (async/close! resp-chan)
-                       (async/put! resp-chan resp)))]
-     (add-server-async group newServer timeout-ms callback)
-     resp-chan))
-  ([group newServer timeout-ms callback]
-   (go-try (let [raft'  (:raft group)
-                 leader (<? (leader-async group))
-                 id     (str (UUID/randomUUID))]
-             (if (= (:this-server raft') leader)
-               (let [command-chan (-> group :command-chan)]
-                 (async/put! command-chan [:add-server [id newServer] callback]))
-               (do (raft/register-callback raft' id timeout-ms callback)
-                   ;; send command to leader
-                   (send-rpc raft' leader :add-server [id newServer] nil)))))))
-
-(defn remove-server-async
-  "Sends a command to the leader. If no callback provided, returns a core async promise channel
-  that will eventually contain a response."
-  ([group server] (remove-server-async group server 5000))
-  ([group server timeout-ms]
-   (let [resp-chan (async/promise-chan)
-         callback  (fn [resp]
-                     (if (nil? resp)
-                       (async/close! resp-chan)
-                       (async/put! resp-chan resp)))]
-     (remove-server-async group server timeout-ms callback)
-     resp-chan))
-  ([group server timeout-ms callback]
-   (go-try (let [raft'  (:raft group)
-                 leader (<? (leader-async group))
-                 id     (str (UUID/randomUUID))]
-             (if (= (:this-server raft') leader)
-               (let [command-chan (-> group :command-chan)]
-                 (async/put! command-chan [:remove-server [id server] callback]))
-               (do (raft/register-callback raft' id timeout-ms callback)
-                   ;; send command to leader
-                   (send-rpc raft' leader :remove-server [id server] nil)))))))
-
-(defn local-state
-  "Returns local, current state from state machine"
-  [raft]
-  @(:state-atom raft))
+(defn queue-new-transaction-raft
+  "Queues a new transaction into the consensus layer for processing.
+  Returns a core async channel that will eventually contain a truthy value if successful."
+  [group ledger-id tx-id txn opts]
+  (log/trace "queue-new-transaction txn:" txn)
+  (new-entry-async
+   group
+   [:tx-queue {:txn            txn
+               :size           (count txn)
+               :tx-id          tx-id
+               :ledger-id      ledger-id
+               :opts           opts
+               :instant        (System/currentTimeMillis)}]))
 
 (defrecord RaftGroup [state-atom event-chan command-chan this-server port
                       close raft raft-initialized open-api private-keys]
-  TxGroup
-  (-add-server-async [group server] (add-server-async group server))
-  (-remove-server-async [group server] (remove-server-async group server))
-  (-new-entry-async [group entry] (new-entry-async group entry))
-  (-local-state [group] (local-state group))
-  (-current-state [group] (state group))
-  (-update-in [_ ks f] (swap! state-atom update-in ks f))
-  (-is-leader? [_] (raft-leader/is-leader? @state-atom))
-  (-active-servers [group]
-    (let [server-map   (txproto/kv-get-in group [:leases :servers])
-          current-time (System/currentTimeMillis)]
-      (reduce-kv (fn [acc server lease-data]
-                   (if (>= (:expire lease-data) current-time)
-                     (conj acc server)
-                     acc))
-                 #{} server-map))))
+  consensus/TxGroup
+  (queue-new-ledger [group ledger-id tx-id txn opts]
+    (queue-new-ledger-raft group ledger-id tx-id txn opts))
+  (queue-new-transaction [group ledger-id tx-id txn opts]
+    (queue-new-transaction-raft group ledger-id tx-id txn opts)))
 
 (defn leader-change-fn
   "Function called every time there is a leader change to provide any extra
@@ -519,3 +448,169 @@
   [config-handler config]
   (fn [[command params] raft-state]
     (config-handler (assoc config :consensus/raft-state raft-state) command params)))
+
+(defn build-snapshot-config
+  "Returns a map of the necessary configurations for snapshot reading/writing, etc.
+  Used automatically by the raft system to handle all snapshot activities."
+  [{:keys [encryption-key storage-group-read storage-group-write storage-group-exists
+           storage-group-delete storage-group-list log-directory state-machine-atom] :as _raft-config}]
+  {:path           "snapshots/"
+   :state-atom     state-machine-atom
+   :storage-read   (or storage-group-read
+                       (io-file/connection-storage-read
+                        log-directory
+                        encryption-key))
+   :storage-write  (or storage-group-write
+                       (io-file/connection-storage-write
+                        log-directory
+                        encryption-key))
+   :storage-exists (or storage-group-exists
+                       (io-file/connection-storage-exists?
+                        log-directory))
+   :storage-delete (or storage-group-delete
+                       (io-file/connection-storage-delete
+                        log-directory))
+   :storage-list   (or storage-group-list
+                       (io-file/connection-storage-list
+                        log-directory))})
+
+(defn add-ledger-storage-fns
+  "Functions that write and read ledger data. Either supplied with config, or generated
+  automatically with defaults"
+  [{:keys [encryption-key ledger-directory
+           storage-ledger-read storage-ledger-write] :as raft-config}]
+  (assoc raft-config
+         :storage-ledger-read (or storage-ledger-read
+                                  (io-file/connection-storage-read
+                                   ledger-directory
+                                   encryption-key))
+         :storage-ledger-write (or storage-ledger-write
+                                   (io-file/connection-storage-write
+                                    ledger-directory
+                                    encryption-key))))
+
+(defn add-state-machine
+  "Add state machine configuration options needed for raft"
+  [{:keys [fluree/conn fluree/watcher fluree/subscriptions this-server command-chan storage-ledger-read storage-ledger-write] :as raft-config}
+   config-handler]
+  (let [state-machine-atom   (atom default-state)
+        state-machine-config {:fluree/conn                    conn
+                              :fluree/watcher                 watcher
+                              :fluree/subscriptions           subscriptions
+                              :consensus/command-chan         command-chan
+                              :consensus/this-server          this-server
+                              :consensus/state-atom           state-machine-atom
+                              :consensus/ledger-read          storage-ledger-read
+                              :consensus/ledger-write         storage-ledger-write
+                              :consensus/state-change-fn-atom state-change-fn-atom}]
+    (assoc raft-config
+           :state-machine-atom state-machine-atom
+           :state-machine (handler config-handler state-machine-config))))
+
+(defn add-snapshot-config
+  [raft-config]
+  (let [snapshot-config (build-snapshot-config raft-config)]
+    (assoc raft-config :snapshot-write (snapshot-writer snapshot-config)
+           :snapshot-reify (snapshot-reify snapshot-config)
+           :snapshot-xfer (snapshot-xfer snapshot-config)
+           :snapshot-install (snapshot-installer snapshot-config)
+           :snapshot-list-indexes (snapshot-list-indexes snapshot-config))))
+
+(defn add-server-configs
+  [{:keys [consensus-this-server consensus-servers] :as raft-state}]
+  (when-not (string? consensus-servers)
+    (throw (ex-info (str "Cannot start raft without a list of participating servers separated by a comma or semicolon. "
+                         "If this is a single server, please specify this-server instead of servers.")
+                    {:status 400 :error :db/invalid-server-address})))
+  (let [servers            (mapv str/trim (str/split consensus-servers #"[,;]"))
+        this-server        (if consensus-this-server
+                             (str/trim consensus-this-server)
+                             (if (= 1 (count servers))
+                               (first servers)
+                               (throw (ex-info "Must specify this-server if multiple servers are specified"
+                                               {:status 400 :error :db/invalid-server-address}))))
+        server-configs-map (mapv multi-addr/multi->map servers)
+        this-server-map    (multi-addr/multi->map this-server)
+        this-server-cfg    (validated-this-server-config this-server-map server-configs-map)]
+    (validated-raft-servers server-configs-map)
+    (assoc raft-state :this-server this-server
+           :servers servers
+           :this-server-config this-server-cfg
+           :server-configs server-configs-map
+           :port (:port this-server-cfg))))
+
+(defn add-leader-change-fn
+  [{:keys [this-server join?], change-fn :leader-change-fn :as raft-config}]
+  (let [raft-initialized-chan (async/promise-chan)
+        leader-change-fn*     (leader-change-fn this-server raft-initialized-chan join? change-fn)]
+    (assoc raft-config :raft-initialized-chan raft-initialized-chan
+           :leader-change-fn leader-change-fn*)))
+
+(defn default-data-directory
+  [server-name directory-type]
+  (str/join "/" ["." "data" server-name directory-type ""]))
+
+(defn default-log-directory
+  [server-name]
+  (default-data-directory server-name "raftlog"))
+
+(defn default-ledger-directory
+  [server-name]
+  (default-data-directory server-name "ledger"))
+
+(defn canonicalize-directories
+  [{:keys [log-directory ledger-directory this-server] :as raft-config}]
+  (let [server-name       (name this-server)
+        log-directory*    (-> log-directory
+                              (or (default-log-directory server-name))
+                              io-file/canonicalize-path)
+        ledger-directory* (-> ledger-directory
+                              (or (default-ledger-directory server-name))
+                              io-file/canonicalize-path)]
+    (assoc raft-config
+           :log-directory log-directory*
+           :ledger-directory* ledger-directory*)))
+
+(defn start
+  [{:keys [log-history entries-max storage-type catch-up-rounds]
+    :or   {log-history     10
+           entries-max     50
+           catch-up-rounds 10}
+    :as   raft-config}]
+  (let [event-handler-fn       (raft-handler/create-handler raft-handler/default-routes)
+        raft-config*           (-> raft-config
+                                   (assoc :event-chan (async/chan)
+                                          :command-chan (async/chan)
+                                          :send-rpc-fn send-rpc
+                                          :log-history log-history
+                                          :entries-max entries-max
+                                          :catch-up-rounds catch-up-rounds
+                                          :only-leader-snapshots (not= :file storage-type))
+                                   (add-server-configs)
+                                   (canonicalize-directories)
+                                   (add-leader-change-fn)
+                                   (add-ledger-storage-fns)
+                                   (add-state-machine event-handler-fn)
+                                   (add-snapshot-config))
+        _                      (log/debug "Starting Raft with config:" raft-config*)
+        raft                   (raft/start raft-config*)
+        client-message-handler (partial message-consume raft (:storage-ledger-read raft-config*))
+        new-client-handler     (fn [client]
+                                 (ftcp/monitor-remote-connection (:this-server raft-config*) client client-message-handler nil))
+        ;; start TCP server, returns the close function
+        server-shutdown-fn     (ftcp/start-tcp-server (:port raft-config*) new-client-handler)
+        ;; launch client connections on TCP server
+        _                      (launch-network-connections raft-config* raft)
+        close-fn               (close-everything-fn raft (:this-server-config raft-config*) server-shutdown-fn)
+        final-map              (-> raft-config*
+                                   (select-keys [:this-server :this-server-config :server-configs :storage-ledger-read
+                                                 :join? :event-chan :command-chan :private-keys :open-api])
+                                   (assoc :raft raft
+                                          :close close-fn
+                                          :server-shutdown server-shutdown-fn ;; TODO - since shutdown of this happens in the :close function below, does this need to remain in this map for anything downstream?
+
+                                          ;; TODO - these following keyword renaming from config's should be updated downstream to use the same names so renaming didn't need to happen
+                                          :state-atom (:state-machine-atom raft-config*)
+                                          :raft-initialized (:raft-initialized-chan raft-config*)))] ;; added in (add-leader-change-fn ...)
+
+    (map->RaftGroup final-map)))

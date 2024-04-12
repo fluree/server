@@ -1,10 +1,9 @@
-(ns fluree.server.consensus.producers.new-index-file
+(ns fluree.server.consensus.raft.producers.new-index-file
   (:require [clojure.core.async :as async :refer [<! go-loop]]
             [fluree.db.util.core :as util]
             [fluree.db.util.log :as log]
-            [fluree.server.consensus.core :as consensus]
-            [fluree.server.consensus.producers.new-commit :refer [consensus-push-index-commit]]
-            [fluree.server.consensus.raft.core :as raft-core]))
+            [fluree.server.consensus.raft.participant :as participant]
+            [fluree.server.consensus.raft.producers.new-commit :refer [consensus-push-index-commit]]))
 
 (set! *warn-on-reflection* true)
 
@@ -15,9 +14,9 @@
   When it comes through consensus, and if it is the same as *this* server, we know we don't need to
   write the files as it is already done."
   [{:keys [:consensus/raft-state] :as config} file-event]
-  (let [file-event* (assoc file-event :server (consensus/this-server raft-state))]
+  (let [file-event* (assoc file-event :server (participant/this-server raft-state))]
     ;; returns promise
-    (raft-core/leader-new-command! config :new-index-file file-event*)))
+    (participant/leader-new-command!-async config :new-index-file file-event*)))
 
 (defn push-new-index-files
   "Monitors for new index files pushed onto the changes channel.
@@ -34,8 +33,8 @@
           (log/error next-file-event "Error in push-new-index-files monitoring new index files, but got an exception.")
           (do
             (case (:event next-file-event)
-              :new-index-file (push-index-file config next-file-event)
-              :new-commit (consensus-push-index-commit config (:data next-file-event)))
+              :new-index-file (<! (push-index-file config next-file-event))
+              :new-commit     (consensus-push-index-commit config (:data next-file-event)))
             (recur)))))))
 
 (defn monitor-chan

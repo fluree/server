@@ -1,11 +1,11 @@
-(ns fluree.server.consensus.handlers.new-commit
+(ns fluree.server.consensus.raft.handlers.new-commit
   (:require [clojure.core.async :as async]
             [fluree.db.nameservice.core :as nameservice]
             [fluree.db.storage :as storage]
             [fluree.db.util.async :refer [<? go-try]]
             [fluree.db.util.log :as log]
             [fluree.server.components.subscriptions :as subs]
-            [fluree.server.components.watcher :as watcher]))
+            [fluree.server.consensus.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
 

@@ -165,7 +165,7 @@
       (is (= 200
              (-> (api-post :transact {:body (json/write-value-as-string req2) :headers json-headers})
                  :status)))
-      (is (= []
+      (is (= [{"id" "ex:list-test"}]
              (-> (api-post :query {:body (json/write-value-as-string q1) :headers json-headers})
                  :body
                  json/read-value))))))
