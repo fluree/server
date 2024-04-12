@@ -1,9 +1,11 @@
 (ns fluree.server.consensus.watcher
-  "When mutation requests happen over http (e.g. creating a new ledger), we want
-  to wait for the operation to complete through consensus before providing the
-  response back to the API requester. These operations get delivered via
-  consensus, where they end up being picked up by a responsible server from a
-  queue, processed, and then the results broadcast back out."
+  "System to manage and track pending requests through consensus in order to
+  respond with the result. When mutation requests happen over http (e.g.
+  creating a new ledger), we want to wait for the operation to complete through
+  consensus before providing the response back to the API requester. These
+  operations get delivered via consensus, where they end up being picked up by a
+  responsible server from a queue, processed, and then the results broadcast
+  back out."
   (:refer-clojure :exclude [remove-watch])
   (:require [clojure.core.async :as async]
             [fluree.db.util.log :as log]))
@@ -56,6 +58,6 @@
 (defn close
   [watcher]
   (let [watcher-atom (:watcher-atom watcher)
-        watches (vals @watcher-atom)]
+        watches      (vals @watcher-atom)]
     (run! async/close! watches)
     (reset! watcher-atom {})))
