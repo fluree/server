@@ -96,11 +96,6 @@
                        [::format QueryFormat]]]
              [::m/default FqlQuery]]))
 
-(def HistoryQueryRequestBody
-  (m/schema [:and
-             [:map-of :keyword :any]
-             HistoryQuery]))
-
 (def HistoryQueryResponse
   (m/schema [:sequential map?]))
 
@@ -143,6 +138,15 @@
                     {:error :db/invalid-query
                      :message (v/format-explained-errors explained nil)})}))
 
+(def history-coercer
+  (rcm/create
+   {:strip-extra-keys false
+    :error-keys #{}
+    :transformers {:body {:default fql/fql-transformer}}
+    :encode-error (fn [explained]
+                    {:error :db/invalid-query
+                     :message (v/format-explained-errors explained nil)})}))
+
 (def query-endpoint
   {:summary    "Endpoint for submitting queries"
    :parameters {:body QueryRequestBody}
@@ -154,11 +158,11 @@
 
 (def history-endpoint
   {:summary    "Endpoint for submitting history queries"
-   :parameters {:body HistoryQueryRequestBody}
+   :parameters {:body HistoryQuery}
    :responses  {200 {:body HistoryQueryResponse}
                 400 {:body ErrorResponse}
                 500 {:body ErrorResponse}}
-   :coercion   ^:replace  query-coercer
+   :coercion   ^:replace history-coercer
    :handler    #'ledger/history})
 
 (defn wrap-assoc-system
@@ -231,6 +235,17 @@
                     {::query  (String. (.readAllBytes ^InputStream data)
                                        ^String charset)
                      ::format :sparql})))]}))
+
+(def jwt-format
+  "Turn a JWT from an InputStream into a string that will be found on :body-params in the
+  request map."
+  (mf/map->Format
+   {:name "application/jwt"
+    :decoder [(fn [_]
+                (reify mf/Decode
+                  (decode [_ data charset]
+                    (String. (.readAllBytes ^InputStream data)
+                             ^String charset))))]}))
 
 (defn websocket-handler
   [conn subscriptions]
@@ -380,12 +395,9 @@
                            {:strip-extra-keys false})
               :muuntaja   (muuntaja/create
                            (-> muuntaja/default-options
-                               (assoc-in
-                                [:formats "application/json"]
-                                json-format)
-                               (assoc-in
-                                [:formats "application/sparql-query"]
-                                sparql-format)))
+                               (assoc-in [:formats "application/json"] json-format)
+                               (assoc-in [:formats "application/sparql-query"] sparql-format)
+                               (assoc-in [:formats "application/jwt"] jwt-format)))
               :middleware [swagger/swagger-feature
                            muuntaja-mw/format-negotiate-middleware
                            muuntaja-mw/format-response-middleware
