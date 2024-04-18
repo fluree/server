@@ -151,11 +151,10 @@
                            "ledger" ledger-name
                            "insert" {"id" "ex:alice"
                                      "ex:secret" "Alice's new secret"}}
-                  txn-res (api-post :transact {:body (json/write-value-as-string
-                                                      (crypto/create-jws
-                                                       (json/write-value-as-string txn-req)
-                                                       (:private auth)))
-                                               :headers json-headers})]
+                  txn-res (api-post :transact {:body (crypto/create-jws
+                                                      (json/write-value-as-string txn-req)
+                                                      (:private auth))
+                                               :headers {"Content-Type" "application/jwt"}})]
               (is (= 200
                      (:status txn-res))
                   "txn signed by authorized user succeeds")))
@@ -164,23 +163,23 @@
                            "ledger"   ledger-name
                            "insert"   [{"id" "ex:bob"}
                                        "ex:secret" "bob's new secret"]}
-                  txn-res (api-post :transact {:body    (json/write-value-as-string
-                                                         (crypto/create-jws
-                                                          (json/write-value-as-string txn-req)
-                                                          (:private auth)))
-                                               :headers json-headers})]
+                  txn-res (api-post :transact {:body    (crypto/create-jws
+                                                         (json/write-value-as-string txn-req)
+                                                         (:private auth))
+                                               :headers {"Content-Type" "application/jwt"}})]
               (is (not= 200 (:status txn-res))
+                  "transaction policy opts prevented modification")
+              (is (= 400 (:status txn-res))
                   "transaction policy opts prevented modification")))
           (testing "query results filtered based on authorization"
             (let [query-req {"@context" test-system/default-context
                              "from"     ledger-name
                              "history"  "ex:bob"
                              "t"        {"from" 1}}
-                  query-res (api-post :history {:body (json/write-value-as-string
-                                                       (crypto/create-jws
-                                                        (json/write-value-as-string query-req)
-                                                        (:private auth)))
-                                                :headers json-headers})]
+                  query-res (api-post :history {:body (crypto/create-jws
+                                                       (json/write-value-as-string query-req)
+                                                       (:private auth))
+                                                :headers  {"Content-Type" "application/jwt"}})]
               (is (= 200 (:status query-res)))
               (is (= [{"id" "ex:bob", "type" "ex:User"}]
                      (-> query-res :body json/read-value first (get "f:assert")))
