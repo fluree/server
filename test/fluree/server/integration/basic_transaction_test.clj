@@ -68,30 +68,30 @@
   (testing "can transact with a where clause"
     (let [ledger-name (create-rand-ledger "transact-endpoint-multi-ledger")
           req1        (json/write-value-as-string
-                        {"@context" test-system/default-context
-                         "ledger"   ledger-name
-                         "insert"   {"id"      "ex:transaction-test"
-                                     "type"    "schema:Test"
-                                     "ex:name" "transact-endpoint-json-test"}})
+                       {"@context" test-system/default-context
+                        "ledger"   ledger-name
+                        "insert"   {"id"      "ex:transaction-test"
+                                    "type"    "schema:Test"
+                                    "ex:name" "transact-endpoint-json-test"}})
           res1        (api-post :transact {:body req1, :headers json-headers})
           _           (assert (= 200 (:status res1)))
           req2        (json/write-value-as-string
-                        {"@context" test-system/default-context
-                         "ledger"   ledger-name
-                         "insert"   {"id"      "?t"
-                                     "ex:name" "new-name"}
-                         "delete"   {"id"      "?t"
-                                     "ex:name" "transact-endpoint-json-test"}
-                         "where"    {"id" "?t", "type" "schema:Test"}})
+                       {"@context" test-system/default-context
+                        "ledger"   ledger-name
+                        "insert"   {"id"      "?t"
+                                    "ex:name" "new-name"}
+                        "delete"   {"id"      "?t"
+                                    "ex:name" "transact-endpoint-json-test"}
+                        "where"    {"id" "?t", "type" "schema:Test"}})
           res2        (api-post :transact {:body req2, :headers json-headers})]
       (is (= 200 (:status res2)))
       (is (= [{"id"      "ex:transaction-test"
                "type"    "schema:Test"
                "ex:name" "new-name"}]
              (->> {:body    (json/write-value-as-string
-                              {"@context" test-system/default-context
-                               "select"   {"ex:transaction-test" ["*"]}
-                               "from"     ledger-name})
+                             {"@context" test-system/default-context
+                              "select"   {"ex:transaction-test" ["*"]}
+                              "from"     ledger-name})
                    :headers json-headers}
                   (api-post :query)
                   :body
@@ -101,9 +101,9 @@
                "type"    "schema:Test"
                "ex:name" "transact-endpoint-json-test"}]
              (->> {:body    (json/write-value-as-string
-                              {"@context" test-system/default-context
-                               "select"   {"ex:transaction-test" ["*"]}
-                               "from"     (str ledger-name "?t=2")})
+                             {"@context" test-system/default-context
+                              "select"   {"ex:transaction-test" ["*"]}
+                              "from"     (str ledger-name "?t=2")})
                    :headers json-headers}
                   (api-post :query)
                   :body
