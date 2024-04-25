@@ -1,5 +1,6 @@
 (ns lib.cljfmt
-  (:require [cljfmt.tool :as fmt]
+  (:require [babashka.fs]
+            [cljfmt.tool :as fmt]
             [cljfmt.report :as report]
             [clojure.string :as str]
             [lib.path :as path]))
@@ -22,3 +23,14 @@
                                    (str dir "/")))]
         (concat (map (fn [[file]] (->proj-path file)) incorrect)
                 (map (fn [[file]] (->proj-path file)) error))))))
+
+(def clj-file-re ".*\\.(clj[sc]?|edn|bb)")
+
+(defn fix
+  "Runs cljfmt fix on all CLJ-related files (recursively) in dir."
+  [dir]
+  ;; We have to do this match ourselves b/c o/w cljfmt will pick up files in
+  ;; the .git dir that have right filename extension, but do not contain valid
+  ;; Clojure.
+  (let [clj-paths (fs/match dir (str "regex:" clj-file-re) {:recursive true})]
+    (fmt/fix-paths (map fs/file clj-paths))))

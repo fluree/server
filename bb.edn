@@ -4,4 +4,6 @@
  :tasks {git-hooks {:requires ([git-hooks :as gh])
                     :task     (apply gh/hook *command-line-args*)}
          lint      {:requires ([lint])
-                    :task     (lint/run-all ".")}}}
+                    :task     (lint/check-all ".")}
+         fix       {:requires ([lint])
+                    :task     (lint/fix-all ".")}}}
