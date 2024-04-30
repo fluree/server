@@ -1,4 +1,4 @@
-{:deps  {org.clojure/clojure            {:mvn/version "1.11.2"}
+{:deps  {org.clojure/clojure            {:mvn/version "1.11.3"}
          org.clojure/core.async         {:mvn/version "1.6.681"}
          com.fluree/db                  {:git/url "https://github.com/fluree/db.git"
                                          :git/sha "0556981ebe63509e91c3353f67832cdaf215fb24"}
@@ -13,23 +13,23 @@
          net.async/async                {:mvn/version "0.1.1"}
 
          ;; serialization, compression
-         com.taoensso/nippy             {:mvn/version "3.3.0"}
+         com.taoensso/nippy             {:mvn/version "3.4.0"}
          org.xerial.snappy/snappy-java  {:mvn/version "1.1.10.5"}
 
          ;; config
          aero/aero                      {:mvn/version "1.1.6"}
 
          ;; logging
-         ch.qos.logback/logback-classic {:mvn/version "1.5.3"}
-         org.slf4j/slf4j-api            {:mvn/version "2.0.12"}
+         ch.qos.logback/logback-classic {:mvn/version "1.5.6"}
+         org.slf4j/slf4j-api            {:mvn/version "2.0.13"}
 
          ;; http
          ;; ring-jetty9-adapter 0.30.x+ uses Jetty 12 & requires JDK 17+
          ;; so we have to stay on 0.22.x b/c our minimum JDK version is 11
          info.sunng/ring-jetty9-adapter ^{:antq/exclude "0.3*"} {:mvn/version "0.22.6"}
-         metosin/reitit                 {:mvn/version "0.6.0"}
-         metosin/muuntaja               {:mvn/version "0.6.8"}
-         metosin/malli                  {:mvn/version "0.14.0"}
+         metosin/reitit                 {:mvn/version "0.7.0"}
+         metosin/muuntaja               {:mvn/version "0.6.10"}
+         metosin/malli                  {:mvn/version "0.16.1"}
          ring-cors/ring-cors            {:mvn/version "0.1.13"}
 
          ;; retries
@@ -45,7 +45,7 @@
   :dev
   {:extra-paths ["dev/src"]
    :extra-deps  {org.clojure/tools.namespace {:mvn/version "1.5.0"}
-                 clj-http/clj-http           {:mvn/version "3.12.3"}
+                 clj-http/clj-http           {:mvn/version "3.13.0"}
                  criterium/criterium         {:mvn/version "0.4.6"}}}
 
   :run-dev
@@ -54,14 +54,14 @@
 
   :test
   {:extra-paths ["test"]
-   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.87.1366"}
-                 clj-http/clj-http   {:mvn/version "3.12.3"}}
+   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.88.1376"}
+                 clj-http/clj-http   {:mvn/version "3.13.0"}}
    :exec-fn     kaocha.runner/exec-fn
    :exec-args   {:kaocha.filter/skip-meta [:pending]}}
 
   :pending-tests
   {:extra-paths ["test"]
-   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.87.1366"}
-                 clj-http/clj-http   {:mvn/version "3.12.3"}}
+   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.88.1376"}
+                 clj-http/clj-http   {:mvn/version "3.13.0"}}
    :exec-fn     kaocha.runner/exec-fn
    :exec-args   {:kaocha.filter/focus-meta [:pending]}}}}
