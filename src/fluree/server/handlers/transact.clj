@@ -6,6 +6,7 @@
             [fluree.db.util.context :as ctx-util]
             [fluree.db.util.core :as util]
             [fluree.db.util.log :as log]
+            [fluree.json-ld :as json-ld]
             [fluree.json-ld.processor.api :as jld-processor]
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.watcher :as watcher]
@@ -14,8 +15,11 @@
 (set! *warn-on-reflection* true)
 
 (defn derive-tx-id
-  [txn]
-  (-> txn jld-processor/canonize (crypto/sha2-256 :hex :string)))
+  [raw-txn]
+  (if (string? raw-txn)
+    (crypto/sha2-256 raw-txn :hex :string)
+    (-> (json-ld/normalize-data raw-txn)
+        (crypto/sha2-256 :hex :string))))
 
 (defn queue-consensus
   [consensus watcher ledger tx-id expanded-txn opts]
@@ -32,7 +36,7 @@
 (defn transact!
   [p consensus watcher expanded-txn opts]
   (let [ledger-id     (-> expanded-txn (get const/iri-ledger) (get 0) (get "@value"))
-        tx-id         (derive-tx-id expanded-txn)
+        tx-id         (derive-tx-id (:raw-txn opts))
         final-resp-ch (watcher/create-watch watcher tx-id)]
 
     ;; register transaction into consensus
