@@ -1,6 +1,5 @@
 (ns fluree.server.consensus.raft.producers.new-commit
-  (:require [fluree.db.ledger :as ledger]
-            [fluree.server.consensus.raft.participant :as participant]))
+  (:require [fluree.server.consensus.raft.participant :as participant]))
 
 (set! *warn-on-reflection* true)
 
@@ -34,9 +33,7 @@
 
   Returns promise that will have the eventual response once committed."
   [config {:keys [commit-res db] :as _params}]
-  (let [ledger    (:ledger db)
-        ledger-id (ledger/-alias ledger)]
-    (consensus-push-commit config
-                           {:ledger-id ledger-id}
-                           {:db                db
-                            :commit-file-meta  commit-res})))
+  (consensus-push-commit config
+                         {:ledger-id (:alias db)}
+                         {:db                db
+                          :commit-file-meta  commit-res}))

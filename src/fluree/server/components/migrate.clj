@@ -42,10 +42,10 @@
 
 (defn migrate-alias
   [conn commit-opts index-files-ch alias]
-  (go-try
-    (let [address (<? (nameservice/primary-address conn alias nil))]
-      (log/info "Migrating ledger" alias "at address" address)
-      (<? (sid/migrate conn address commit-opts index-files-ch)))))
+  #_(go-try
+      (let [address (<? (nameservice/primary-address conn alias nil))]
+        (log/info "Migrating ledger" alias "at address" address)
+        (<? (sid/migrate conn address commit-opts index-files-ch)))))
 
 (defn sid-migrate-ledgers
   [conn commit-opts ledgers]
