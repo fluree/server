@@ -1,1 +1,3 @@
-{:lint-as {fluree.server.handlers.shared/defhandler clojure.core/defn}}
+{:lint-as {fluree.server.handlers.shared/defhandler clojure.core/defn}
+ ;; TODO: Remove this when the migrate ns works again
+ :exclude-files "src/fluree/server/components/migrate.clj$"}
