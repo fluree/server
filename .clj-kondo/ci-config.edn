@@ -1,0 +1,2 @@
+{:output ; GitHub Actions can parse this to provide more useful output
+ {:pattern "::{{level}} file={{filename}},line={{row}},col={{col}}::{{message}}"}}

@@ -8,4 +8,5 @@
 /.eastwood
 /.clj-kondo/*
 !/.clj-kondo/config.edn
+!/.clj-kondo/ci-config.edn
 /.lsp/
