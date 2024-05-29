@@ -45,7 +45,7 @@
   (go-try
     (let [address (<? (nameservice/primary-address conn alias nil))]
       (log/info "Migrating ledger" alias "at address" address)
-      (<? (sid/migrate conn address commit-opts index-files-ch)))))
+      #_(<? (sid/migrate conn address commit-opts index-files-ch)))))
 
 (defn sid-migrate-ledgers
   [conn commit-opts ledgers]
@@ -74,4 +74,4 @@
                       ::ds/config}]
                   (let [{:keys [ledgers]} migrater]
                     (log/info "Beginning migration for ledger aliases:" ledgers)
-                    (<?? (sid-migrate-ledgers connection commit-opts ledgers))))})
+                    #_(<?? (sid-migrate-ledgers connection commit-opts ledgers))))})
