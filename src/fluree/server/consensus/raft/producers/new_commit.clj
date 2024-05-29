@@ -35,7 +35,7 @@
   Returns promise that will have the eventual response once committed."
   [config {:keys [commit-res db] :as _params}]
   (let [ledger    (:ledger db)
-        ledger-id (ledger/-alias ledger)]
+        ledger-id (:alias ledger)]
     (consensus-push-commit config
                            {:ledger-id ledger-id}
                            {:db                db
