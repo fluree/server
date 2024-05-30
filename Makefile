@@ -1,14 +1,16 @@
 SOURCES := $(shell find src)
 RESOURCES := $(shell find resources)
 
-.PHONY: prepare
-prepare:
-	clojure -X:deps prep
-
 target/server-%.jar: $(SOURCES) $(RESOURCES) prepare
 	clojure -T:build uber
 
 uberjar: target/server-%.jar
+
+.DEFAULT_GOAL := uberjar
+
+.PHONY: prepare
+prepare:
+	clojure -X:deps prep
 
 docker-build:
 	docker buildx build -t fluree/server:latest -t fluree/server:$(shell git rev-parse HEAD) --build-arg="PROFILE=prod" --load .
