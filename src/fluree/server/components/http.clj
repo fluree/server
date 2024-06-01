@@ -4,7 +4,7 @@
    [donut.system :as ds]
    [fluree.db.json-ld.credential :as cred]
    [fluree.db.query.fql.syntax :as fql]
-   [fluree.db.query.history :as fqh]
+   [fluree.db.query.history.parse :as fqh]
    [fluree.db.util.log :as log]
    [fluree.db.validation :as v]
    [fluree.server.components.subscriptions :as subscriptions]

@@ -74,4 +74,4 @@
                       ::ds/config}]
                   (let [{:keys [ledgers]} migrater]
                     (log/info "Beginning migration for ledger aliases:" ledgers)
-                    (<?? (sid-migrate-ledgers connection commit-opts ledgers))))})
+                    #_(<?? (sid-migrate-ledgers connection commit-opts ledgers))))})
