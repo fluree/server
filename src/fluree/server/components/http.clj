@@ -189,7 +189,8 @@
   [handler]
   (fn [{:keys [body-params] :as req}]
     (log/trace "unwrap-credential body-params:" body-params)
-    (let [verified (<!! (cred/verify body-params))
+    (let [role (get-in req [:headers "fluree-role"])
+          verified (<!! (cred/verify body-params))
           _        (log/trace "unwrap-credential verified:" verified)
 
           {:keys [subject did]}
@@ -203,7 +204,7 @@
                 (throw (ex-info "Invalid credential"
                                 {:response {:status 400
                                             :body   {:error "Invalid credential"}}})))
-          req*     (assoc req :body-params subject :credential/did did :raw-txn body-params)]
+          req*     (assoc req :body-params subject :credential/did did :credential/role role :raw-txn body-params)]
       (log/debug "Unwrapped credential with did:" did)
       (handler req*))))
 
