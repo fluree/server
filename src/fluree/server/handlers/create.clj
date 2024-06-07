@@ -17,7 +17,7 @@
 (defn queue-consensus
   [consensus watcher ledger tx-id txn opts]
   (let [;; initial response is not completion, but acknowledgement of persistence
-        persist-resp-ch (consensus/queue-new-ledger consensus ledger tx-id txn opts)]
+        persist-resp-ch (consensus/-queue-new-ledger consensus ledger tx-id txn opts)]
 
     (go
       (let [persist-resp (<! persist-resp-ch)]
@@ -38,7 +38,7 @@
     ;; wait for final response from consensus and deliver to promise
     (go
       (let [final-resp (<! final-resp-ch)]
-        (log/debug "HTTP API ledger creation final response: " final-resp)
+        (log/trace "HTTP API ledger creation final response: " final-resp)
         (cond
           (= :timeout final-resp)
           (deliver p (ex-info

@@ -6,5 +6,5 @@
 (set! *warn-on-reflection* true)
 
 (defprotocol TxGroup
-  (queue-new-ledger [group ledger-id tx-id txn opts])
-  (queue-new-transaction [group ledger-id tx-id txn opts]))
+  (-queue-new-ledger [group ledger-id tx-id txn opts])
+  (-queue-new-transaction [group ledger-id tx-id txn opts]))

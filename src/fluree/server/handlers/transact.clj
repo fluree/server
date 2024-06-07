@@ -24,7 +24,7 @@
 (defn queue-consensus
   [consensus watcher ledger tx-id expanded-txn opts]
   (let [;; initial response is not completion, but acknowledgement of persistence
-        persist-resp-ch (consensus/queue-new-transaction consensus ledger tx-id
+        persist-resp-ch (consensus/-queue-new-transaction consensus ledger tx-id
                                                          expanded-txn opts)]
     (async/go
       (let [persist-resp (async/<! persist-resp-ch)]

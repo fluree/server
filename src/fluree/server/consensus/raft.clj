@@ -301,7 +301,8 @@
 (defn new-entry-async
   "Sends a command to the leader. If no callback provided, returns a core async promise channel
   that will eventually contain a response."
-  ([group entry] (new-entry-async group entry 5000))
+  ([group entry]
+   (new-entry-async group entry 5000))
   ([group entry timeout-ms]
    (let [resp-chan (async/promise-chan)
          callback  (fn [resp]
@@ -327,35 +328,33 @@
   Returns a core async channel that will eventually contain true if successful."
   [group ledger-id tx-id txn opts]
   (log/debug "Consensus - queue new ledger:" ledger-id tx-id txn)
-  (new-entry-async
-   group
-   [:ledger-create {:txn         txn
-                    :size        (count txn)
-                    :tx-id       tx-id
-                    :ledger-id   ledger-id
-                    :opts        opts
-                    :instant     (System/currentTimeMillis)}]))
+  (new-entry-async group
+                   [:ledger-create {:txn       txn
+                                    :size      (count txn)
+                                    :tx-id     tx-id
+                                    :ledger-id ledger-id
+                                    :opts      opts
+                                    :instant   (System/currentTimeMillis)}]))
 
 (defn queue-new-transaction-raft
   "Queues a new transaction into the consensus layer for processing.
   Returns a core async channel that will eventually contain a truthy value if successful."
   [group ledger-id tx-id txn opts]
-  (log/trace "queue-new-transaction txn:" txn)
-  (new-entry-async
-   group
-   [:tx-queue {:txn            txn
-               :size           (count txn)
-               :tx-id          tx-id
-               :ledger-id      ledger-id
-               :opts           opts
-               :instant        (System/currentTimeMillis)}]))
+  (log/trace "-queue-new-transaction txn:" txn)
+  (new-entry-async group
+                   [:tx-queue {:txn       txn
+                               :size      (count txn)
+                               :tx-id     tx-id
+                               :ledger-id ledger-id
+                               :opts      opts
+                               :instant   (System/currentTimeMillis)}]))
 
 (defrecord RaftGroup [state-atom event-chan command-chan this-server port
                       close raft raft-initialized open-api private-keys]
   consensus/TxGroup
-  (queue-new-ledger [group ledger-id tx-id txn opts]
+  (-queue-new-ledger [group ledger-id tx-id txn opts]
     (queue-new-ledger-raft group ledger-id tx-id txn opts))
-  (queue-new-transaction [group ledger-id tx-id txn opts]
+  (-queue-new-transaction [group ledger-id tx-id txn opts]
     (queue-new-transaction-raft group ledger-id tx-id txn opts)))
 
 (defn leader-change-fn
