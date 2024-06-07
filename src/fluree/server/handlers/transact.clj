@@ -1,59 +1,22 @@
 (ns fluree.server.handlers.transact
   (:require [clojure.core.async :as async :refer [<! go]]
-            [fluree.crypto :as crypto]
             [fluree.db.constants :as const]
             [fluree.db.json-ld.api :as fluree]
             [fluree.db.util.context :as ctx-util]
             [fluree.db.util.core :as util]
             [fluree.db.util.log :as log]
-            [fluree.json-ld :as json-ld]
             [fluree.json-ld.processor.api :as jld-processor]
             [fluree.server.consensus :as consensus]
-            [fluree.server.handlers.shared :refer [defhandler deref!]]))
+            [fluree.server.handlers.shared :refer [defhandler deref! derive-tx-id wrap-consensus-response]]))
 
 (set! *warn-on-reflection* true)
-
-(defn derive-tx-id
-  [raw-txn]
-  (if (string? raw-txn)
-    (crypto/sha2-256 raw-txn :hex :string)
-    (-> (json-ld/normalize-data raw-txn)
-        (crypto/sha2-256 :hex :string))))
 
 (defn transact!
   [consensus watcher expanded-txn opts]
   (let [ledger-id (-> expanded-txn (get const/iri-ledger) (get 0) (get "@value"))
         tx-id     (derive-tx-id (:raw-txn opts))
-        p         (promise)]
-    (go
-      (let [final-resp (<! (consensus/queue-new-transaction consensus watcher ledger-id tx-id expanded-txn opts))]
-        (log/trace "HTTP API transaction final response: " final-resp)
-        (cond
-          (= :timeout final-resp)
-          (deliver p (ex-info
-                       (str "Timeout waiting for transaction to complete for: "
-                            ledger-id " with tx-id: " tx-id)
-                       {:status 408 :error :db/response-timeout}))
-
-          (nil? final-resp)
-          (deliver p (ex-info
-                       (str "Unexpected close waiting for ledger transaction to complete for: "
-                            ledger-id " with tx-id: " tx-id
-                            ". Transaction may have processed, check ledger for confirmation.")
-                       {:status 500 :error :db/response-closed}))
-
-          (util/exception? final-resp)
-          (deliver p final-resp)
-
-          :else
-          (let [{:keys [ledger-id commit-file-meta t tx-id]} final-resp]
-            (log/info "Transaction completed for:" ledger-id "tx-id:" tx-id
-                      "commit head:" (:address commit-file-meta))
-            (deliver p {:ledger ledger-id
-                        :commit (:address commit-file-meta)
-                        :t      t
-                        :tx-id  tx-id})))))
-    p))
+        resp-ch   (consensus/queue-new-transaction consensus watcher ledger-id tx-id expanded-txn opts)]
+    (wrap-consensus-response ledger-id tx-id resp-ch)))
 
 (defn throw-ledger-doesnt-exist
   [ledger]
