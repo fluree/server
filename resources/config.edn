@@ -28,6 +28,10 @@
 
  :fluree/subscriptions {}
 
+ :fluree/standalone {:address #or [#env FLUREE_STANDALONE_ADDRESS
+                                   #profile {:dev    "/ip4/127.0.0.1/tcp/62071"
+                                             :prod   nil
+                                             :docker "/ip4/127.0.0.1/tcp/62071"}]}}
  :fluree/raft {:log-history      #or [#env FLUREE_RAFT_LOG_HISTORY
                                       10]
                :entries-max      #or [#env FLUREE_RAFT_ENTRIES_MAX

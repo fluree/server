@@ -20,6 +20,7 @@
 
 (derive :fluree/raft :fluree/consensus)
 (derive :fluree/standalone :fluree/consensus)
+
 (derive :http/jetty :http/server)
 
 (defmethod ig/init-key :fluree/connection
