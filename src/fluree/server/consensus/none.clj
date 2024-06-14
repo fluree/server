@@ -1,15 +1,14 @@
 (ns fluree.server.consensus.none
   (:require [clojure.core.async :as async]
-            [fluree.server.components.subscriptions :as subs]
-            [fluree.server.consensus :as consensus]
-            [fluree.server.consensus.watcher :as watcher]
-            [fluree.server.consensus.msg-format :as msg-format]
-            [fluree.server.handlers.shared :refer [deref!]]
             [fluree.db.constants :as const]
             [fluree.db.json-ld.api :as fluree]
             [fluree.db.util.async :refer [go-try]]
-            [fluree.db.util.log :as log]))
-
+            [fluree.db.util.log :as log]
+            [fluree.server.components.subscriptions :as subs]
+            [fluree.server.consensus :as consensus]
+            [fluree.server.consensus.msg-format :as msg-format]
+            [fluree.server.consensus.watcher :as watcher]
+            [fluree.server.handlers.shared :refer [deref!]]))
 
 (defn queue-new-ledger
   [tx-queue ledger-id tx-id txn opts]
@@ -22,7 +21,6 @@
   (let [event-msg (msg-format/queue-new-transaction ledger-id tx-id txn opts)
         success?  (async/put! tx-queue event-msg)]
     (async/go success?)))
-
 
 (defrecord LocalConsensus [tx-queue closed? close]
   consensus/TxGroup
@@ -53,20 +51,19 @@
   [{:keys [fluree/conn] :as config}
    {:keys [ledger-id txn opts tx-id] :as _params}]
   (go-try
-   (let [create-opts    (parse-opts txn)
-         ledger         (deref!
-                         (fluree/create conn ledger-id create-opts))
-         staged-db      (-> ledger
-                            fluree/db
-                            (fluree/stage txn opts)
-                            deref!)
-         commmit-result (deref!
+    (let [create-opts    (parse-opts txn)
+          ledger         (deref!
+                          (fluree/create conn ledger-id create-opts))
+          staged-db      (-> ledger
+                             fluree/db
+                             (fluree/stage txn opts)
+                             deref!)
+          commmit-result (deref!
                          ;; following uses :file-data? and will return map with {:keys [db data-file commit-file]}
-                         (fluree/commit! ledger staged-db {:file-data? true}))]
-     (broadcast-new-ledger! config (assoc commmit-result :tx-id tx-id
-                                                         :ledger-id ledger-id
-                                                         :t 1)))))
-
+                          (fluree/commit! ledger staged-db {:file-data? true}))]
+      (broadcast-new-ledger! config (assoc commmit-result :tx-id tx-id
+                                           :ledger-id ledger-id
+                                           :t 1)))))
 
 (defn broadcast-new-commit!
   "Responsible for producing the event broadcast to connected peers."
@@ -81,22 +78,21 @@
   [{:keys [fluree/conn] :as config}
    {:keys [ledger-id tx-id txn opts] :as params}]
   (go-try
-   (let [start-time    (System/currentTimeMillis)
-         _             (log/debug "Starting transaction processing for ledger:" ledger-id
-                                  "with tx-id" tx-id ". Transaction sat in queue for"
-                                  (- start-time (:instant params)) "milliseconds.")
-         ledger        (if (deref! (fluree/exists? conn ledger-id))
-                         (deref! (fluree/load conn ledger-id))
-                         (throw (ex-info "Ledger does not exist" {:ledger ledger-id})))
-         staged-db     (-> ledger
-                           fluree/db
-                           (fluree/stage txn opts)
-                           deref!)
-         commit-result (deref!
-                        (fluree/commit! ledger staged-db {:file-data? true}))
-         broadcast-msg (msg-format/new-commit nil params commit-result)]
-     (broadcast-new-commit! config broadcast-msg))))
-
+    (let [start-time    (System/currentTimeMillis)
+          _             (log/debug "Starting transaction processing for ledger:" ledger-id
+                                   "with tx-id" tx-id ". Transaction sat in queue for"
+                                   (- start-time (:instant params)) "milliseconds.")
+          ledger        (if (deref! (fluree/exists? conn ledger-id))
+                          (deref! (fluree/load conn ledger-id))
+                          (throw (ex-info "Ledger does not exist" {:ledger ledger-id})))
+          staged-db     (-> ledger
+                            fluree/db
+                            (fluree/stage txn opts)
+                            deref!)
+          commit-result (deref!
+                         (fluree/commit! ledger staged-db {:file-data? true}))
+          broadcast-msg (msg-format/new-commit nil params commit-result)]
+      (broadcast-new-commit! config broadcast-msg))))
 
 (defn process-event
   [config event]
@@ -110,7 +106,6 @@
         result)
       (catch Exception e
         (log/error "Error processing event" event e)))))
-
 
 (defn monitor-new-tx-queue
   [config tx-queue closed?]
@@ -134,7 +129,6 @@
           (let [result (async/<! (process-event config event))
                 i*     (inc i)]
             (recur i*)))))))
-
 
 (defn start
   [config]
