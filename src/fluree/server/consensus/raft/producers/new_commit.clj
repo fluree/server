@@ -1,5 +1,6 @@
 (ns fluree.server.consensus.raft.producers.new-commit
-  (:require [fluree.server.consensus.raft.participant :as participant]))
+  (:require [fluree.server.consensus.raft.participant :as participant]
+            [fluree.server.consensus.msg-format :as msg-format]))
 
 (set! *warn-on-reflection* true)
 
@@ -9,16 +10,10 @@
   This is called with new commits immediately after processing a transaction.
 
   Returns promise that will have the eventual response once committed."
-  [{:keys [consensus/raft-state] :as config}
-   {:keys [ledger-id tx-id] :as _params}
-   {:keys [db data-file-meta commit-file-meta]}]
-  (let [created-body {:ledger-id         ledger-id
-                      :data-file-meta    data-file-meta
-                      :commit-file-meta  commit-file-meta
-                      ;; below is metadata for quickly validating into the state machine, not retained
-                      :t                 (:t db) ;; for quickly validating this is the next 'block'
-                      :tx-id             tx-id ;; for quickly removing from the queue
-                      :server            (participant/this-server raft-state)}] ;; for quickly ensuring this server *is* still the leader
+  [{:keys [consensus/raft-state] :as config} params commit-result]
+  (let [created-body (msg-format/new-commit
+                      (participant/this-server raft-state)
+                      params commit-result)]
 
     ;; returns promise
     (participant/leader-new-command! config :new-commit created-body)))

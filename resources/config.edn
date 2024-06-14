@@ -46,9 +46,9 @@
                                                            :prod   nil
                                                            :docker "/ip4/127.0.0.1/tcp/62071"}]
                      :consensus-type        #or [#env FLUREE_CONSENSUS_TYPE
-                                                 #profile {:dev    :raft
-                                                           :prod   :raft
-                                                           :docker :raft}]
+                                                 #profile {:dev    :none
+                                                           :prod   :none ;; use :raft for multi-server environments
+                                                           :docker :none}]
                      ;; TODO - trace down both uses of private-key vs private-keys reconcile
                      :private-key           nil
                      :private-keys          nil

@@ -3,6 +3,7 @@
             [fluree.db.json-ld.api :as fluree]
             [fluree.db.util.log :as log]
             [fluree.raft.leader :refer [is-leader?]]
+            [fluree.server.consensus.msg-format :as msg-format]
             [fluree.server.consensus.raft.participant :as participant]
             [fluree.server.consensus.raft.producers.new-index-file :as new-index-file]
             [fluree.server.handlers.shared :refer [deref!]]))
@@ -55,16 +56,10 @@
   "Pushes create-ledger request in consensus only if leader.
 
   Returns promise that will have the eventual response once committed."
-  [{:keys [consensus/raft-state] :as config}
-   {:keys [ledger-id tx-id] :as _params}
-   {:keys [db data-file-meta commit-file-meta]}]
-  (let [created-body {:ledger-id         ledger-id
-                      :data-file-meta    data-file-meta
-                      :commit-file-meta  commit-file-meta
-                      ;; below is metadata for quickly validating into the state machine, not retained
-                      :t                 (:t db) ;; for quickly validating this is the next 'block'
-                      :tx-id             tx-id ;; for quickly removing from the queue
-                      :server            (participant/this-server raft-state)}] ;; for quickly ensuring this server *is* still the leader
+  [{:keys [consensus/raft-state] :as config} params commit-result]
+  (let [created-body (msg-format/new-commit ;; same as new-commit message
+                      (participant/this-server raft-state)
+                      params commit-result)]
 
     ;; returns promise
     (participant/leader-new-command! config :ledger-created created-body)))
