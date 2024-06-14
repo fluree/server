@@ -24,9 +24,9 @@
 
 (defrecord LocalConsensus [tx-queue closed? close]
   consensus/TxGroup
-  (queue-new-ledger [group ledger-id tx-id txn opts]
+  (queue-new-ledger [_ ledger-id tx-id txn opts]
     (queue-new-ledger tx-queue ledger-id tx-id txn opts))
-  (queue-new-transaction [group ledger-id tx-id txn opts]
+  (queue-new-transaction [_ ledger-id tx-id txn opts]
     (queue-new-transaction tx-queue ledger-id tx-id txn opts)))
 
 (defn broadcast-new-ledger!
@@ -105,10 +105,11 @@
                       :tx-queue (do-transaction config event-msg)))]
         result)
       (catch Exception e
-        (log/error "Error processing event" event e)))))
+        (log/error "Unexpected event message - expected two-tuple of [event-type event-data], "
+                   "and of a supported event type. Received:" event e)))))
 
 (defn monitor-new-tx-queue
-  [config tx-queue closed?]
+  [config tx-queue]
   (async/go
     (loop [i 0]
       (let [timeout-ch (async/timeout 5000)
@@ -128,6 +129,7 @@
           :else
           (let [result (async/<! (process-event config event))
                 i*     (inc i)]
+            (log/trace "Processed transaction #" i* ". Result:" result)
             (recur i*)))))))
 
 (defn start
@@ -139,7 +141,7 @@
                    (reset! closed? true)
                    (async/close! tx-queue))]
 
-    (monitor-new-tx-queue config tx-queue closed?)
+    (monitor-new-tx-queue config tx-queue)
 
     (map->LocalConsensus {:tx-queue tx-queue
                           :closed?  closed?
