@@ -1,18 +1,18 @@
 (ns fluree.server.components.consensus
   (:require [donut.system :as ds]
             [fluree.db.util.log :as log]
-            [fluree.server.consensus.raft :as raft]
-            [fluree.server.consensus.none :as none]))
+            [fluree.server.consensus.none :as none]
+            [fluree.server.consensus.raft :as raft]))
 
 (set! *warn-on-reflection* true)
 
 (defn update-config
   [config connection watcher subscriptions conn-storage-path]
   (assoc config
-    :ledger-directory conn-storage-path
-    :fluree/conn connection
-    :fluree/watcher watcher
-    :fluree/subscriptions subscriptions))
+         :ledger-directory conn-storage-path
+         :fluree/conn connection
+         :fluree/watcher watcher
+         :fluree/subscriptions subscriptions))
 
 (defn start-raft
   [config connection watcher subscriptions conn-storage-path]

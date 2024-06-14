@@ -6,10 +6,10 @@
             [fluree.db.util.log :as log]
             [fluree.raft :as raft]
             [fluree.server.consensus :as consensus]
+            [fluree.server.consensus.msg-format :as msg-format]
             [fluree.server.consensus.network.multi-addr :as multi-addr]
             [fluree.server.consensus.network.tcp :as ftcp]
             [fluree.server.consensus.raft.handler :as raft-handler]
-            [fluree.server.consensus.msg-format :as msg-format]
             [fluree.server.io.file :as io-file]
             [taoensso.nippy :as nippy])
   (:import (java.util UUID)))

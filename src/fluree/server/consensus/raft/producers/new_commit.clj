@@ -1,6 +1,6 @@
 (ns fluree.server.consensus.raft.producers.new-commit
-  (:require [fluree.server.consensus.raft.participant :as participant]
-            [fluree.server.consensus.msg-format :as msg-format]))
+  (:require [fluree.server.consensus.msg-format :as msg-format]
+            [fluree.server.consensus.raft.participant :as participant]))
 
 (set! *warn-on-reflection* true)
 
