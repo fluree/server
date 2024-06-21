@@ -19,32 +19,57 @@
 (defmulti check (fn [& args] (-> args first keyword)))
 
 (defmethod check :cljfmt
-  [_ staging-dir]
-  (let [bad-files (cljfmt/check staging-dir)]
-    (when (and (check-enabled? :cljfmt) (seq bad-files))
-      (println)
-      (println (let [bfc (count bad-files)]
-                 (str bfc " " (if (= 1 bfc) "file is" "files are")
-                      " formatted incorrectly:\n"
-                      (str/join "\n" bad-files)
-                      "\n")))
-      (println "Run: cljfmt fix" (str/join " " bad-files))
-      (println "     git add" (str/join " " bad-files))
-      (println)
-      (System/exit 1))))
+  [_ dir]
+  (when (check-enabled? :cljfmt)
+    (let [bad-files (cljfmt/check dir)]
+      (when (seq bad-files)
+        (println)
+        (println (let [bfc (count bad-files)]
+                   (str bfc " " (if (= 1 bfc) "file is" "files are")
+                        " formatted incorrectly:\n"
+                        (str/join "\n" bad-files)
+                        "\n")))
+        (println "Run: cljfmt fix" (str/join " " bad-files))
+        (println "     git add" (str/join " " bad-files))
+        (println)
+        (System/exit 1)))))
 
 (defmethod check :clj-kondo
-  [_ staging-dir]
-  (let [bad-files (clj-kondo/lint staging-dir)]
-    (when (and (check-enabled? :clj-kondo) (seq bad-files))
-      (println)
-      (println "Fix errors and run: git add" (str/join " " bad-files))
-      (System/exit 2))))
+  [_ dir]
+  (when (check-enabled? :clj-kondo)
+    (let [bad-files (clj-kondo/lint dir)]
+      (when (seq bad-files)
+        (println)
+        (println "Fix errors and run: git add" (str/join " " bad-files))
+        (System/exit 2)))))
 
-(defn run-all
+(defmulti fix (fn [& args] (-> args first keyword)))
+
+(defmethod fix :cljfmt
+  [_ dir]
+  (when (check-enabled? :cljfmt)
+    (cljfmt/fix dir)))
+
+(defmethod fix :clj-kondo
+  [_ _]
+  ;; clj-kondo doesn't support fixing the issues it identifies
+  true)
+
+(defn check-all
   "Runs all enabled linters at root `dir`"
   [dir]
   (let [path (-> dir fs/file fs/canonicalize str)]
     (println "Linting" path)
     (check :cljfmt path)
     (check :clj-kondo path)))
+
+(defn fix-all
+  "Runs all linters in 'fix' mode at root `dir`"
+  [dir]
+  (let [path (-> dir fs/file fs/canonicalize str)]
+    (println "Fixing" path)
+    (let [results (fix :cljfmt path)
+          fixed   (filter :reformatted results)]
+      (println "Reformatted" (count fixed) "file(s):")
+      (doseq [file fixed]
+        (println (-> file :file str))))))

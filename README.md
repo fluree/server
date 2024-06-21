@@ -88,6 +88,9 @@ Run `make prepare` to compile the required dependencies to enable Clojure develo
 
 - Code linters can be run via `bb run lint`
     - This will run cljfmt and clj-kondo on the entire codebase
+- cljfmt can automatically fix the formatting errors it finds
+    - You can run this on the whole codebase by invoking `bb run fix`
+    - clj-kondo cannot automatically fix the issues it finds
 
 ### Git hooks
 
