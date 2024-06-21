@@ -1,5 +1,6 @@
 (ns lib.cljfmt
-  (:require [cljfmt.lib :as fmt]
+  (:require [cljfmt.tool :as fmt]
+            [cljfmt.report :as report]
             [clojure.string :as str]
             [lib.path :as path]))
 
@@ -11,9 +12,8 @@
   "Runs cljfmt check on all files (recursively) in dir. Returns a collection of
   any files that failed the check."
   [dir]
-  (let [cljfmt-opts {:paths [dir], :diff? false}
+  (let [cljfmt-opts {:paths [dir], :diff? false, :report report/clojure}
         {:keys [counts incorrect error] :as _result} (fmt/check cljfmt-opts)]
-    #_(println "cljfmt results:" (pr-str result))
     (if (and (nil-or-zero? (:incorrect counts)) (nil-or-zero? (:error counts)))
       []
       (let [->proj-path (partial path/tmp->project-rel
