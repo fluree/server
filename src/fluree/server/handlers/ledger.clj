@@ -1,6 +1,6 @@
 (ns fluree.server.handlers.ledger
   (:require
-   [fluree.db.json-ld.api :as fluree]
+   [fluree.db :as fluree]
    [fluree.db.util.log :as log]
    [fluree.server.components.http :as-alias http]
    [fluree.server.handlers.shared :refer [defhandler deref!]]))

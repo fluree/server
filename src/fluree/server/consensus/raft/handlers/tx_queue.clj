@@ -1,5 +1,5 @@
 (ns fluree.server.consensus.raft.handlers.tx-queue
-  (:require [fluree.db.json-ld.api :as fluree]
+  (:require [fluree.db :as fluree]
             [fluree.db.util.core :as util]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.raft.producers.new-commit :refer [consensus-push-commit]]
