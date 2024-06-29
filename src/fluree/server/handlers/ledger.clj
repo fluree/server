@@ -6,17 +6,14 @@
    [fluree.server.handlers.shared :refer [defhandler deref!]]))
 
 (defhandler query
-  [{:keys [fluree/conn credential/did]
+  [{:keys [fluree/conn credential/did credential/role]
     {:keys [body]} :parameters}]
-  (let [query  (or (::http/query body) body)
-        format (or (::http/format body) :fql)
-        _      (log/debug "query handler received query:" query)
-        opts   (when (= :fql format)
-                 (cond-> (:opts query)
-                   did (assoc :did did)))
-        query* (if opts (assoc query :opts opts) query)]
+  (let [query        (or (::http/query body) body)
+        format       (or (::http/format body) :fql)
+        _            (log/debug "query handler received query:" query)
+        request-opts {:format format :did did :role role}]
     {:status 200
-     :body   (deref! (fluree/query-connection conn query* {:format format}))}))
+     :body   (deref! (fluree/query-connection conn query request-opts))}))
 
 (defhandler history
   [{:keys [fluree/conn credential/did]
