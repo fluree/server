@@ -1,5 +1,5 @@
 (ns api-calls
-  (:require [fluree.db.json-ld.api :as fluree]))
+  (:require [fluree.db :as fluree]))
 
 
 (comment
