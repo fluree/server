@@ -1,5 +1,5 @@
 (ns fluree.server.handlers.remote-resource
-  (:require [fluree.db :as-alias fluree]
+  (:require [fluree.db.api :as-alias fluree]
             [fluree.db.nameservice.core :as nameservice]
             [fluree.db.util.async :refer [<??]]
             [fluree.db.util.log :as log]
