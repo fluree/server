@@ -5,6 +5,7 @@
    [fluree.db.json-ld.credential :as cred]
    [fluree.db.query.fql.syntax :as fql]
    [fluree.db.query.history.parse :as fqh]
+   [fluree.db.util.core :as util]
    [fluree.db.util.log :as log]
    [fluree.db.validation :as v]
    [fluree.server.components.subscriptions :as subscriptions]
@@ -191,12 +192,11 @@
     (log/trace "unwrap-credential body-params:" body-params)
     (let [verified (<!! (cred/verify body-params))
           _        (log/trace "unwrap-credential verified:" verified)
-
           {:keys [subject did]}
           (cond (:subject verified) ; valid credential
                 verified
 
-                (nil? verified) ; no credential
+                (util/exception? verified) ; no credential
                 {:subject body-params}
 
                 :else ; invalid credential
