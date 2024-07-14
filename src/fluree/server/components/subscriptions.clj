@@ -3,7 +3,8 @@
             [fluree.server.subscriptions :as subscriptions]))
 
 (def subscriptions
-  #::ds{:start  subscriptions/listen
+  #::ds{:start  (fn [_]
+                  (subscriptions/listen))
         :stop   (fn [{::ds/keys [instance]}]
                   (subscriptions/close instance))
         :config {}})
