@@ -7,7 +7,7 @@
    [fluree.db.query.history.parse :as fqh]
    [fluree.db.util.log :as log]
    [fluree.db.validation :as v]
-   [fluree.server.components.subscriptions :as subscriptions]
+   [fluree.server.subscriptions :as subscriptions]
    [fluree.server.handlers.create :as create]
    [fluree.server.handlers.ledger :as ledger]
    [fluree.server.handlers.remote-resource :as remote]

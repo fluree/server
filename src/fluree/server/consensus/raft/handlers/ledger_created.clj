@@ -3,7 +3,7 @@
             [clojure.java.io :as io]
             [fluree.db.util.filesystem :as fs]
             [fluree.db.util.log :as log]
-            [fluree.server.components.subscriptions :as subs]
+            [fluree.server.subscriptions :as subscriptions]
             [fluree.server.consensus.raft.handlers.new-commit :as new-commit]
             [fluree.server.consensus.watcher :as watcher])
   (:import (java.io File)))
@@ -94,5 +94,5 @@
    {:keys [ledger-id server tx-id commit-file-meta] :as handler-result}]
   (log/info (str "New Ledger successfully created by server " server ": " ledger-id " with tx-id: " tx-id "."))
   (watcher/deliver-watch watcher tx-id handler-result)
-  (subs/send-message-to-all subscriptions "ledger-created" ledger-id (:json commit-file-meta))
+  (subscriptions/send-message-to-all subscriptions "ledger-created" ledger-id (:json commit-file-meta))
   :success) ;; result of this function is not used

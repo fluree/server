@@ -4,7 +4,7 @@
             [fluree.db.storage :as storage]
             [fluree.db.util.async :refer [<? go-try]]
             [fluree.db.util.log :as log]
-            [fluree.server.components.subscriptions :as subs]
+            [fluree.server.subscriptions :as subscriptions]
             [fluree.server.consensus.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
@@ -89,5 +89,5 @@
    {:keys [ledger-id tx-id server commit-file-meta] :as commit-result}]
   (log/info "New transaction completed for" ledger-id "tx-id: " tx-id "by server:" server)
   (watcher/deliver-watch watcher tx-id commit-result)
-  (subs/send-message-to-all subscriptions "new-commit" ledger-id (:json commit-file-meta))
+  (subscriptions/send-message-to-all subscriptions "new-commit" ledger-id (:json commit-file-meta))
   :success) ;; result of this function is not used
