@@ -1,6 +1,6 @@
 (ns fluree.server.consensus.raft.handlers.tx-exception
   (:require [fluree.db.util.log :as log]
-            [fluree.server.consensus.watcher :as watcher]))
+            [fluree.server.watcher :as watcher]))
 
 (defn update-ledger-state
   "Updates the latest commit in the ledger, and removes the processed transaction in the queue"

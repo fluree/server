@@ -1,7 +1,7 @@
 (ns fluree.server.components.watcher
   (:refer-clojure :exclude [remove-watch])
   (:require [donut.system :as ds]
-            [fluree.server.consensus.watcher :as watcher]))
+            [fluree.server.watcher :as watcher]))
 
 (def watcher
   #::ds{:start  (fn [{cfg ::ds/config}]

@@ -5,7 +5,7 @@
             [fluree.db.util.async :refer [<? go-try]]
             [fluree.db.util.log :as log]
             [fluree.server.subscriptions :as subscriptions]
-            [fluree.server.consensus.watcher :as watcher]))
+            [fluree.server.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
 
