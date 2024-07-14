@@ -1,6 +1,5 @@
 (ns user
   (:require [clojure.string :as str]
-            [fluree.server.main :as main]
             [donut.system :as ds]
             [donut.system.repl :as donut]
             [donut.system.repl.state]
