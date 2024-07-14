@@ -5,7 +5,7 @@
             [fluree.db.util.log :as log]
             [fluree.server.subscriptions :as subscriptions]
             [fluree.server.consensus.raft.handlers.new-commit :as new-commit]
-            [fluree.server.consensus.watcher :as watcher])
+            [fluree.server.watcher :as watcher])
   (:import (java.io File)))
 
 (set! *warn-on-reflection* true)
