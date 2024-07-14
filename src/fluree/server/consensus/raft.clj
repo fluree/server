@@ -569,7 +569,7 @@
                               io-file/canonicalize-path)]
     (assoc raft-config
            :log-directory log-directory*
-           :ledger-directory* ledger-directory*)))
+           :ledger-directory ledger-directory*)))
 
 (defn start
   [{:keys [log-history entries-max storage-type catch-up-rounds]
