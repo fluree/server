@@ -5,6 +5,7 @@
             [clojure.string :as str]
             [donut.system :as ds]
             [fluree.db.util.log :as log]
+            [fluree.server.handler :as handler]
             [fluree.server.components.consensus :as consensus]
             [fluree.server.components.fluree :as fluree]
             [fluree.server.components.http :as http]
@@ -53,15 +54,15 @@
              :subscriptions subscriptions/subscriptions}
     :http   {:server  http/server
              :handler #::ds{:start  (fn [{{:keys [fluree/connection fluree/consensus fluree/watcher fluree/subscriptions] :as cfg
-                                           {:keys [routes middleware]} :http}
-                                          ::ds/config}]
+                                          {:keys [routes middleware]} :http}
+                                         ::ds/config}]
                                       (log/debug "ds/config:" cfg)
-                                      (http/app {:fluree/conn          connection
-                                                 :fluree/consensus     consensus
-                                                 :fluree/watcher       watcher
-                                                 :fluree/subscriptions subscriptions
-                                                 :http/routes          routes
-                                                 :http/middleware      middleware}))
+                                      (handler/app {:fluree/conn          connection
+                                                    :fluree/consensus     consensus
+                                                    :fluree/watcher       watcher
+                                                    :fluree/subscriptions subscriptions
+                                                    :http/routes          routes
+                                                    :http/middleware      middleware}))
                             :config {:http                 (ds/ref [:env :http/server])
                                      :fluree/connection    (ds/ref [:fluree :conn])
                                      :fluree/watcher       (ds/ref [:fluree :watcher])
