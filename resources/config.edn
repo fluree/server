@@ -26,17 +26,8 @@
                                           #profile {:dev    100
                                                     :prod   1000
                                                     :docker 1000}]
-                     :defaults       {:context-type :string
-                                      :indexer      {:reindex-min-bytes 1000
-                                                     :reindex-max-bytes 10000000}
-                                      :context
-                                      #or [#env FLUREE_DEFAULT_CONTEXT
-                                           #include-json-or-edn #env FLUREE_DEFAULT_CONTEXT_FILE
-                                           #profile {:dev
-                                                     {:id   "@id"
-                                                      :type "@type"
-                                                      :ex   "http://example.com/"
-                                                      :f    "https://ns.flur.ee/ledger#"}}]}}
+                     :defaults       {:indexer      {:reindex-min-bytes 1000
+                                                     :reindex-max-bytes 10000000}}}
  :fluree/consensus  {:consensus-servers     #or [#env FLUREE_CONSENSUS_SERVERS
                                                  #profile {:dev    "/ip4/127.0.0.1/tcp/62071"
                                                            :prod   nil
