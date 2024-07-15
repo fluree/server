@@ -49,11 +49,11 @@
     (async/close! resp-chan)))
 
 (defn watch
-  [{:keys [max-tx-wait-ms watcher-atom]
-    :or   {max-tx-wait-ms 60000}}]
-  {:max-tx-wait-ms max-tx-wait-ms
-   :watcher-atom   (or watcher-atom
-                       (new-watcher-atom))})
+  ([max-tx-wait-ms]
+   (watch max-tx-wait-ms (new-watcher-atom)))
+  ([max-tx-wait-ms watcher-atom]
+   {:max-tx-wait-ms max-tx-wait-ms
+    :watcher-atom   watcher-atom}))
 
 (defn close
   [watcher]
