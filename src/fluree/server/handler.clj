@@ -318,9 +318,8 @@
          resp)))))
 
 (defn app
-  [{:keys [fluree/conn fluree/consensus fluree/watcher fluree/subscriptions http/middleware http/routes]}]
-  (log/debug "HTTP server running with Fluree connection:" conn
-             "- middleware:" middleware "- routes:" routes)
+  [{:keys [fluree/conn fluree/consensus fluree/watcher fluree/subscriptions]}]
+  (log/debug "HTTP server running with Fluree connection:" conn)
   (let [exception-middleware      (exception/create-exception-middleware
                                    (merge
                                     exception/default-handlers
@@ -343,9 +342,7 @@
                                    [300 coercion/coerce-response-middleware]
                                    [400 coercion/coerce-request-middleware]
                                    [1000 exception-middleware]]
-        fluree-middleware         (sort-middleware-by-weight
-                                   (concat default-fluree-middleware
-                                           middleware))]
+        fluree-middleware         (sort-middleware-by-weight default-fluree-middleware)]
     (ring/ring-handler
      (ring/router
       [["/swagger.json"
@@ -396,8 +393,7 @@
                                        (if (http/ws-upgrade-request? req)
                                          (http/ws-upgrade-response (websocket-handler conn subscriptions))
                                          {:status 400
-                                          :body   "Invalid websocket upgrade request"}))}]
-          routes])))
+                                          :body   "Invalid websocket upgrade request"}))}]])))
       (swagger-ui/create-swagger-ui-handler
        {:path   "/"
         :config {:validatorUrl     nil
