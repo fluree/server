@@ -1,12 +1,4 @@
-{:http/server       {:port           #long #or [#env FLUREE_HTTP_API_PORT
-                                                #profile {:dev    58090
-                                                          :prod   8090
-                                                          :docker 8090}]
-                     :max-tx-wait-ms #or [#env FLUREE_HTTP_MAX_TX_WAIT_MS
-                                          #profile {:dev    45000
-                                                    :prod   45000
-                                                    :docker 45000}]}
- :fluree/connection {:remote-servers #or [#env FLUREE_REMOTE_SERVERS
+{:fluree/connection {:remote-servers #or [#env FLUREE_REMOTE_SERVERS
                                           #profile {:dev    "http://127.0.0.1:58090"
                                                     :prod   nil
                                                     :docker nil}]
@@ -26,25 +18,46 @@
                                           #profile {:dev    100
                                                     :prod   1000
                                                     :docker 1000}]
-                     :defaults       {:indexer      {:reindex-min-bytes 1000
-                                                     :reindex-max-bytes 10000000}}}
- :fluree/consensus  {:consensus-servers     #or [#env FLUREE_CONSENSUS_SERVERS
-                                                 #profile {:dev    "/ip4/127.0.0.1/tcp/62071"
-                                                           :prod   nil
-                                                           :docker "/ip4/127.0.0.1/tcp/62071"}]
-                     :consensus-this-server #or [#env FLUREE_CONSENSUS_THIS_SERVER
-                                                 #profile {:dev    "/ip4/127.0.0.1/tcp/62071"
-                                                           :prod   nil
-                                                           :docker "/ip4/127.0.0.1/tcp/62071"}]
-                     :consensus-type        #or [#env FLUREE_CONSENSUS_TYPE
-                                                 #profile {:dev    :raft
-                                                           :prod   :raft
-                                                           :docker :raft}]
-                     ;; TODO - trace down both uses of private-key vs private-keys reconcile
-                     :private-key           nil
-                     :private-keys          nil
-                     :log-directory         nil #_"./data/log/"
-                     :ledger-directory      nil #_"./data/ledger/"
-                     :encryption-key        nil
-                     :storage-type          :file
-                     :open-api              true}}
+                     :defaults       {:indexer {:reindex-min-bytes 1000
+                                                :reindex-max-bytes 10000000}}}
+
+ :fluree/watcher {:max-tx-wait-ms #or [#env FLUREE_HTTP_MAX_TX_WAIT_MS
+                                       #profile {:dev    45000
+                                                 :prod   45000
+                                                 :docker 45000}]}
+
+ :fluree/subscriptions {}
+
+ :fluree/raft {:log-history      #or [#env FLUREE_RAFT_LOG_HISTORY
+                                      10]
+               :entries-max      #or [#env FLUREE_RAFT_ENTRIES_MAX
+                                      50]
+               :catch-up-rounds  #or [#env FLUREE_RAFT_CATCH_UP_ROUNDS
+                                      10]
+               :storage-type     #or [#keyword #env FLUREE_RAFT_STORAGE_TYPE
+                                      :file]
+               :servers          #or [#env FLUREE_RAFT_CONSENSUS_SERVERS
+                                      #profile {:dev    "/ip4/127.0.0.1/tcp/62071"
+                                                :prod   nil
+                                                :docker "/ip4/127.0.0.1/tcp/62071"}]
+               :this-server      #or [#env FLUREE_RAFT_THIS_SERVER
+                                      #profile {:dev    "/ip4/127.0.0.1/tcp/62071"
+                                                :prod   nil
+                                                :docker "/ip4/127.0.0.1/tcp/62071"}]
+               :log-directory    #env FLUREE_RAFT_LOG_DIRECTORY
+               :ledger-directory #env FLUREE_RAFT_LEDGER_DIRECTORY
+               :conn             #ig/ref :fluree/connection
+               :watcher          #ig/ref :fluree/watcher
+               :subscriptions    #ig/ref :fluree/subscriptions}
+
+ :fluree/handler {:conn          #ig/ref :fluree/connection
+                  :consensus     #ig/ref :fluree/consensus
+                  :watcher       #ig/ref :fluree/watcher
+                  :subscriptions #ig/ref :fluree/subscriptions}
+
+ :http/jetty {:port    #long #or [#env FLUREE_HTTP_API_PORT
+                                  #profile {:dev    58090
+                                            :prod   8090
+                                            :docker 8090}]
+              :join?   false
+              :handler #ig/ref :fluree/handler}}

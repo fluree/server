@@ -491,7 +491,9 @@
 
 (defn add-state-machine
   "Add state machine configuration options needed for raft"
-  [{:keys [fluree/conn fluree/watcher fluree/subscriptions this-server command-chan storage-ledger-read storage-ledger-write] :as raft-config}
+  [{:keys [conn watcher subscriptions this-server command-chan
+           storage-ledger-read storage-ledger-write]
+    :as raft-config}
    config-handler]
   (let [state-machine-atom   (atom default-state)
         state-machine-config {:fluree/conn                    conn
@@ -517,24 +519,25 @@
            :snapshot-list-indexes (snapshot-list-indexes snapshot-config))))
 
 (defn add-server-configs
-  [{:keys [consensus-this-server consensus-servers] :as raft-state}]
-  (when-not (string? consensus-servers)
+  [{:keys [this-server servers] :as raft-state}]
+  (when-not (string? servers)
     (throw (ex-info (str "Cannot start raft without a list of participating servers separated by a comma or semicolon. "
                          "If this is a single server, please specify this-server instead of servers.")
                     {:status 400 :error :db/invalid-server-address})))
-  (let [servers            (mapv str/trim (str/split consensus-servers #"[,;]"))
-        this-server        (if consensus-this-server
-                             (str/trim consensus-this-server)
-                             (if (= 1 (count servers))
-                               (first servers)
+  (let [servers*           (->> (mapv str/trim (str/split servers #"[,;]")))
+        this-server*       (if this-server
+                             (str/trim this-server)
+                             (if (= 1 (count servers*))
+                               (first servers*)
                                (throw (ex-info "Must specify this-server if multiple servers are specified"
                                                {:status 400 :error :db/invalid-server-address}))))
-        server-configs-map (mapv multi-addr/multi->map servers)
-        this-server-map    (multi-addr/multi->map this-server)
+        server-configs-map (mapv multi-addr/multi->map servers*)
+        this-server-map    (multi-addr/multi->map this-server*)
         this-server-cfg    (validated-this-server-config this-server-map server-configs-map)]
     (validated-raft-servers server-configs-map)
-    (assoc raft-state :this-server this-server
-           :servers servers
+    (assoc raft-state
+           :this-server this-server*
+           :servers servers*
            :this-server-config this-server-cfg
            :server-configs server-configs-map
            :port (:port this-server-cfg))))

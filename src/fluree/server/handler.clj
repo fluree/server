@@ -318,7 +318,7 @@
          resp)))))
 
 (defn app
-  [{:keys [fluree/conn fluree/consensus fluree/watcher fluree/subscriptions]}]
+  [conn consensus watcher subscriptions]
   (log/debug "HTTP server running with Fluree connection:" conn)
   (let [exception-middleware      (exception/create-exception-middleware
                                    (merge
