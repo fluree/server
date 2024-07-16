@@ -524,7 +524,7 @@
     (throw (ex-info (str "Cannot start raft without a list of participating servers separated by a comma or semicolon. "
                          "If this is a single server, please specify this-server instead of servers.")
                     {:status 400 :error :db/invalid-server-address})))
-  (let [servers*           (->> (mapv str/trim (str/split servers #"[,;]")))
+  (let [servers*           (mapv str/trim (str/split servers #"[,;]"))
         this-server*       (if this-server
                              (str/trim this-server)
                              (if (= 1 (count servers*))
