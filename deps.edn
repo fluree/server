@@ -6,7 +6,6 @@
                                          :git/sha "0958995acf5540271d1807fc6d8f2da131164e24"}
 
          integrant/integrant            {:mvn/version "0.10.0"}
-         club.donutpower/system         {:mvn/version "0.0.165"}
 
          ;; network, consensus
          com.github.fluree/raft         {:git/tag "v1.0.0-beta2"

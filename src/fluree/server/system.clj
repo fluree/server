@@ -61,19 +61,26 @@
   (jetty/stop-server http-server))
 
 (defn start-config
+  ([config]
+   (start-config config {}))
+  ([config overrides]
+   (-> config
+       (meta-merge overrides)
+       ig/init)))
+
+(defn start-resource
   ([resource-name]
-   (start-config resource-name :prod))
+   (start-resource resource-name :prod))
   ([resource-name profile]
-   (start-config resource-name profile {}))
+   (start-resource resource-name profile {}))
   ([resource-name profile overrides]
    (-> resource-name
        io/resource
        (aero/read-config {:profile profile})
-       (meta-merge overrides)
-       ig/init)))
+       (start-config overrides))))
 
 (def start
-  (partial start-config default-resource-name))
+  (partial start-resource default-resource-name))
 
 (defn stop
   [server]
