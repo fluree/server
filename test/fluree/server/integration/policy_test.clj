@@ -63,7 +63,7 @@
           query-req    {:body
                         (json/write-value-as-string
                          (assoc secret-query
-                           "opts" {"did" alice-did}))
+                                "opts" {"did" alice-did}))
                         :headers json-headers}
           query-res    (api-post :query query-req)]
 
@@ -91,7 +91,7 @@
             query-req {:body
                        (json/write-value-as-string
                         (assoc secret-query
-                          "opts" {"did" alice-did}))
+                               "opts" {"did" alice-did}))
                        :headers json-headers}
             query-res (api-post :query query-req)
             _         (assert (= 200 (:status query-res)))]
@@ -127,7 +127,6 @@
                                "opts"     {"did" alice-did}})
                              :headers json-headers}
                   query-res (api-post :history query-req)]
-
 
               (is (= 200 (:status query-res)))
 

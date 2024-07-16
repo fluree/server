@@ -67,7 +67,7 @@
 
         index-files-ch (new-index-file/monitor-chan config)]
     (fluree/transact! conn txn (assoc opts :file-data? true
-                                           :index-files-ch index-files-ch))))
+                                      :index-files-ch index-files-ch))))
 
 (defn get-next-transaction
   "Checks the consensus state machine to see if any more transactions
