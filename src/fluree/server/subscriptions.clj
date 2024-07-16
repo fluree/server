@@ -6,7 +6,6 @@
   (:import (java.io IOException)
            (java.nio.channels ClosedChannelException)))
 
-
 ;; structure of subscriptions atom:
 ;{:subs    {"id" {:chan   port ;; <- core.async channel
 ;                 :ledgers {"some/ledger" {}} ;; <- map where each key is a ledger-id subscribed to

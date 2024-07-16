@@ -1,6 +1,6 @@
 (ns fluree.server.consensus.raft.handlers.create-ledger
-  (:require [fluree.db.constants :as const]
-            [fluree.db.api :as fluree]
+  (:require [fluree.db.api :as fluree]
+            [fluree.db.constants :as const]
             [fluree.db.util.log :as log]
             [fluree.raft.leader :refer [is-leader?]]
             [fluree.server.consensus.raft.participant :as participant]

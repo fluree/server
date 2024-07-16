@@ -3,8 +3,8 @@
             [clojure.java.io :as io]
             [fluree.db.util.filesystem :as fs]
             [fluree.db.util.log :as log]
-            [fluree.server.subscriptions :as subscriptions]
             [fluree.server.consensus.raft.handlers.new-commit :as new-commit]
+            [fluree.server.subscriptions :as subscriptions]
             [fluree.server.watcher :as watcher])
   (:import (java.io File)))
 
