@@ -1,16 +1,16 @@
 (ns fluree.server.handlers.create
   (:require
    [clojure.core.async :as async :refer [go <!]]
-   [fluree.db.constants :as const]
    [fluree.db.api :as fluree]
+   [fluree.db.constants :as const]
    [fluree.db.util.context :as ctx-util]
    [fluree.db.util.core :as util]
    [fluree.db.util.log :as log]
    [fluree.json-ld.processor.api :as jld-processor]
    [fluree.server.consensus :as consensus]
-   [fluree.server.watcher :as watcher]
    [fluree.server.handlers.shared :refer [deref! defhandler]]
-   [fluree.server.handlers.transact :refer [derive-tx-id]]))
+   [fluree.server.handlers.transact :refer [derive-tx-id]]
+   [fluree.server.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
 

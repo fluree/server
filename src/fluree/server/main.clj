@@ -1,6 +1,6 @@
 (ns fluree.server.main
-  (:require [fluree.server.system :as system]
-            [fluree.db.util.log :as log])
+  (:require [fluree.db.util.log :as log]
+            [fluree.server.system :as system])
   (:gen-class))
 
 (set! *warn-on-reflection* true)

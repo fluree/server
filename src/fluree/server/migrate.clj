@@ -1,11 +1,11 @@
 (ns fluree.server.components.migrate
   #_(:require [clojure.core.async :as async :refer [<! >! go-loop]]
-            [fluree.db.json-ld.migrate.sid :as sid]
-            [fluree.db.nameservice.core :as nameservice]
-            [fluree.db.util.async :refer [<?? <? go-try]]
-            [fluree.db.util.core :as util]
-            [fluree.db.util.log :as log]
-            [fluree.server.consensus.raft.producers.new-index-file :as new-index-file]))
+              [fluree.db.json-ld.migrate.sid :as sid]
+              [fluree.db.nameservice.core :as nameservice]
+              [fluree.db.util.async :refer [<?? <? go-try]]
+              [fluree.db.util.core :as util]
+              [fluree.db.util.log :as log]
+              [fluree.server.consensus.raft.producers.new-index-file :as new-index-file]))
 
 ;; TODO: this function is unused, but would be necessary if migrating through
 ;; consensus
