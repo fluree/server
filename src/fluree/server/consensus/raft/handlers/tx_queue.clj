@@ -4,8 +4,7 @@
             [fluree.db.util.log :as log]
             [fluree.server.consensus.raft.producers.new-commit :refer [consensus-push-commit]]
             [fluree.server.consensus.raft.producers.new-index-file :as new-index-file]
-            [fluree.server.consensus.raft.producers.tx-exception :refer [consensus-push-tx-exception]]
-            [fluree.server.handlers.shared :refer [deref!]]))
+            [fluree.server.consensus.raft.producers.tx-exception :refer [consensus-push-tx-exception]]))
 
 (set! *warn-on-reflection* true)
 
