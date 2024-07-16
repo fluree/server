@@ -179,16 +179,18 @@
     (let [verified (<!! (cred/verify body-params))
           _        (log/trace "unwrap-credential verified:" verified)
           {:keys [subject did]}
-          (cond (:subject verified) ; valid credential
-                verified
+          (cond
+            (:subject verified) ; valid credential
+            verified
 
-                (util/exception? verified) ; no credential
-                {:subject body-params}
+            (and (util/exception? verified)
+                 (not= 400 (-> verified ex-data :status))) ; no credential
+            {:subject body-params}
 
-                :else ; invalid credential
-                (throw (ex-info "Invalid credential"
-                                {:response {:status 400
-                                            :body   {:error "Invalid credential"}}})))
+            :else ; invalid credential
+            (throw (ex-info "Invalid credential"
+                            {:response {:status 400
+                                        :body   {:error "Invalid credential"}}})))
           req*     (assoc req :body-params subject :credential/did did :raw-txn body-params)]
       (log/debug "Unwrapped credential with did:" did)
       (handler req*))))
