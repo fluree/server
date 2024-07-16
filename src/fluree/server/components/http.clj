@@ -5,6 +5,7 @@
    [fluree.db.json-ld.credential :as cred]
    [fluree.db.query.fql.syntax :as fql]
    [fluree.db.query.history.parse :as fqh]
+   [fluree.db.util.core :as util]
    [fluree.db.util.log :as log]
    [fluree.db.validation :as v]
    [fluree.server.components.subscriptions :as subscriptions]
@@ -191,18 +192,19 @@
     (log/trace "unwrap-credential body-params:" body-params)
     (let [verified (<!! (cred/verify body-params))
           _        (log/trace "unwrap-credential verified:" verified)
-
           {:keys [subject did]}
-          (cond (:subject verified) ; valid credential
-                verified
+          (cond
+            (:subject verified) ; valid credential
+            verified
 
-                (nil? verified) ; no credential
-                {:subject body-params}
+            (and (util/exception? verified)
+                 (not= 400 (-> verified ex-data :status))) ; no credential
+            {:subject body-params}
 
-                :else ; invalid credential
-                (throw (ex-info "Invalid credential"
-                                {:response {:status 400
-                                            :body   {:error "Invalid credential"}}})))
+            :else ; invalid credential
+            (throw (ex-info "Invalid credential"
+                            {:response {:status 400
+                                        :body   {:error "Invalid credential"}}})))
           req*     (assoc req :body-params subject :credential/did did :raw-txn body-params)]
       (log/debug "Unwrapped credential with did:" did)
       (handler req*))))

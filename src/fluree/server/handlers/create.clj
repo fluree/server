@@ -1,8 +1,8 @@
 (ns fluree.server.handlers.create
   (:require
    [clojure.core.async :as async :refer [go <!]]
-   [fluree.db.constants :as const]
    [fluree.db.api :as fluree]
+   [fluree.db.constants :as const]
    [fluree.db.util.context :as ctx-util]
    [fluree.db.util.core :as util]
    [fluree.db.util.log :as log]
