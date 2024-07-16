@@ -10,6 +10,8 @@
             [meta-merge.core :refer [meta-merge]]
             [ring.adapter.jetty9 :as jetty]))
 
+(set! *warn-on-reflection* true)
+
 (def default-resource-name "config.edn")
 
 (defmethod aero/reader 'ig/ref
