@@ -103,14 +103,15 @@
                (-> history-res :body json/read-value)))))
 
     (testing "invalid credential"
-      (let [invalid-tx (-> {"ledger"   "credential-test"
-                            "@context" "https://ns.flur.ee"
-                            "insert"   {"@id"    "ex:cred-test"
-                                        "ex:KEY" "VALUE"}}
-                           (cred/generate (:private auth))
-                           <!!
-                           (assoc-in ["credentialSubject" "@graph" "ex:KEY"]
-                                     "ALTEREDVALUE"))
+      (let [valid-tx    (<!!
+                         (cred/generate {"ledger"   ledger-name
+                                         "@context" ["https://ns.flur.ee", {"ex" "http://example.com/ns/"}]
+                                         "insert"   {"@id"    "ex:cred-test"
+                                                     "ex:KEY" "VALUE"}}
+                                        (:private auth)))
+
+            invalid-tx  (assoc-in valid-tx ["credentialSubject" "insert" "ex:KEY"]
+                                  "ALTEREDVALUE")
 
             invalid-res (api-post :transact
                                   {:body    (json/write-value-as-string invalid-tx)

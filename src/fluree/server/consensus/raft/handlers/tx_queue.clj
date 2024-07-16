@@ -1,11 +1,10 @@
 (ns fluree.server.consensus.raft.handlers.tx-queue
-  (:require [fluree.db.json-ld.api :as fluree]
+  (:require [fluree.db.api :as fluree]
             [fluree.db.util.core :as util]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.raft.producers.new-commit :refer [consensus-push-commit]]
             [fluree.server.consensus.raft.producers.new-index-file :as new-index-file]
-            [fluree.server.consensus.raft.producers.tx-exception :refer [consensus-push-tx-exception]]
-            [fluree.server.handlers.shared :refer [deref!]]))
+            [fluree.server.consensus.raft.producers.tx-exception :refer [consensus-push-tx-exception]]))
 
 (set! *warn-on-reflection* true)
 
@@ -59,27 +58,15 @@
   (= :leader (:status raft-state)))
 
 (defn do-transaction
-  [{:keys [:fluree/conn] :as config} {:keys [ledger-id tx-id txn opts] :as params}]
-  (let [start-time (System/currentTimeMillis)
-        _          (log/debug "Starting transaction processing for ledger:" ledger-id
-                              "with tx-id" tx-id ". Transaction sat in queue for"
-                              (- start-time (:instant params)) "milliseconds.")
-        ledger     (if (deref! (fluree/exists? conn ledger-id))
-                     (deref! (fluree/load conn ledger-id))
-                     (throw (ex-info "Ledger does not exist" {:ledger ledger-id})))
+  [{:keys [fluree/conn] :as config} {:keys [ledger-id tx-id txn opts] :as params}]
+  (let [start-time     (System/currentTimeMillis)
+        _              (log/debug "Starting transaction processing for ledger:" ledger-id
+                                  "with tx-id" tx-id ". Transaction sat in queue for"
+                                  (- start-time (:instant params)) "milliseconds.")
 
-        commit! (fn [db]
-                  (let [index-files-ch (new-index-file/monitor-chan config)
-                        resp           (fluree/commit! ledger db {:file-data?     true
-                                                                  :index-files-ch index-files-ch})]
-                    (log/debug "New commit for ledger" ledger-id "with tx-id: " tx-id
-                               "processed in" (- (System/currentTimeMillis) start-time) "milliseconds.")
-                    resp))]
-    (-> ledger
-        fluree/db
-        (fluree/stage txn opts)
-        deref!
-        (commit!))))
+        index-files-ch (new-index-file/monitor-chan config)]
+    (fluree/transact! conn txn (assoc opts :file-data? true
+                                      :index-files-ch index-files-ch))))
 
 (defn get-next-transaction
   "Checks the consensus state machine to see if any more transactions
