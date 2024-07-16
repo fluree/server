@@ -1,4 +1,4 @@
-(ns fluree.server.components.migrate
+(ns fluree.server.migrate
   #_(:require [clojure.core.async :as async :refer [<! >! go-loop]]
               [fluree.db.json-ld.migrate.sid :as sid]
               [fluree.db.nameservice.core :as nameservice]
