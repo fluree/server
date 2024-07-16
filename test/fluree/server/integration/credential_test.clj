@@ -109,7 +109,7 @@
                                          "insert"   {"@id"    "ex:cred-test"
                                                      "ex:KEY" "VALUE"}}
                                         (:private auth)))
-            _           (fluree.db.util.log/warn "valid-tx: " valid-tx)
+
             invalid-tx  (assoc-in valid-tx ["credentialSubject" "insert" "ex:KEY"]
                                   "ALTEREDVALUE")
 
