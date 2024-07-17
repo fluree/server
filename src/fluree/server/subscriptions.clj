@@ -1,6 +1,5 @@
-(ns fluree.server.components.subscriptions
+(ns fluree.server.subscriptions
   (:require [clojure.core.async :as async]
-            [donut.system :as ds]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [ring.adapter.jetty9.websocket :as ws])
@@ -12,9 +11,6 @@
 ;                 :ledgers {"some/ledger" {}} ;; <- map where each key is a ledger-id subscribed to
 ;                 :did     nil}}
 ; :closed? false}
-
-(def default-subscription-atom (atom {:subs    {}
-                                      :closed? false}))
 
 (defn close-chan
   [chan message]
@@ -151,6 +147,11 @@
         sub-ids (all-sub-ids @sub-atom)]
     (run! #(send-message subscriptions % message) sub-ids)))
 
+(defn listen
+  []
+  {:sub-atom (atom {:subs    {}
+                    :closed? false})})
+
 (defn close
   [{:keys [sub-atom] :as _subscriptions}]
   (log/info "Closing all websocket subscriptions.")
@@ -159,14 +160,6 @@
       close-all-chans
       close-all-sockets)
   (reset! sub-atom {:closed? true}))
-
-(def subscriptions
-  #::ds{:start  (fn [{{:keys [subscription-atom]
-                       :or   {subscription-atom default-subscription-atom}} ::ds/config}]
-                  {:sub-atom subscription-atom})
-        :stop   (fn [{::ds/keys [instance]}]
-                  (close instance))
-        :config {}})
 
 (defmulti client-message :msg-type)
 

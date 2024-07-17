@@ -1,18 +1,17 @@
-(ns fluree.server.components.http
+(ns fluree.server.handler
   (:require
    [clojure.core.async :as async :refer [<!!]]
-   [donut.system :as ds]
    [fluree.db.json-ld.credential :as cred]
    [fluree.db.query.fql.syntax :as fql]
    [fluree.db.query.history.parse :as fqh]
    [fluree.db.util.core :as util]
    [fluree.db.util.log :as log]
    [fluree.db.validation :as v]
-   [fluree.server.components.subscriptions :as subscriptions]
    [fluree.server.handlers.create :as create]
    [fluree.server.handlers.ledger :as ledger]
    [fluree.server.handlers.remote-resource :as remote]
    [fluree.server.handlers.transact :as srv-tx]
+   [fluree.server.subscriptions :as subscriptions]
    [malli.core :as m]
    [muuntaja.core :as muuntaja]
    [muuntaja.format.core :as mf]
@@ -100,36 +99,14 @@
 (def HistoryQueryResponse
   (m/schema [:sequential map?]))
 
-(def DefaultContextRequestBody
-  (m/schema [:and
-             [:map-of :keyword :any]
-             [:map
-              [:ledger LedgerAlias]
-              [:t {:optional true} TValue]]]))
-
 (def DefaultResourceRequestBody
   (m/schema [:and
              [:map-of :keyword :any]
              [:map
               [:resource LedgerAlias]]]))
 
-(def DefaultContextResponseBody Context)
-
 (def ErrorResponse
   [:or :string map?])
-
-(def server
-  #::ds{:start  (fn [{{:keys [handler options]} ::ds/config}]
-                  (let [server (http/run-jetty handler options)]
-                    (println "Fluree HTTP API server running on port"
-                             (:port options))
-                    server))
-        :stop   (fn [{::ds/keys [instance]}]
-                  (http/stop-server instance))
-        :config {:handler (ds/local-ref [:handler])
-                 :options
-                 {:port  (ds/ref [:env :http/server :port])
-                  :join? false}}})
 
 (def query-coercer
   (rcm/create
@@ -334,9 +311,8 @@
          resp)))))
 
 (defn app
-  [{:keys [fluree/conn fluree/consensus fluree/watcher fluree/subscriptions http/middleware http/routes]}]
-  (log/debug "HTTP server running with Fluree connection:" conn
-             "- middleware:" middleware "- routes:" routes)
+  [conn consensus watcher subscriptions]
+  (log/debug "HTTP server running with Fluree connection:" conn)
   (let [exception-middleware      (exception/create-exception-middleware
                                    (merge
                                     exception/default-handlers
@@ -359,9 +335,7 @@
                                    [300 coercion/coerce-response-middleware]
                                    [400 coercion/coerce-request-middleware]
                                    [1000 exception-middleware]]
-        fluree-middleware         (sort-middleware-by-weight
-                                   (concat default-fluree-middleware
-                                           middleware))]
+        fluree-middleware         (sort-middleware-by-weight default-fluree-middleware)]
     (ring/ring-handler
      (ring/router
       [["/swagger.json"
@@ -407,13 +381,11 @@
      (ring/routes
       (ring/ring-handler
        (ring/router
-        (concat
-         [["/fluree/subscribe" {:get (fn [req]
-                                       (if (http/ws-upgrade-request? req)
-                                         (http/ws-upgrade-response (websocket-handler conn subscriptions))
-                                         {:status 400
-                                          :body   "Invalid websocket upgrade request"}))}]
-          routes])))
+        [["/fluree/subscribe" {:get (fn [req]
+                                      (if (http/ws-upgrade-request? req)
+                                        (http/ws-upgrade-response (websocket-handler conn subscriptions))
+                                        {:status 400
+                                         :body   "Invalid websocket upgrade request"}))}]]))
       (swagger-ui/create-swagger-ui-handler
        {:path   "/"
         :config {:validatorUrl     nil

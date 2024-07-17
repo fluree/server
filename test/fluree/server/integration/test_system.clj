@@ -1,8 +1,7 @@
 (ns fluree.server.integration.test-system
   (:require [clj-http.client :as http]
-            [donut.system :as ds]
             [fluree.db.util.json :as json]
-            [fluree.server.main :as sys])
+            [fluree.server.system :as system])
   (:import (java.net ServerSocket)))
 
 (def json-headers
@@ -55,26 +54,20 @@
    "rdf"    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
    "f"      "https://ns.flur.ee/ledger#"})
 
-(defmethod ds/named-system :test
-  [_]
-  (let [multi-addr-1 (str "/ip4/127.0.0.1/tcp/" @consensus-port-1)]
-    (ds/system :dev {[:env] {:http/server {:port           @api-port
-                                           :max-tx-wait-ms 45000}
-                             :fluree/connection
-                             {:method       :memory
-                              :parallelism  1
-                              :cache-max-mb 100}
-                             :fluree/consensus
-                             {:consensus-type        :raft
-                              :consensus-servers     multi-addr-1
-                              :consensus-this-server multi-addr-1}}})))
-
 (defn run-test-server
   [run-tests]
   (set-server-ports)
-  (let [stop-server (sys/run-server {:profile :test})]
+  (let [multi-addr-1     (str "/ip4/127.0.0.1/tcp/" @consensus-port-1)
+        config-overrides {:http/jetty        {:port @api-port}
+                          :fluree/watcher    {:max-tx-wait-ms 45000}
+                          :fluree/connection {:method       :memory
+                                              :parallelism  1
+                                              :cache-max-mb 100}
+                          :fluree/raft       {:servers     multi-addr-1
+                                              :this-server multi-addr-1}}
+        server           (system/start :dev config-overrides)]
     (run-tests)
-    (stop-server)))
+    (system/stop server)))
 
 (defn api-url [endpoint]
   (str "http://localhost:" @api-port "/fluree/" (name endpoint)))

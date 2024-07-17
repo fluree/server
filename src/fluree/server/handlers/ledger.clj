@@ -2,14 +2,14 @@
   (:require
    [fluree.db.api :as fluree]
    [fluree.db.util.log :as log]
-   [fluree.server.components.http :as-alias http]
+   [fluree.server.handler :as-alias handler]
    [fluree.server.handlers.shared :refer [defhandler deref!]]))
 
 (defhandler query
   [{:keys [fluree/conn credential/did]
     {:keys [body]} :parameters}]
-  (let [query  (or (::http/query body) body)
-        format (or (::http/format body) :fql)
+  (let [query  (or (::handler/query body) body)
+        format (or (::handler/format body) :fql)
         _      (log/debug "query handler received query:" query)
         opts   (when (= :fql format)
                  (cond-> (:opts query)
