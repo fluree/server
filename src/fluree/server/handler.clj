@@ -381,11 +381,11 @@
      (ring/routes
       (ring/ring-handler
        (ring/router
-         [["/fluree/subscribe" {:get (fn [req]
-                                       (if (http/ws-upgrade-request? req)
-                                         (http/ws-upgrade-response (websocket-handler conn subscriptions))
-                                         {:status 400
-                                          :body   "Invalid websocket upgrade request"}))}]]))
+        [["/fluree/subscribe" {:get (fn [req]
+                                      (if (http/ws-upgrade-request? req)
+                                        (http/ws-upgrade-response (websocket-handler conn subscriptions))
+                                        {:status 400
+                                         :body   "Invalid websocket upgrade request"}))}]]))
       (swagger-ui/create-swagger-ui-handler
        {:path   "/"
         :config {:validatorUrl     nil
