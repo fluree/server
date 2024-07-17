@@ -99,20 +99,11 @@
 (def HistoryQueryResponse
   (m/schema [:sequential map?]))
 
-(def DefaultContextRequestBody
-  (m/schema [:and
-             [:map-of :keyword :any]
-             [:map
-              [:ledger LedgerAlias]
-              [:t {:optional true} TValue]]]))
-
 (def DefaultResourceRequestBody
   (m/schema [:and
              [:map-of :keyword :any]
              [:map
               [:resource LedgerAlias]]]))
-
-(def DefaultContextResponseBody Context)
 
 (def ErrorResponse
   [:or :string map?])
