@@ -2,7 +2,6 @@
   (:require [clojure.string :as str]
             [fluree.server.handlers.transact :as tx-handler]
             [fluree.server.handlers.create :as create-handler]
-            [fluree.server.components.consensus :as consensus]
             [fluree.server.consensus.raft.handler :as consensus-handler]
             [fluree.server.consensus.raft]
             [clojure.java.io :as io]
