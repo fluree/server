@@ -63,8 +63,8 @@
           query-req    {:body
                         (json/write-value-as-string
                          (assoc secret-query
-                           "opts" {"did"            alice-did
-                                   "default-allow?" true}))
+                                "opts" {"did"            alice-did
+                                        "default-allow?" true}))
                         :headers json-headers}
           query-res    (api-post :query query-req)]
 
@@ -92,8 +92,8 @@
             query-req {:body
                        (json/write-value-as-string
                         (assoc secret-query
-                          "opts" {"did"            alice-did
-                                  "default-allow?" true}))
+                               "opts" {"did"            alice-did
+                                       "default-allow?" true}))
                        :headers json-headers}
             query-res (api-post :query query-req)
             _         (assert (= 200 (:status query-res)))]
