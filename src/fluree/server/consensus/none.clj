@@ -1,7 +1,7 @@
 (ns fluree.server.consensus.none
   (:require [clojure.core.async :as async]
             [fluree.db.constants :as const]
-            [fluree.db.json-ld.api :as fluree]
+            [fluree.db.api :as fluree]
             [fluree.db.util.async :refer [go-try]]
             [fluree.db.util.log :as log]
             [fluree.server.components.subscriptions :as subs]
