@@ -99,34 +99,35 @@
         (log/error "Unexpected event message - expected two-tuple of [event-type event-data], "
                    "and of a supported event type. Received:" event e)))))
 
-(defn monitor-new-tx-queue
-  [conn subscriptions watcher tx-queue]
-  (go
-    (loop [i 0]
-      (let [timeout-ch (async/timeout 5000)
-            [event ch] (async/alts! [tx-queue timeout-ch])]
-        (cond
-          (= timeout-ch ch)
-          (do
-            (log/trace "No new transactions in 5 second."
-                       "Processed" i "total transactions.")
-            (recur i))
+(defn new-tx-queue
+  [conn subscriptions watcher]
+  (let [tx-queue (async/chan)]
+    (go
+      (loop [i 0]
+        (let [timeout-ch (async/timeout 5000)
+              [event ch] (async/alts! [tx-queue timeout-ch])]
+          (cond
+            (= timeout-ch ch)
+            (do
+              (log/trace "No new transactions in 5 second."
+                         "Processed" i "total transactions.")
+              (recur i))
 
-          (nil? event)
-          (do
-            (log/warn "Closing local transaction queue was closed. No new transactions will be processed.")
-            ::closed)
+            (nil? event)
+            (do
+              (log/warn "Closing local transaction queue was closed. No new transactions will be processed.")
+              ::closed)
 
-          :else
-          (let [result (<! (process-event conn subscriptions watcher event))
-                i*     (inc i)]
-            (log/trace "Processed transaction #" i* ". Result:" result)
-            (recur i*)))))))
+            :else
+            (let [result (<! (process-event conn subscriptions watcher event))
+                  i*     (inc i)]
+              (log/trace "Processed transaction #" i* ". Result:" result)
+              (recur i*))))))
+    tx-queue))
 
 (defn start
   [conn subscriptions watcher]
-  (let [tx-queue (async/chan)]
-    (monitor-new-tx-queue conn subscriptions watcher tx-queue)
+  (let [tx-queue (new-tx-queue conn subscriptions watcher)]
     (->StandaloneTransactor tx-queue)))
 
 (defn stop
