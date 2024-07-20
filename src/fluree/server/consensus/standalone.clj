@@ -1,5 +1,5 @@
 (ns fluree.server.consensus.standalone
-  (:require [clojure.core.async :as async]
+  (:require [clojure.core.async :as async :refer [<! >! go]]
             [fluree.db.constants :as const]
             [fluree.db.api :as fluree]
             [fluree.db.util.async :refer [go-try]]
@@ -12,15 +12,17 @@
 
 (defn queue-new-ledger
   [tx-queue ledger-id tx-id txn opts]
-  (let [event-msg (msg-format/queue-new-ledger ledger-id tx-id txn opts)
-        success?  (async/put! tx-queue event-msg)]
-    (async/go success?)))
+  (go
+    (let [event-msg (msg-format/queue-new-ledger ledger-id tx-id txn opts)]
+      (>! tx-queue event-msg)
+      true)))
 
 (defn queue-new-transaction
   [tx-queue ledger-id tx-id txn opts]
-  (let [event-msg (msg-format/queue-new-transaction ledger-id tx-id txn opts)
-        success?  (async/put! tx-queue event-msg)]
-    (async/go success?)))
+  (go
+    (let [event-msg (msg-format/queue-new-transaction ledger-id tx-id txn opts)]
+      (>! tx-queue event-msg)
+      true)))
 
 (defrecord StandaloneTransactor [tx-queue]
   consensus/TxGroup
@@ -92,13 +94,13 @@
 
 (defn process-event
   [conn subscriptions watcher event]
-  (async/go
+  (go
     (try
       (let [[event-type event-msg] event
-            result (async/<!
-                    (case event-type
-                      :ledger-create (do-new-ledger conn subscriptions watcher event-msg)
-                      :tx-queue (do-transaction conn subscriptions watcher event-msg)))]
+
+            result (<! (case event-type
+                         :ledger-create (do-new-ledger conn subscriptions watcher event-msg)
+                         :tx-queue      (do-transaction conn subscriptions watcher event-msg)))]
         result)
       (catch Exception e
         (log/error "Unexpected event message - expected two-tuple of [event-type event-data], "
@@ -106,7 +108,7 @@
 
 (defn monitor-new-tx-queue
   [conn subscriptions watcher tx-queue]
-  (async/go
+  (go
     (loop [i 0]
       (let [timeout-ch (async/timeout 5000)
             [event ch] (async/alts! [tx-queue timeout-ch])]
@@ -123,7 +125,7 @@
             ::closed)
 
           :else
-          (let [result (async/<! (process-event conn subscriptions watcher event))
+          (let [result (<! (process-event conn subscriptions watcher event))
                 i*     (inc i)]
             (log/trace "Processed transaction #" i* ". Result:" result)
             (recur i*)))))))
