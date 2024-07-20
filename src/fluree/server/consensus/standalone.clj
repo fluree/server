@@ -101,7 +101,7 @@
 
 (defn new-tx-queue
   [conn subscriptions watcher]
-  (let [tx-queue (async/chan)]
+  (let [tx-queue (async/chan 512)]
     (go
       (loop [i 0]
         (let [timeout-ch (async/timeout 5000)
