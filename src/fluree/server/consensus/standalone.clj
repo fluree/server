@@ -2,7 +2,7 @@
   (:require [clojure.core.async :as async :refer [<! >! go]]
             [fluree.db.api :as fluree]
             [fluree.db.constants :as const]
-            [fluree.db.util.async :refer [go-try]]
+            [fluree.db.util.async :refer [<? go-try]]
             [fluree.db.util.core :refer [get-first-value]]
             [fluree.db.util.log :as log]
             [fluree.server.consensus :as consensus]
@@ -91,7 +91,7 @@
     (try
       (let [[event-type event-msg] event
 
-            result (<! (case event-type
+            result (<? (case event-type
                          :ledger-create (create-ledger! conn subscriptions watcher event-msg)
                          :tx-queue      (transact! conn subscriptions watcher event-msg)))]
         result)
