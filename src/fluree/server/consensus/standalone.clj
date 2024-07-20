@@ -31,8 +31,7 @@
 
 (defn broadcast-new-ledger!
   "Responsible for producing the event broadcast to connected peers."
-  [{:keys [fluree/watcher fluree/subscriptions] :as _config}
-   {:keys [ledger-id server tx-id commit-file-meta] :as handler-result}]
+  [subscriptions watcher {:keys [ledger-id server tx-id commit-file-meta] :as handler-result}]
   (log/info (str "New Ledger successfully created by server " server ": " ledger-id " with tx-id: " tx-id "."))
   (watcher/deliver-watch watcher tx-id handler-result)
   (subs/send-message-to-all subscriptions "ledger-created" ledger-id (:json commit-file-meta))
@@ -48,8 +47,7 @@
       (->> (reduce-kv (fn [opts k v] (assoc opts (keyword k) v)) {}))))
 
 (defn do-new-ledger
-  [{:keys [fluree/conn] :as config}
-   {:keys [ledger-id txn opts tx-id] :as _params}]
+  [conn subscriptions watcher {:keys [ledger-id txn opts tx-id] :as _params}]
   (go-try
     (let [create-opts    (parse-opts txn)
           ledger         (deref!
@@ -61,22 +59,20 @@
           commmit-result (deref!
                          ;; following uses :file-data? and will return map with {:keys [db data-file commit-file]}
                           (fluree/commit! ledger staged-db {:file-data? true}))]
-      (broadcast-new-ledger! config (assoc commmit-result :tx-id tx-id
+      (broadcast-new-ledger! subscriptions watcher (assoc commmit-result :tx-id tx-id
                                            :ledger-id ledger-id
                                            :t 1)))))
 
 (defn broadcast-new-commit!
   "Responsible for producing the event broadcast to connected peers."
-  [{:keys [fluree/watcher fluree/subscriptions] :as _config}
-   {:keys [ledger-id tx-id server commit-file-meta] :as commit-result}]
+  [subscriptions watcher {:keys [ledger-id tx-id server commit-file-meta] :as commit-result}]
   (log/info "New transaction completed for" ledger-id "tx-id: " tx-id "by server:" server)
   (watcher/deliver-watch watcher tx-id commit-result)
   (subs/send-message-to-all subscriptions "new-commit" ledger-id (:json commit-file-meta))
   :success)
 
 (defn do-transaction
-  [{:keys [fluree/conn] :as config}
-   {:keys [ledger-id tx-id txn opts] :as params}]
+  [conn subscriptions watcher {:keys [ledger-id tx-id txn opts] :as params}]
   (go-try
     (let [start-time    (System/currentTimeMillis)
           _             (log/debug "Starting transaction processing for ledger:" ledger-id
@@ -92,24 +88,24 @@
           commit-result (deref!
                          (fluree/commit! ledger staged-db {:file-data? true}))
           broadcast-msg (msg-format/new-commit nil params commit-result)]
-      (broadcast-new-commit! config broadcast-msg))))
+      (broadcast-new-commit! subscriptions watcher broadcast-msg))))
 
 (defn process-event
-  [config event]
+  [conn subscriptions watcher event]
   (async/go
     (try
       (let [[event-type event-msg] event
             result (async/<!
                     (case event-type
-                      :ledger-create (do-new-ledger config event-msg)
-                      :tx-queue (do-transaction config event-msg)))]
+                      :ledger-create (do-new-ledger conn subscriptions watcher event-msg)
+                      :tx-queue (do-transaction conn subscriptions watcher event-msg)))]
         result)
       (catch Exception e
         (log/error "Unexpected event message - expected two-tuple of [event-type event-data], "
                    "and of a supported event type. Received:" event e)))))
 
 (defn monitor-new-tx-queue
-  [config tx-queue]
+  [conn subscriptions watcher tx-queue]
   (async/go
     (loop [i 0]
       (let [timeout-ch (async/timeout 5000)
@@ -127,15 +123,15 @@
             ::closed)
 
           :else
-          (let [result (async/<! (process-event config event))
+          (let [result (async/<! (process-event conn subscriptions watcher event))
                 i*     (inc i)]
             (log/trace "Processed transaction #" i* ". Result:" result)
             (recur i*)))))))
 
 (defn start
-  [config]
+  [conn subscriptions watcher]
   (let [tx-queue (async/chan)]
-    (monitor-new-tx-queue config tx-queue)
+    (monitor-new-tx-queue conn subscriptions watcher tx-queue)
     (->StandaloneTransactor tx-queue)))
 
 (defn stop
