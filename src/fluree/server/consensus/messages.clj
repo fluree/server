@@ -1,4 +1,4 @@
-(ns fluree.server.consensus.msg-format
+(ns fluree.server.consensus.messages
   "Common namespace for defining consensus messages shared across consensus
   protocols")
 
@@ -16,9 +16,6 @@
    :t                (:t db) ;; for quickly validating this is the next 'block'
    :tx-id            tx-id ;; for quickly removing from the queue
    :server           processing-server})
-
-(defn error
-  [])
 
 (defn queue-new-ledger
   "Upon receiving a request to create a new ledger, an event

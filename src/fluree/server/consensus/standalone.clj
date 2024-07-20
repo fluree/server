@@ -6,7 +6,7 @@
             [fluree.db.util.core :refer [get-first-value]]
             [fluree.db.util.log :as log]
             [fluree.server.consensus :as consensus]
-            [fluree.server.consensus.msg-format :as msg-format]
+            [fluree.server.consensus.messages :as messages]
             [fluree.server.handlers.shared :refer [deref!]]
             [fluree.server.subscriptions :as subscriptions]
             [fluree.server.watcher :as watcher]))
@@ -15,12 +15,12 @@
   consensus/TxGroup
   (queue-new-ledger [_ ledger-id tx-id txn opts]
     (go
-      (let [event-msg (msg-format/queue-new-ledger ledger-id tx-id txn opts)]
+      (let [event-msg (messages/queue-new-ledger ledger-id tx-id txn opts)]
         (async/offer! tx-queue event-msg))))
 
   (queue-new-transaction [_ ledger-id tx-id txn opts]
     (go
-      (let [event-msg (msg-format/queue-new-transaction ledger-id tx-id txn opts)]
+      (let [event-msg (messages/queue-new-transaction ledger-id tx-id txn opts)]
         (async/offer! tx-queue event-msg)))))
 
 (defn broadcast-new-ledger!
@@ -80,7 +80,7 @@
                             deref!)
           commit-result (deref!
                          (fluree/commit! ledger staged-db {:file-data? true}))
-          broadcast-msg (msg-format/new-commit nil params commit-result)]
+          broadcast-msg (messages/new-commit nil params commit-result)]
       (broadcast-new-commit! subscriptions watcher broadcast-msg))))
 
 (defn process-event

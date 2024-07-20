@@ -6,7 +6,7 @@
             [fluree.db.util.log :as log]
             [fluree.raft :as raft]
             [fluree.server.consensus :as consensus]
-            [fluree.server.consensus.msg-format :as msg-format]
+            [fluree.server.consensus.messages :as messages]
             [fluree.server.consensus.network.multi-addr :as multi-addr]
             [fluree.server.consensus.network.tcp :as ftcp]
             [fluree.server.consensus.raft.handler :as raft-handler]
@@ -330,7 +330,7 @@
   (log/debug "Consensus - queue new ledger:" ledger-id tx-id txn)
   (new-entry-async
    group
-   (msg-format/queue-new-ledger ledger-id tx-id txn opts)))
+   (messages/queue-new-ledger ledger-id tx-id txn opts)))
 
 (defn queue-new-transaction-raft
   "Queues a new transaction into the consensus layer for processing.
@@ -339,7 +339,7 @@
   (log/trace "queue-new-transaction txn:" txn)
   (new-entry-async
    group
-   (msg-format/queue-new-transaction ledger-id tx-id txn opts)))
+   (messages/queue-new-transaction ledger-id tx-id txn opts)))
 
 (defrecord RaftGroup [state-atom event-chan command-chan this-server port
                       close raft raft-initialized open-api private-keys]
