@@ -1,5 +1,5 @@
 (ns fluree.server.consensus.standalone
-  (:require [clojure.core.async :as async :refer [<! go]]
+  (:require [clojure.core.async :as async :refer [<! go go-loop]]
             [fluree.db.api :as fluree]
             [fluree.db.constants :as const]
             [fluree.db.util.async :refer [<? go-try]]
@@ -100,27 +100,26 @@
 (defn new-tx-queue
   [conn subscriptions watcher]
   (let [tx-queue (async/chan 16)]
-    (go
-      (loop [i 0]
-        (let [timeout-ch (async/timeout 5000)
-              [event ch] (async/alts! [tx-queue timeout-ch])]
-          (cond
-            (= timeout-ch ch)
-            (do
-              (log/trace "No new transactions in 5 second."
-                         "Processed" i "total transactions.")
-              (recur i))
+    (go-loop [i 0]
+      (let [timeout-ch (async/timeout 5000)
+            [event ch] (async/alts! [tx-queue timeout-ch])]
+        (cond
+          (= timeout-ch ch)
+          (do
+            (log/trace "No new transactions in 5 seconds."
+                       "Processed" i "total transactions.")
+            (recur i))
 
-            (nil? event)
-            (do
-              (log/warn "Local transaction queue was closed. No new transactions will be processed.")
-              ::closed)
+          (nil? event)
+          (do
+            (log/warn "Local transaction queue was closed. No new transactions will be processed.")
+            ::closed)
 
-            :else
-            (let [result (<! (process-event conn subscriptions watcher event))
-                  i*     (inc i)]
-              (log/trace "Processed transaction #" i* ". Result:" result)
-              (recur i*))))))
+          :else
+          (let [result (<! (process-event conn subscriptions watcher event))
+                i*     (inc i)]
+            (log/trace "Processed transaction #" i* ". Result:" result)
+            (recur i*)))))
     tx-queue))
 
 (defn start
