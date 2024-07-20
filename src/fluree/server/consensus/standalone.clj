@@ -115,7 +115,7 @@
 
             (nil? event)
             (do
-              (log/warn "Closing local transaction queue was closed. No new transactions will be processed.")
+              (log/warn "Local transaction queue was closed. No new transactions will be processed.")
               ::closed)
 
             :else
