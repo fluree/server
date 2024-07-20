@@ -21,7 +21,7 @@
                      :defaults       {:indexer {:reindex-min-bytes 1000
                                                 :reindex-max-bytes 10000000}}}
 
- :fluree/watcher {:max-tx-wait-ms #or [#env FLUREE_HTTP_MAX_TX_WAIT_MS
+ :fluree/watcher {:max-tx-wait-ms #or [#env FLUREE_MAX_TX_WAIT_MS
                                        #profile {:dev    45000
                                                  :prod   45000
                                                  :docker 45000}]}
