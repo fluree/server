@@ -3,7 +3,7 @@
             [clojure.java.io :as io]
             [fluree.db.api :as fluree]
             [fluree.server.consensus.raft :as raft]
-            [fluree.server.consensus.standalone :as none]
+            [fluree.server.consensus.standalone :as standalone]
             [fluree.server.handler :as handler]
             [fluree.server.subscriptions :as subscriptions]
             [fluree.server.watcher :as watcher]
@@ -51,6 +51,14 @@
 (defmethod ig/halt-key! :fluree/raft
   [_ {:keys [close] :as _raft-group}]
   (close))
+
+(defmethod ig/init-key :fluree/standalone
+  [_ {:keys [conn subscriptions watcher]}]
+  (standalone/start conn subscriptions watcher))
+
+(defmethod ig/halt-key! :fluree/standalone
+  [_ transactor]
+  (standalone/stop transactor))
 
 (defmethod ig/init-key :fluree/handler
   [_ {:keys [conn consensus watcher subscriptions]}]
