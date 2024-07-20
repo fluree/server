@@ -22,7 +22,7 @@
         success?  (async/put! tx-queue event-msg)]
     (async/go success?)))
 
-(defrecord LocalConsensus [tx-queue closed? close]
+(defrecord StandaloneTransactor [tx-queue]
   consensus/TxGroup
   (queue-new-ledger [_ ledger-id tx-id txn opts]
     (queue-new-ledger tx-queue ledger-id tx-id txn opts))
@@ -143,6 +143,6 @@
 
     (monitor-new-tx-queue config tx-queue)
 
-    (map->LocalConsensus {:tx-queue tx-queue
-                          :closed?  closed?
-                          :close    close-fn})))
+    (map->StandaloneTransactor {:tx-queue tx-queue
+                                :closed?  closed?
+                                :close    close-fn})))
