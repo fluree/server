@@ -30,7 +30,7 @@
 
  :fluree/standalone {:conn          #ig/ref :fluree/connection
                      :watcher       #ig/ref :fluree/watcher
-                     :subscriptions #ig/ref :fluree/subscriptions}}
+                     :subscriptions #ig/ref :fluree/subscriptions}
 
  :fluree/handler {:conn          #ig/ref :fluree/connection
                   :consensus     #ig/ref :fluree/consensus
