@@ -11,26 +11,19 @@
             [fluree.server.consensus.watcher :as watcher]
             [fluree.server.handlers.shared :refer [deref!]]))
 
-(defn queue-new-ledger
-  [tx-queue ledger-id tx-id txn opts]
-  (go
-    (let [event-msg (msg-format/queue-new-ledger ledger-id tx-id txn opts)]
-      (>! tx-queue event-msg)
-      true)))
-
-(defn queue-new-transaction
-  [tx-queue ledger-id tx-id txn opts]
-  (go
-    (let [event-msg (msg-format/queue-new-transaction ledger-id tx-id txn opts)]
-      (>! tx-queue event-msg)
-      true)))
-
 (defrecord StandaloneTransactor [tx-queue]
   consensus/TxGroup
   (queue-new-ledger [_ ledger-id tx-id txn opts]
-    (queue-new-ledger tx-queue ledger-id tx-id txn opts))
+    (go
+      (let [event-msg (msg-format/queue-new-ledger ledger-id tx-id txn opts)]
+      (>! tx-queue event-msg)
+      true)))
+
   (queue-new-transaction [_ ledger-id tx-id txn opts]
-    (queue-new-transaction tx-queue ledger-id tx-id txn opts)))
+    (go
+      (let [event-msg (msg-format/queue-new-transaction ledger-id tx-id txn opts)]
+      (>! tx-queue event-msg)
+      true))))
 
 (defn broadcast-new-ledger!
   "Responsible for producing the event broadcast to connected peers."
