@@ -1,29 +1,29 @@
 (ns fluree.server.consensus.standalone
   (:require [clojure.core.async :as async :refer [<! >! go]]
-            [fluree.db.constants :as const]
             [fluree.db.api :as fluree]
-            [fluree.db.util.core :refer [get-first-value]]
+            [fluree.db.constants :as const]
             [fluree.db.util.async :refer [go-try]]
+            [fluree.db.util.core :refer [get-first-value]]
             [fluree.db.util.log :as log]
-            [fluree.server.subscriptions :as subscriptions]
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.msg-format :as msg-format]
-            [fluree.server.watcher :as watcher]
-            [fluree.server.handlers.shared :refer [deref!]]))
+            [fluree.server.handlers.shared :refer [deref!]]
+            [fluree.server.subscriptions :as subscriptions]
+            [fluree.server.watcher :as watcher]))
 
 (defrecord StandaloneTransactor [tx-queue]
   consensus/TxGroup
   (queue-new-ledger [_ ledger-id tx-id txn opts]
     (go
       (let [event-msg (msg-format/queue-new-ledger ledger-id tx-id txn opts)]
-      (>! tx-queue event-msg)
-      true)))
+        (>! tx-queue event-msg)
+        true)))
 
   (queue-new-transaction [_ ledger-id tx-id txn opts]
     (go
       (let [event-msg (msg-format/queue-new-transaction ledger-id tx-id txn opts)]
-      (>! tx-queue event-msg)
-      true))))
+        (>! tx-queue event-msg)
+        true))))
 
 (defn broadcast-new-ledger!
   "Responsible for producing the event broadcast to connected peers."
@@ -55,8 +55,8 @@
                          ;; following uses :file-data? and will return map with {:keys [db data-file commit-file]}
                           (fluree/commit! ledger staged-db {:file-data? true}))]
       (broadcast-new-ledger! subscriptions watcher (assoc commmit-result :tx-id tx-id
-                                           :ledger-id ledger-id
-                                           :t 1)))))
+                                                          :ledger-id ledger-id
+                                                          :t 1)))))
 
 (defn broadcast-new-commit!
   "Responsible for producing the event broadcast to connected peers."
