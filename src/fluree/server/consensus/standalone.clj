@@ -41,7 +41,7 @@
                  (assoc opts (keyword k) v))
                {} string-opts)))
 
-(defn do-new-ledger
+(defn create-ledger!
   [conn subscriptions watcher {:keys [ledger-id txn opts tx-id] :as _params}]
   (go-try
     (let [create-opts    (parse-opts txn)
@@ -66,7 +66,7 @@
   (subs/send-message-to-all subscriptions "new-commit" ledger-id (:json commit-file-meta))
   :success)
 
-(defn do-transaction
+(defn transact!
   [conn subscriptions watcher {:keys [ledger-id tx-id txn opts] :as params}]
   (go-try
     (let [start-time    (System/currentTimeMillis)
@@ -92,8 +92,8 @@
       (let [[event-type event-msg] event
 
             result (<! (case event-type
-                         :ledger-create (do-new-ledger conn subscriptions watcher event-msg)
-                         :tx-queue      (do-transaction conn subscriptions watcher event-msg)))]
+                         :ledger-create (create-ledger! conn subscriptions watcher event-msg)
+                         :tx-queue      (transact! conn subscriptions watcher event-msg)))]
         result)
       (catch Exception e
         (log/error "Unexpected event message - expected two-tuple of [event-type event-data], "
