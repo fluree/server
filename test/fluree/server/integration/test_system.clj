@@ -57,14 +57,11 @@
 (defn run-test-server
   [run-tests]
   (set-server-ports)
-  (let [multi-addr-1     (str "/ip4/127.0.0.1/tcp/" @consensus-port-1)
-        config-overrides {:http/jetty        {:port @api-port}
+  (let [config-overrides {:http/jetty        {:port @api-port}
                           :fluree/watcher    {:max-tx-wait-ms 45000}
                           :fluree/connection {:method       :memory
                                               :parallelism  1
-                                              :cache-max-mb 100}
-                          :fluree/raft       {:servers     multi-addr-1
-                                              :this-server multi-addr-1}}
+                                              :cache-max-mb 100}}
         server           (system/start :dev config-overrides)]
     (run-tests)
     (system/stop server)))
