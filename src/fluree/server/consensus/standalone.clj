@@ -1,5 +1,5 @@
 (ns fluree.server.consensus.standalone
-  (:require [clojure.core.async :as async :refer [<! >! go]]
+  (:require [clojure.core.async :as async :refer [<! go]]
             [fluree.db.api :as fluree]
             [fluree.db.constants :as const]
             [fluree.db.util.async :refer [<? go-try]]
