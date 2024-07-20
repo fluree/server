@@ -3,6 +3,7 @@
             [clojure.java.io :as io]
             [fluree.db.api :as fluree]
             [fluree.server.consensus.raft :as raft]
+            [fluree.server.consensus.standalone :as none]
             [fluree.server.handler :as handler]
             [fluree.server.subscriptions :as subscriptions]
             [fluree.server.watcher :as watcher]

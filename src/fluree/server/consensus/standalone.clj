@@ -1,4 +1,4 @@
-(ns fluree.server.consensus.none
+(ns fluree.server.consensus.standalone
   (:require [clojure.core.async :as async]
             [fluree.db.constants :as const]
             [fluree.db.api :as fluree]
