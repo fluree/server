@@ -16,14 +16,12 @@
   (queue-new-ledger [_ ledger-id tx-id txn opts]
     (go
       (let [event-msg (msg-format/queue-new-ledger ledger-id tx-id txn opts)]
-        (>! tx-queue event-msg)
-        true)))
+        (async/offer! tx-queue event-msg))))
 
   (queue-new-transaction [_ ledger-id tx-id txn opts]
     (go
       (let [event-msg (msg-format/queue-new-transaction ledger-id tx-id txn opts)]
-        (>! tx-queue event-msg)
-        true))))
+        (async/offer! tx-queue event-msg)))))
 
 (defn broadcast-new-ledger!
   "Responsible for producing the event broadcast to connected peers."
