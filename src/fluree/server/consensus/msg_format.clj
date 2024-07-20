@@ -1,7 +1,7 @@
-(ns fluree.server.consensus.msg-format)
+(ns fluree.server.consensus.msg-format
+  "Common namespace for defining consensus messages shared across consensus
+  protocols")
 
-;; to the extent messages through consensus can be shared across
-;; consensus protocols, this provies a common place to define them
 
 (defn new-commit
   "Post-transaction, the message we will broadcast out and/or deliver
@@ -16,6 +16,9 @@
    :t                (:t db) ;; for quickly validating this is the next 'block'
    :tx-id            tx-id ;; for quickly removing from the queue
    :server           processing-server})
+
+(defn error
+  [])
 
 (defn queue-new-ledger
   "Upon receiving a request to create a new ledger, an event
