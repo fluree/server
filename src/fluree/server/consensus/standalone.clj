@@ -7,9 +7,7 @@
             [fluree.db.util.log :as log]
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.messages :as messages]
-            [fluree.server.handlers.shared :refer [deref!]]
-            [fluree.server.subscriptions :as subscriptions]
-            [fluree.server.watcher :as watcher]))
+            [fluree.server.handlers.shared :refer [deref!]]))
 
 (defrecord StandaloneTransactor [tx-queue]
   consensus/TxGroup
@@ -23,14 +21,6 @@
       (let [event-msg (messages/queue-new-transaction ledger-id tx-id txn opts)]
         (async/offer! tx-queue event-msg)))))
 
-(defn broadcast-new-ledger!
-  "Responsible for producing the event broadcast to connected peers."
-  [subscriptions watcher {:keys [ledger-id server tx-id commit-file-meta] :as handler-result}]
-  (log/info (str "New Ledger successfully created by server " server ": " ledger-id " with tx-id: " tx-id "."))
-  (watcher/deliver-watch watcher tx-id handler-result)
-  (subscriptions/send-message-to-all subscriptions "ledger-created" ledger-id (:json commit-file-meta))
-  :success)
-
 (defn parse-opts
   "Extract the opts from the transaction and keywordify the top level keys."
   [expanded-txn]
@@ -40,29 +30,20 @@
                {} string-opts)))
 
 (defn create-ledger!
-  [conn subscriptions watcher {:keys [ledger-id txn opts tx-id] :as _params}]
+  [conn subscriptions watcher {:keys [ledger-id txn opts] :as params}]
   (go-try
-    (let [create-opts    (parse-opts txn)
-          ledger         (deref!
-                          (fluree/create conn ledger-id create-opts))
-          staged-db      (-> ledger
-                             fluree/db
-                             (fluree/stage txn opts)
-                             deref!)
-          commmit-result (deref!
+    (let [create-opts   (parse-opts txn)
+          ledger        (deref!
+                         (fluree/create conn ledger-id create-opts))
+          staged-db     (-> ledger
+                            fluree/db
+                            (fluree/stage txn opts)
+                            deref!)
+          commit-result (deref!
                          ;; following uses :file-data? and will return map with {:keys [db data-file commit-file]}
-                          (fluree/commit! ledger staged-db {:file-data? true}))]
-      (broadcast-new-ledger! subscriptions watcher (assoc commmit-result :tx-id tx-id
-                                                          :ledger-id ledger-id
-                                                          :t 1)))))
-
-(defn broadcast-new-commit!
-  "Responsible for producing the event broadcast to connected peers."
-  [subscriptions watcher {:keys [ledger-id tx-id server commit-file-meta] :as commit-result}]
-  (log/info "New transaction completed for" ledger-id "tx-id: " tx-id "by server:" server)
-  (watcher/deliver-watch watcher tx-id commit-result)
-  (subscriptions/send-message-to-all subscriptions "new-commit" ledger-id (:json commit-file-meta))
-  :success)
+                         (fluree/commit! ledger staged-db {:file-data? true}))
+          broadcast-msg (messages/new-ledger params commit-result)]
+      (consensus/broadcast-new-ledger! subscriptions watcher broadcast-msg))))
 
 (defn transact!
   [conn subscriptions watcher {:keys [ledger-id tx-id txn opts] :as params}]
@@ -80,8 +61,8 @@
                             deref!)
           commit-result (deref!
                          (fluree/commit! ledger staged-db {:file-data? true}))
-          broadcast-msg (messages/new-commit nil params commit-result)]
-      (broadcast-new-commit! subscriptions watcher broadcast-msg))))
+          broadcast-msg (messages/new-commit params commit-result)]
+      (consensus/broadcast-new-commit! subscriptions watcher broadcast-msg))))
 
 (defn process-event
   [conn subscriptions watcher event]
