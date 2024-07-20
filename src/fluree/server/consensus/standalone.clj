@@ -5,10 +5,10 @@
             [fluree.db.util.core :refer [get-first-value]]
             [fluree.db.util.async :refer [go-try]]
             [fluree.db.util.log :as log]
-            [fluree.server.components.subscriptions :as subs]
+            [fluree.server.subscriptions :as subscriptions]
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.msg-format :as msg-format]
-            [fluree.server.consensus.watcher :as watcher]
+            [fluree.server.watcher :as watcher]
             [fluree.server.handlers.shared :refer [deref!]]))
 
 (defrecord StandaloneTransactor [tx-queue]
@@ -30,7 +30,7 @@
   [subscriptions watcher {:keys [ledger-id server tx-id commit-file-meta] :as handler-result}]
   (log/info (str "New Ledger successfully created by server " server ": " ledger-id " with tx-id: " tx-id "."))
   (watcher/deliver-watch watcher tx-id handler-result)
-  (subs/send-message-to-all subscriptions "ledger-created" ledger-id (:json commit-file-meta))
+  (subscriptions/send-message-to-all subscriptions "ledger-created" ledger-id (:json commit-file-meta))
   :success)
 
 (defn parse-opts
@@ -63,7 +63,7 @@
   [subscriptions watcher {:keys [ledger-id tx-id server commit-file-meta] :as commit-result}]
   (log/info "New transaction completed for" ledger-id "tx-id: " tx-id "by server:" server)
   (watcher/deliver-watch watcher tx-id commit-result)
-  (subs/send-message-to-all subscriptions "new-commit" ledger-id (:json commit-file-meta))
+  (subscriptions/send-message-to-all subscriptions "new-commit" ledger-id (:json commit-file-meta))
   :success)
 
 (defn transact!
