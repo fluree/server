@@ -2,6 +2,7 @@
   (:require [clojure.core.async :as async :refer [<! >! go]]
             [fluree.db.constants :as const]
             [fluree.db.api :as fluree]
+            [fluree.db.util.core :refer [get-first-value]]
             [fluree.db.util.async :refer [go-try]]
             [fluree.db.util.log :as log]
             [fluree.server.components.subscriptions :as subs]
@@ -42,11 +43,10 @@
 (defn parse-opts
   "Extract the opts from the transaction and keywordify the top level keys."
   [expanded-txn]
-  (-> expanded-txn
-      (get const/iri-opts)
-      (get 0)
-      (get "@value")
-      (->> (reduce-kv (fn [opts k v] (assoc opts (keyword k) v)) {}))))
+  (let [string-opts (get-first-value expanded-txn const/iri-opts)]
+    (reduce-kv (fn [opts k v]
+                 (assoc opts (keyword k) v))
+               {} string-opts)))
 
 (defn do-new-ledger
   [conn subscriptions watcher {:keys [ledger-id txn opts tx-id] :as _params}]
