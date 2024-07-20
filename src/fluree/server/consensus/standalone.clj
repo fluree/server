@@ -134,15 +134,10 @@
 
 (defn start
   [config]
-  (let [tx-queue (async/chan)
-        closed?  (atom false)
-        close-fn (fn []
-                   (log/info "Closing local transaction queue.")
-                   (reset! closed? true)
-                   (async/close! tx-queue))]
-
+  (let [tx-queue (async/chan)]
     (monitor-new-tx-queue config tx-queue)
+    (->StandaloneTransactor tx-queue)))
 
-    (map->StandaloneTransactor {:tx-queue tx-queue
-                                :closed?  closed?
-                                :close    close-fn})))
+(defn stop
+  [{:keys [tx-queue] :as _transactor}]
+  (async/close! tx-queue))
