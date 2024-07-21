@@ -1,5 +1,5 @@
 (ns fluree.server.consensus.raft.producers.new-commit
-  (:require [fluree.server.consensus.messages :as messages]
+  (:require [fluree.server.consensus.events :as events]
             [fluree.server.consensus.raft.participant :as participant]))
 
 (set! *warn-on-reflection* true)
@@ -11,7 +11,7 @@
 
   Returns promise that will have the eventual response once committed."
   [{:keys [consensus/raft-state] :as config} params commit-result]
-  (let [created-body (messages/transaction-committed
+  (let [created-body (events/transaction-committed
                       (participant/this-server raft-state)
                       params commit-result)]
 

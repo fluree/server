@@ -6,7 +6,6 @@
             [fluree.db.util.log :as log]
             [fluree.raft :as raft]
             [fluree.server.consensus :as consensus]
-            [fluree.server.consensus.messages :as messages]
             [fluree.server.consensus.network.multi-addr :as multi-addr]
             [fluree.server.consensus.network.tcp :as ftcp]
             [fluree.server.consensus.raft.handler :as raft-handler]

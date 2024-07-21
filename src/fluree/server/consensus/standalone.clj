@@ -6,7 +6,7 @@
             [fluree.db.util.core :refer [exception? get-first-value]]
             [fluree.db.util.log :as log]
             [fluree.server.consensus :as consensus]
-            [fluree.server.consensus.messages :as messages]
+            [fluree.server.consensus.events :as events]
             [fluree.server.handlers.shared :refer [deref!]]))
 
 (defrecord StandaloneTransactor [tx-queue]
@@ -40,7 +40,7 @@
           commit-result (deref!
                          ;; following uses :file-data? and will return map with {:keys [db data-file commit-file]}
                          (fluree/commit! ledger staged-db {:file-data? true}))
-          broadcast-msg (messages/ledger-created params commit-result)]
+          broadcast-msg (events/transaction-committed params commit-result)]
       (consensus/broadcast-new-ledger! subscriptions watcher broadcast-msg))))
 
 (defn transact!
@@ -59,7 +59,7 @@
                             deref!)
           commit-result (deref!
                          (fluree/commit! ledger staged-db {:file-data? true}))
-          broadcast-msg (messages/transaction-committed params commit-result)]
+          broadcast-msg (events/transaction-committed params commit-result)]
       (consensus/broadcast-new-commit! subscriptions watcher broadcast-msg))))
 
 (defn process-event
@@ -72,7 +72,7 @@
                          :ledger-create (create-ledger! conn subscriptions watcher event-msg)
                          :tx-queue      (transact! conn subscriptions watcher event-msg)))]
         (if (exception? result)
-          (let [error-msg (messages/error event-msg result)]
+          (let [error-msg (events/error event-msg result)]
             (consensus/broadcast-error! watcher error-msg))
           result))
       (catch Exception e

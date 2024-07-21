@@ -3,7 +3,7 @@
             [fluree.db.constants :as const]
             [fluree.db.util.log :as log]
             [fluree.raft.leader :refer [is-leader?]]
-            [fluree.server.consensus.messages :as messages]
+            [fluree.server.consensus.events :as events]
             [fluree.server.consensus.raft.participant :as participant]
             [fluree.server.consensus.raft.producers.new-index-file :as new-index-file]
             [fluree.server.handlers.shared :refer [deref!]]))
@@ -57,7 +57,7 @@
 
   Returns promise that will have the eventual response once committed."
   [{:keys [consensus/raft-state] :as config} params commit-result]
-  (let [created-body (messages/transaction-committed ; same as new-commit message
+  (let [created-body (events/transaction-committed ; same as new-commit message
                       (participant/this-server raft-state)
                       params commit-result)]
 

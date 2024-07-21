@@ -1,5 +1,5 @@
-(ns fluree.server.consensus.messages
-  "Common namespace for defining consensus messages shared across consensus
+(ns fluree.server.consensus.events
+  "Common namespace for defining consensus event messages shared across consensus
   protocols")
 
 (defn create-ledger
@@ -14,18 +14,6 @@
                    :ledger-id ledger-id
                    :opts      opts
                    :instant   (System/currentTimeMillis)}])
-
-(defn ledger-created
-  ([{:keys [ledger-id tx-id] :as _event-params}
-    commit-result]
-   (-> commit-result
-       (select-keys [:db :data-file-meta :commit-file-meta])
-       (assoc :tx-id tx-id
-              :ledger-id ledger-id
-              :t 1)))
-  ([processing-server event-params commit-result]
-   (-> (ledger-created event-params commit-result)
-       (assoc :server processing-server))))
 
 (defn commit-transaction
   "Upon receiving a request to create a new ledger, an event
