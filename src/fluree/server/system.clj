@@ -4,9 +4,9 @@
             [fluree.db.api :as fluree]
             [fluree.server.consensus.raft :as raft]
             [fluree.server.consensus.standalone :as standalone]
-            [fluree.server.handler :as handler]
             [fluree.server.consensus.subscriptions :as subscriptions]
             [fluree.server.consensus.watcher :as watcher]
+            [fluree.server.handler :as handler]
             [integrant.core :as ig]
             [meta-merge.core :refer [meta-merge]]
             [ring.adapter.jetty9 :as jetty]))

@@ -9,8 +9,8 @@
             [fluree.json-ld :as json-ld]
             [fluree.json-ld.processor.api :as jld-processor]
             [fluree.server.consensus :as consensus]
-            [fluree.server.handlers.shared :refer [defhandler deref!]]
-            [fluree.server.consensus.watcher :as watcher]))
+            [fluree.server.consensus.watcher :as watcher]
+            [fluree.server.handlers.shared :refer [defhandler deref!]]))
 
 (set! *warn-on-reflection* true)
 
