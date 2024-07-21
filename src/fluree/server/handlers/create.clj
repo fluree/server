@@ -10,7 +10,7 @@
    [fluree.server.consensus :as consensus]
    [fluree.server.handlers.shared :refer [deref! defhandler]]
    [fluree.server.handlers.transact :refer [derive-tx-id]]
-   [fluree.server.watcher :as watcher]))
+   [fluree.server.consensus.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
 

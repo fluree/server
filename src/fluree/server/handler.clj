@@ -11,7 +11,7 @@
    [fluree.server.handlers.ledger :as ledger]
    [fluree.server.handlers.remote-resource :as remote]
    [fluree.server.handlers.transact :as srv-tx]
-   [fluree.server.subscriptions :as subscriptions]
+   [fluree.server.consensus.subscriptions :as subscriptions]
    [malli.core :as m]
    [muuntaja.core :as muuntaja]
    [muuntaja.format.core :as mf]

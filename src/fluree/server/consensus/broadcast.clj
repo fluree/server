@@ -1,7 +1,7 @@
 (ns fluree.server.consensus.broadcast
   (:require [fluree.db.util.log :as log]
-            [fluree.server.subscriptions :as subscriptions]
-            [fluree.server.watcher :as watcher]))
+            [fluree.server.consensus.subscriptions :as subscriptions]
+            [fluree.server.consensus.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
 
