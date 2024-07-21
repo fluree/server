@@ -2,7 +2,7 @@
   "Common namespace for defining consensus messages shared across consensus
   protocols")
 
-(defn queue-new-ledger
+(defn create-ledger
   "Upon receiving a request to create a new ledger, an event
   message must be queued into the consensus state machine.
 
@@ -15,7 +15,7 @@
                    :opts      opts
                    :instant   (System/currentTimeMillis)}])
 
-(defn new-ledger
+(defn ledger-created
   ([{:keys [ledger-id tx-id] :as _event-params}
     commit-result]
    (-> commit-result
@@ -24,10 +24,10 @@
               :ledger-id ledger-id
               :t 1)))
   ([processing-server event-params commit-result]
-   (-> (new-ledger event-params commit-result)
+   (-> (ledger-created event-params commit-result)
        (assoc :server processing-server))))
 
-(defn queue-new-transaction
+(defn commit-transaction
   "Upon receiving a request to create a new ledger, an event
   message must be queued into the consensus state machine.
 
@@ -40,7 +40,7 @@
               :opts      opts
               :instant   (System/currentTimeMillis)}])
 
-(defn new-commit
+(defn transaction-committed
   "Post-transaction, the message we will broadcast out and/or deliver
   to a client awaiting a response."
   ([{:keys [ledger-id tx-id] :as _event-params}
@@ -53,7 +53,7 @@
     :tx-id            tx-id ;; for quickly removing from the queue
     })
   ([processing-server event-params commit-result]
-   (-> (new-commit event-params commit-result)
+   (-> (transaction-committed event-params commit-result)
        (assoc :server processing-server))))
 
 (defn error

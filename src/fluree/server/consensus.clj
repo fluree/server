@@ -16,13 +16,13 @@
 (defn queue-new-ledger
   [group ledger-id tx-id txn opts]
   (log/trace "queue-new-ledger:" ledger-id tx-id txn)
-  (let [ledger-msg (messages/queue-new-ledger ledger-id tx-id txn opts)]
+  (let [ledger-msg (messages/create-ledger ledger-id tx-id txn opts)]
     (-queue-new-ledger group ledger-msg)))
 
 (defn queue-new-transaction
   [group ledger-id tx-id txn opts]
   (log/trace "queue-new-transaction:" txn)
-  (let [txn-msg (messages/queue-new-transaction ledger-id tx-id txn opts)]
+  (let [txn-msg (messages/commit-transaction ledger-id tx-id txn opts)]
     (-queue-new-transaction group txn-msg)))
 
 (defn broadcast-new-ledger!

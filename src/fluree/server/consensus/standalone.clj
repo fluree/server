@@ -40,7 +40,7 @@
           commit-result (deref!
                          ;; following uses :file-data? and will return map with {:keys [db data-file commit-file]}
                          (fluree/commit! ledger staged-db {:file-data? true}))
-          broadcast-msg (messages/new-ledger params commit-result)]
+          broadcast-msg (messages/ledger-created params commit-result)]
       (consensus/broadcast-new-ledger! subscriptions watcher broadcast-msg))))
 
 (defn transact!
@@ -59,7 +59,7 @@
                             deref!)
           commit-result (deref!
                          (fluree/commit! ledger staged-db {:file-data? true}))
-          broadcast-msg (messages/new-commit params commit-result)]
+          broadcast-msg (messages/transaction-committed params commit-result)]
       (consensus/broadcast-new-commit! subscriptions watcher broadcast-msg))))
 
 (defn process-event

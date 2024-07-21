@@ -57,7 +57,7 @@
 
   Returns promise that will have the eventual response once committed."
   [{:keys [consensus/raft-state] :as config} params commit-result]
-  (let [created-body (messages/new-commit ;; same as new-commit message
+  (let [created-body (messages/transaction-committed ; same as new-commit message
                       (participant/this-server raft-state)
                       params commit-result)]
 

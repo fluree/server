@@ -4,7 +4,7 @@
 
 (defn consensus-push-tx-exception
   [{:keys [consensus/raft-state] :as config} params tx-exception]
-  (let [server (participant/this-server raft-state)
-        error-message (messages/error server params tx-exception)]
+  (let [server    (participant/this-server raft-state)
+        error-msg (messages/error server params tx-exception)]
     ;; returns promise
-    (participant/leader-new-command! config :tx-exception error-message)))
+    (participant/leader-new-command! config :tx-exception error-msg)))
