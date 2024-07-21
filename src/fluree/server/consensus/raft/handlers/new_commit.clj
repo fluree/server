@@ -4,7 +4,7 @@
             [fluree.db.storage :as storage]
             [fluree.db.util.async :refer [<? go-try]]
             [fluree.db.util.log :as log]
-            [fluree.server.consensus :as consensus]))
+            [fluree.server.consensus.broadcast :as broadcast]))
 
 (set! *warn-on-reflection* true)
 
@@ -85,4 +85,4 @@
 (defn broadcast!
   "Responsible for producing the event broadcast to connected peers."
   [{:keys [fluree/watcher fluree/subscriptions] :as _config} commit-result]
-  (consensus/broadcast-new-commit! subscriptions watcher commit-result))
+  (broadcast/announce-new-commit! subscriptions watcher commit-result))

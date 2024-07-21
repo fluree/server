@@ -6,6 +6,7 @@
             [fluree.db.util.core :refer [exception? get-first-value]]
             [fluree.db.util.log :as log]
             [fluree.server.consensus :as consensus]
+            [fluree.server.consensus.broadcast :as broadcast]
             [fluree.server.consensus.events :as events]
             [fluree.server.handlers.shared :refer [deref!]]))
 
@@ -41,7 +42,7 @@
                          ;; following uses :file-data? and will return map with {:keys [db data-file commit-file]}
                          (fluree/commit! ledger staged-db {:file-data? true}))
           broadcast-msg (events/transaction-committed params commit-result)]
-      (consensus/broadcast-new-ledger! subscriptions watcher broadcast-msg))))
+      (broadcast/announce-new-ledger! subscriptions watcher broadcast-msg))))
 
 (defn transact!
   [conn subscriptions watcher {:keys [ledger-id tx-id txn opts] :as params}]
@@ -60,7 +61,7 @@
           commit-result (deref!
                          (fluree/commit! ledger staged-db {:file-data? true}))
           broadcast-msg (events/transaction-committed params commit-result)]
-      (consensus/broadcast-new-commit! subscriptions watcher broadcast-msg))))
+      (broadcast/announce-new-commit! subscriptions watcher broadcast-msg))))
 
 (defn process-event
   [conn subscriptions watcher event]
@@ -73,7 +74,7 @@
                          :tx-queue      (transact! conn subscriptions watcher event-msg)))]
         (if (exception? result)
           (let [error-msg (events/error event-msg result)]
-            (consensus/broadcast-error! watcher error-msg))
+            (broadcast/announce-error! watcher error-msg))
           result))
       (catch Exception e
         (log/error "Unexpected event message - expected two-tuple of [event-type event-data], "
