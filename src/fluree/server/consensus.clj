@@ -1,5 +1,5 @@
 (ns fluree.server.consensus
-  "To allow for pluggable consensus, we have a TxGroup protocol. In order to allow
+  "To allow for pluggable consensus, we have a Transactor protocol. In order to allow
   for a new consensus type, we need to create a record with all of the following
   methods. Currently, we support Raft and Standalone."
   (:require [fluree.db.util.log :as log]
@@ -7,7 +7,7 @@
 
 (set! *warn-on-reflection* true)
 
-(defprotocol TxGroup
+(defprotocol Transactor
   (-queue-new-ledger [group event-params])
   (-queue-new-transaction [group event-params]))
 

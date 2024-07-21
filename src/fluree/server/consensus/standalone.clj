@@ -11,7 +11,7 @@
             [fluree.server.handlers.shared :refer [deref!]]))
 
 (defrecord StandaloneTransactor [tx-queue]
-  consensus/TxGroup
+  consensus/Transactor
   (-queue-new-ledger [_ ledger-msg]
     (go
       (async/offer! tx-queue ledger-msg)))

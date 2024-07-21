@@ -324,7 +324,7 @@
 
 (defrecord RaftGroup [state-atom event-chan command-chan this-server port
                       close raft raft-initialized open-api private-keys]
-  consensus/TxGroup
+  consensus/Transactor
   (-queue-new-ledger [group ledger-msg]
     (new-entry-async group ledger-msg))
   (-queue-new-transaction [group txn-msg]
