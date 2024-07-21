@@ -3,14 +3,27 @@
   for a new consensus type, we need to create a record with all of the following
   methods. Currently, we support Raft and Standalone."
   (:require [fluree.db.util.log :as log]
+            [fluree.server.consensus.messages :as messages]
             [fluree.server.subscriptions :as subscriptions]
             [fluree.server.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
 
 (defprotocol TxGroup
-  (queue-new-ledger [group ledger-id tx-id txn opts])
-  (queue-new-transaction [group ledger-id tx-id txn opts]))
+  (-queue-new-ledger [group ledger-msg])
+  (-queue-new-transaction [group txn-msg]))
+
+(defn queue-new-ledger
+  [group ledger-id tx-id txn opts]
+  (log/trace "queue-new-ledger:" ledger-id tx-id txn)
+  (let [ledger-msg (messages/queue-new-ledger ledger-id tx-id txn opts)]
+    (-queue-new-ledger group ledger-msg)))
+
+(defn queue-new-transaction
+  [group ledger-id tx-id txn opts]
+  (log/trace "queue-new-transaction:" txn)
+  (let [txn-msg (messages/queue-new-transaction ledger-id tx-id txn opts)]
+    (-queue-new-transaction group txn-msg)))
 
 (defn broadcast-new-ledger!
   [subscriptions watcher new-ledger-result]

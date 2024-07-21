@@ -11,15 +11,13 @@
 
 (defrecord StandaloneTransactor [tx-queue]
   consensus/TxGroup
-  (queue-new-ledger [_ ledger-id tx-id txn opts]
+  (-queue-new-ledger [_ ledger-msg]
     (go
-      (let [event-msg (messages/queue-new-ledger ledger-id tx-id txn opts)]
-        (async/offer! tx-queue event-msg))))
+      (async/offer! tx-queue ledger-msg)))
 
-  (queue-new-transaction [_ ledger-id tx-id txn opts]
+  (-queue-new-transaction [_ txn-msg]
     (go
-      (let [event-msg (messages/queue-new-transaction ledger-id tx-id txn opts)]
-        (async/offer! tx-queue event-msg)))))
+      (async/offer! tx-queue txn-msg))))
 
 (defn parse-opts
   "Extract the opts from the transaction and keywordify the top level keys."
