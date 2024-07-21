@@ -2,8 +2,8 @@
   (:require [clojure.core.async :as async :refer [<! go go-loop]]
             [fluree.db.api :as fluree]
             [fluree.db.constants :as const]
-            [fluree.db.util.async :refer [<? go-try]]
-            [fluree.db.util.core :refer [get-first-value]]
+            [fluree.db.util.async :refer [go-try]]
+            [fluree.db.util.core :refer [exception? get-first-value]]
             [fluree.db.util.log :as log]
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.messages :as messages]
@@ -70,10 +70,13 @@
     (try
       (let [[event-type event-msg] event
 
-            result (<? (case event-type
+            result (<! (case event-type
                          :ledger-create (create-ledger! conn subscriptions watcher event-msg)
                          :tx-queue      (transact! conn subscriptions watcher event-msg)))]
-        result)
+        (if (exception? result)
+          (let [error-msg (messages/error event-msg result)]
+            (consensus/broadcast-error! watcher error-msg))
+          result))
       (catch Exception e
         (log/error "Unexpected event message - expected two-tuple of [event-type event-data], "
                    "and of a supported event type. Received:" event e)))))
