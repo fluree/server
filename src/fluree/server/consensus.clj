@@ -8,8 +8,8 @@
 (set! *warn-on-reflection* true)
 
 (defprotocol Transactor
-  (-queue-new-ledger [group event-params])
-  (-queue-new-transaction [group event-params]))
+  (-queue-new-ledger [transactor new-ledger-params])
+  (-queue-new-transaction [transactor new-tx-params]))
 
 (defn queue-new-ledger
   [group ledger-id tx-id txn opts]
