@@ -12,11 +12,11 @@
 
 (defrecord StandaloneTransactor [tx-queue]
   consensus/Transactor
-  (-queue-new-ledger [_ ledgerevent]
-    (go (async/offer! tx-queue ledgerevent)))
+  (-queue-new-ledger [_ ledger-msg]
+    (go (async/offer! tx-queue ledger-msg)))
 
-  (-queue-new-transaction [_ txn-evt]
-    (go (async/offer! tx-queue txn-evt))))
+  (-queue-new-transaction [_ txn-msg]
+    (go (async/offer! tx-queue txn-msg))))
 
 (defn parse-opts
   "Extract the opts from the transaction and keywordify the top level keys."
@@ -39,8 +39,8 @@
           commit-result (deref!
                          ;; following uses :file-data? and will return map with {:keys [db data-file commit-file]}
                          (fluree/commit! ledger staged-db {:file-data? true}))
-          broadcast-evt (events/transaction-committed params commit-result)]
-      (broadcast/announce-new-ledger! subscriptions watcher broadcast-evt))))
+          broadcast-msg (events/transaction-committed params commit-result)]
+      (broadcast/announce-new-ledger! subscriptions watcher broadcast-msg))))
 
 (defn transact!
   [conn subscriptions watcher {:keys [ledger-id tx-id txn opts] :as params}]
@@ -58,21 +58,21 @@
                             deref!)
           commit-result (deref!
                          (fluree/commit! ledger staged-db {:file-data? true}))
-          broadcast-evt (events/transaction-committed params commit-result)]
-      (broadcast/announce-new-commit! subscriptions watcher broadcast-evt))))
+          broadcast-msg (events/transaction-committed params commit-result)]
+      (broadcast/announce-new-commit! subscriptions watcher broadcast-msg))))
 
 (defn process-event
   [conn subscriptions watcher event]
   (go
     (try
-      (let [[event-type event-evt] event
+      (let [[event-type event-msg] event
 
             result (<! (case event-type
-                         :ledger-create (create-ledger! conn subscriptions watcher event-evt)
-                         :tx-queue      (transact! conn subscriptions watcher event-evt)))]
+                         :ledger-create (create-ledger! conn subscriptions watcher event-msg)
+                         :tx-queue      (transact! conn subscriptions watcher event-msg)))]
         (if (exception? result)
-          (let [error-evt (events/error event-evt result)]
-            (broadcast/announce-error! watcher error-evt))
+          (let [error-msg (events/error event-msg result)]
+            (broadcast/announce-error! watcher error-msg))
           result))
       (catch Exception e
         (log/error "Unexpected event message - expected two-tuple of [event-type event-data], "
