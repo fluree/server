@@ -1,4 +1,4 @@
-(ns fluree.server.subscriptions
+(ns fluree.server.consensus.subscriptions
   (:require [clojure.core.async :as async]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
