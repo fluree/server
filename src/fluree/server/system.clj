@@ -53,8 +53,8 @@
   (close))
 
 (defmethod ig/init-key :fluree/standalone
-  [_ {:keys [conn subscriptions watcher]}]
-  (standalone/start conn subscriptions watcher))
+  [_ {:keys [conn subscriptions watcher max-pending-txs]}]
+  (standalone/start conn subscriptions watcher max-pending-txs))
 
 (defmethod ig/halt-key! :fluree/standalone
   [_ transactor]
