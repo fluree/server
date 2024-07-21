@@ -12,7 +12,7 @@
                    ": " ledger-id " with tx-id: " tx-id "."))
     (watcher/deliver-watch watcher tx-id ledger-created-event)
     (subscriptions/send-message-to-all subscriptions "ledger-created" ledger-id (:json commit-file-meta))
-    :success))
+    ::new-ledger))
 
 (defn announce-new-commit!
   [subscriptions watcher transaction-commited-event]
@@ -22,10 +22,11 @@
     (watcher/deliver-watch watcher tx-id transaction-commited-event)
     (subscriptions/send-message-to-all subscriptions "new-commit" ledger-id
                                        (:json commit-file-meta))
-    :success))
+    ::new-commit))
 
 (defn announce-error!
   [watcher error-event]
   (let [{:keys [tx-id ex-message ex-data]} error-event]
     (log/debug "Delivering tx-exception to watcher with msg/data: " ex-message ex-data)
-    (watcher/deliver-watch watcher tx-id (ex-info ex-message ex-data))))
+    (watcher/deliver-watch watcher tx-id (ex-info ex-message ex-data))
+    ::error))
