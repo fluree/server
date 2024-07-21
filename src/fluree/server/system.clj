@@ -3,9 +3,10 @@
             [clojure.java.io :as io]
             [fluree.db.api :as fluree]
             [fluree.server.consensus.raft :as raft]
+            [fluree.server.consensus.standalone :as standalone]
             [fluree.server.handler :as handler]
-            [fluree.server.subscriptions :as subscriptions]
-            [fluree.server.watcher :as watcher]
+            [fluree.server.consensus.subscriptions :as subscriptions]
+            [fluree.server.consensus.watcher :as watcher]
             [integrant.core :as ig]
             [meta-merge.core :refer [meta-merge]]
             [ring.adapter.jetty9 :as jetty]))
@@ -50,6 +51,14 @@
 (defmethod ig/halt-key! :fluree/raft
   [_ {:keys [close] :as _raft-group}]
   (close))
+
+(defmethod ig/init-key :fluree/standalone
+  [_ {:keys [conn subscriptions watcher max-pending-txs]}]
+  (standalone/start conn subscriptions watcher max-pending-txs))
+
+(defmethod ig/halt-key! :fluree/standalone
+  [_ transactor]
+  (standalone/stop transactor))
 
 (defmethod ig/init-key :fluree/handler
   [_ {:keys [conn consensus watcher subscriptions]}]

@@ -6,7 +6,6 @@
             [fluree.db.util.log :as log]
             [fluree.raft :as raft]
             [fluree.server.consensus :as consensus]
-            [fluree.server.consensus.msg-format :as msg-format]
             [fluree.server.consensus.network.multi-addr :as multi-addr]
             [fluree.server.consensus.network.tcp :as ftcp]
             [fluree.server.consensus.raft.handler :as raft-handler]
@@ -323,31 +322,13 @@
                  ;; send command to leader
                  (send-rpc raft leader :new-command command-data nil)))))))
 
-(defn queue-new-ledger-raft
-  "Queues a new ledger into the consensus layer for processing.
-  Returns a core async channel that will eventually contain true if successful."
-  [group ledger-id tx-id txn opts]
-  (log/debug "Consensus - queue new ledger:" ledger-id tx-id txn)
-  (new-entry-async
-   group
-   (msg-format/queue-new-ledger ledger-id tx-id txn opts)))
-
-(defn queue-new-transaction-raft
-  "Queues a new transaction into the consensus layer for processing.
-  Returns a core async channel that will eventually contain a truthy value if successful."
-  [group ledger-id tx-id txn opts]
-  (log/trace "queue-new-transaction txn:" txn)
-  (new-entry-async
-   group
-   (msg-format/queue-new-transaction ledger-id tx-id txn opts)))
-
 (defrecord RaftGroup [state-atom event-chan command-chan this-server port
                       close raft raft-initialized open-api private-keys]
-  consensus/TxGroup
-  (queue-new-ledger [group ledger-id tx-id txn opts]
-    (queue-new-ledger-raft group ledger-id tx-id txn opts))
-  (queue-new-transaction [group ledger-id tx-id txn opts]
-    (queue-new-transaction-raft group ledger-id tx-id txn opts)))
+  consensus/Transactor
+  (-queue-new-ledger [group ledger-msg]
+    (new-entry-async group ledger-msg))
+  (-queue-new-transaction [group txn-msg]
+    (new-entry-async group txn-msg)))
 
 (defn leader-change-fn
   "Function called every time there is a leader change to provide any extra

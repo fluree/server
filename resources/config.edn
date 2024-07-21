@@ -21,38 +21,18 @@
                      :defaults       {:indexer {:reindex-min-bytes 1000
                                                 :reindex-max-bytes 10000000}}}
 
- :fluree/watcher {:max-tx-wait-ms #or [#env FLUREE_HTTP_MAX_TX_WAIT_MS
+ :fluree/watcher {:max-tx-wait-ms #or [#env FLUREE_MAX_TX_WAIT_MS
                                        #profile {:dev    45000
                                                  :prod   45000
                                                  :docker 45000}]}
 
  :fluree/subscriptions {}
 
- :fluree/standalone {:address #or [#env FLUREE_STANDALONE_ADDRESS
-                                   #profile {:dev    "/ip4/127.0.0.1/tcp/62071"
-                                             :prod   nil
-                                             :docker "/ip4/127.0.0.1/tcp/62071"}]}}
- :fluree/raft {:log-history      #or [#env FLUREE_RAFT_LOG_HISTORY
-                                      10]
-               :entries-max      #or [#env FLUREE_RAFT_ENTRIES_MAX
-                                      50]
-               :catch-up-rounds  #or [#env FLUREE_RAFT_CATCH_UP_ROUNDS
-                                      10]
-               :storage-type     #or [#keyword #env FLUREE_RAFT_STORAGE_TYPE
-                                      :file]
-               :servers          #or [#env FLUREE_RAFT_SERVERS
-                                      #profile {:dev    "/ip4/127.0.0.1/tcp/62071"
-                                                :prod   nil
-                                                :docker "/ip4/127.0.0.1/tcp/62071"}]
-               :this-server      #or [#env FLUREE_RAFT_THIS_SERVER
-                                      #profile {:dev    "/ip4/127.0.0.1/tcp/62071"
-                                                :prod   nil
-                                                :docker "/ip4/127.0.0.1/tcp/62071"}]
-               :log-directory    #env FLUREE_RAFT_LOG_DIRECTORY
-               :ledger-directory #env FLUREE_RAFT_LEDGER_DIRECTORY
-               :conn             #ig/ref :fluree/connection
-               :watcher          #ig/ref :fluree/watcher
-               :subscriptions    #ig/ref :fluree/subscriptions}
+ :fluree/standalone {:conn            #ig/ref :fluree/connection
+                     :watcher         #ig/ref :fluree/watcher
+                     :subscriptions   #ig/ref :fluree/subscriptions
+                     :max-pending-txs #or [#env FLUREE_STANDALONE_MAX_PENDING_TXS
+                                           16]}
 
  :fluree/handler {:conn          #ig/ref :fluree/connection
                   :consensus     #ig/ref :fluree/consensus
