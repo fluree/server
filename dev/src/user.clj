@@ -7,6 +7,8 @@
             [clojure.java.io :as io]
             [fluree.server.system :as system]
             [fluree.db.util.log :as log]
+            [aero.core :as aero]
+            [meta-merge.core :refer [meta-merge]]
             [integrant.core :as ig]
             [integrant.repl :refer [clear go halt init reset reset-all]]))
 
@@ -39,3 +41,31 @@
    :fluree/connection {:method :remote
                        :servers "http://localhost:58090"}
    :fluree/consensus {:consensus-type :none}})
+
+(defn load-config
+  "Loads aero config at given file path using profile keyword."
+  [config-file profile]
+  (-> config-file
+      io/resource
+      (aero/read-config {:profile profile})))
+
+(defn dev-config
+  []
+  (ig/expand
+   (load-config "config.edn" :dev)))
+
+;; register dev-config as default
+(integrant.repl/set-prep! dev-config)
+
+
+(defn start!
+  "Starts dev repl"
+  []
+  (go))
+
+(comment
+
+ (start!)
+
+
+ )
