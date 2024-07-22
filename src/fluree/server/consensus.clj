@@ -12,13 +12,13 @@
   (-queue-new-transaction [transactor new-tx-params]))
 
 (defn queue-new-ledger
-  [group ledger-id tx-id txn opts]
+  [transactor ledger-id tx-id txn opts]
   (log/trace "queue-new-ledger:" ledger-id tx-id txn)
   (let [event-params (events/create-ledger ledger-id tx-id txn opts)]
-    (-queue-new-ledger group event-params)))
+    (-queue-new-ledger transactor event-params)))
 
 (defn queue-new-transaction
-  [group ledger-id tx-id txn opts]
+  [transactor ledger-id tx-id txn opts]
   (log/trace "queue-new-transaction:" txn)
   (let [event-params (events/commit-transaction ledger-id tx-id txn opts)]
-    (-queue-new-transaction group event-params)))
+    (-queue-new-transaction transactor event-params)))
