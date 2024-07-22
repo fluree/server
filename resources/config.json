@@ -1,17 +1,19 @@
 {
   "fluree": {
     "connection": {
-      "remoteServers": "http://127.0.0.1:58090"
+      "remoteServers": ["http://127.0.0.1:58090"]
     },
     "consensus": {
-      "type": "raft",
+      "protocol": "raft",
       "logHistory": 10
     }
   },
   "http": {
-    "port": 8090
+    "server": "jetty",
+    "port": 8090,
+    "maxTxnWaitMs": 4500
   },
-  "profile": {
+  "profiles": {
     "dev": {
       "http": {
         "port": 58090
