@@ -28,6 +28,8 @@
        (dissoc :profiles)))
 
   ([resource-name profile]
-   (-> resource-name
-       read-resource
-       (update :profiles get profile))))
+   (let [config    (read-resource resource-name)
+         overrides (get-in config [:profiles profile])]
+     (-> config
+         (dissoc :profiles)
+         (deep-merge overrides)))))
