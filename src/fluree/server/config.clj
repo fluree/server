@@ -4,6 +4,16 @@
             [fluree.db.util.json :as json]
             [malli.core :as m]))
 
+(defn deep-merge
+  ([x y]
+   (if (and (map? x) (map? y))
+     (merge-with deep-merge x y)
+     (if (some? y)
+       y
+       x)))
+  ([x y & more]
+   (reduce deep-merge x (cons y more))))
+
 (defn read-resource
   [resource-name]
   (-> resource-name
