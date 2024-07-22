@@ -1,8 +1,4 @@
-{:fluree/connection {:remote-servers #or [#env FLUREE_REMOTE_SERVERS
-                                          #profile {:dev    "http://127.0.0.1:58090"
-                                                    :prod   nil
-                                                    :docker nil}]
-                     :method         #or [#env FLUREE_STORAGE_METHOD
+{:fluree/connection {:method         #or [#env FLUREE_STORAGE_METHOD
                                           #profile {:dev    :file
                                                     :prod   :file
                                                     :docker :file}]
