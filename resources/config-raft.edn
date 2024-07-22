@@ -4,7 +4,7 @@
                                       50]
                :catch-up-rounds  #or [#env FLUREE_RAFT_CATCH_UP_ROUNDS
                                       10]
-               :storage-type     #or [#keyword #env FLUREE_RAFT_STORAGE_TYPE
+               :storage-type     #keyword #or [#env FLUREE_RAFT_STORAGE_TYPE
                                       :file]
                :servers          #or [#env FLUREE_RAFT_SERVERS
                                       #profile {:dev    "/ip4/127.0.0.1/tcp/62071"
