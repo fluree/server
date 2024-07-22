@@ -60,8 +60,9 @@
 
 (defn start!
   "Starts dev repl"
-  []
-  (go))
+  ([] (go))
+  ([overrides]
+   (go (meta-merge overrides))))
 
 (comment
 
