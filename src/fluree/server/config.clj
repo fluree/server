@@ -4,7 +4,7 @@
             [fluree.db.util.json :as json]
             [malli.core :as m]))
 
-(defn load-resource*
+(defn read-resource
   [resource-name]
   (-> resource-name
       io/resource
@@ -14,10 +14,10 @@
 (defn load-resource
   ([resource-name]
    (-> resource-name
-       load-resource*
-       (dissoc :profile)))
+       read-resource
+       (dissoc :profiles)))
 
   ([resource-name profile]
    (-> resource-name
-       load-resource*
-       (update :profile get profile))))
+       read-resource
+       (update :profiles get profile))))
