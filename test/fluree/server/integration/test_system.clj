@@ -58,7 +58,7 @@
   [run-tests]
   (set-server-ports)
   (let [config-overrides {:http/jetty        {:port @api-port}
-                          :fluree/watcher    {:max-tx-wait-ms 45000}
+                          :fluree/watcher    {:max-txn-wait-ms 45000}
                           :fluree/connection {:method       :memory
                                               :parallelism  1
                                               :cache-max-mb 100}}

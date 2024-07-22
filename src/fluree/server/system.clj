@@ -37,8 +37,8 @@
   (subscriptions/close subs))
 
 (defmethod ig/init-key :fluree/watcher
-  [_ {:keys [max-tx-wait-ms]}]
-  (watcher/watch max-tx-wait-ms))
+  [_ {:keys [max-txn-wait-ms]}]
+  (watcher/watch max-txn-wait-ms))
 
 (defmethod ig/halt-key! :fluree/watcher
   [_ watcher]
@@ -53,8 +53,8 @@
   (close))
 
 (defmethod ig/init-key :fluree/standalone
-  [_ {:keys [conn subscriptions watcher max-pending-txs]}]
-  (standalone/start conn subscriptions watcher max-pending-txs))
+  [_ {:keys [conn subscriptions watcher max-pending-txns]}]
+  (standalone/start conn subscriptions watcher max-pending-txns))
 
 (defmethod ig/halt-key! :fluree/standalone
   [_ transactor]
