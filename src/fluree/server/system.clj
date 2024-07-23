@@ -1,28 +1,49 @@
 (ns fluree.server.system
-  (:require [aero.core :as aero]
-            [clojure.java.io :as io]
-            [fluree.db.api :as fluree]
+  (:require [fluree.db.api :as fluree]
+            [fluree.server.config :as config]
             [fluree.server.consensus.raft :as raft]
             [fluree.server.consensus.standalone :as standalone]
             [fluree.server.consensus.subscriptions :as subscriptions]
             [fluree.server.consensus.watcher :as watcher]
             [fluree.server.handler :as handler]
             [integrant.core :as ig]
-            [meta-merge.core :refer [meta-merge]]
             [ring.adapter.jetty9 :as jetty]))
 
 (set! *warn-on-reflection* true)
 
-(def default-resource-name "config.edn")
-
-(defmethod aero/reader 'ig/ref
-  [_ _ ref-key]
-  (ig/ref ref-key))
+(def default-resource-name "config.json")
 
 (derive :fluree/raft :fluree/consensus)
 (derive :fluree/standalone :fluree/consensus)
-
 (derive :http/jetty :http/server)
+
+(defmethod ig/expand-key :connection
+  [_ config]
+  {:fluree/connection config})
+
+(defmethod ig/expand-key :consensus
+  [_ config]
+  (let [consensus-key    (keyword "fluree" (-> config :protocol name))
+        consensus-config (-> config
+                             (dissoc :protocol)
+                             (assoc :conn (ig/ref :fluree/connection)
+                                    :watcher (ig/ref :fluree/watcher)
+                                    :subscriptions (ig/ref :fluree/subscriptions)))]
+    {consensus-key         consensus-config
+     :fluree/subscriptions {}}))
+
+(defmethod ig/expand-key :http
+  [_ {:keys [server max-txn-wait-ms] :as config :or {server :jetty}}]
+  (let [http-key    (keyword "http" (name server))
+        http-config (-> config
+                        (dissoc :server :max-txn-wait-ms)
+                        (assoc :handler (ig/ref :fluree/handler)))]
+    {http-key        http-config
+     :fluree/watcher {:max-txn-wait-ms max-txn-wait-ms}
+     :fluree/handler {:conn          (ig/ref :fluree/connection)
+                      :consensus     (ig/ref :fluree/consensus)
+                      :watcher       (ig/ref :fluree/watcher)
+                      :subscriptions (ig/ref :fluree/subscriptions)}}))
 
 (defmethod ig/init-key :fluree/connection
   [_ config]
@@ -72,24 +93,14 @@
   [_ http-server]
   (jetty/stop-server http-server))
 
-(defn start-config
-  ([config]
-   (start-config config {}))
-  ([config overrides]
-   (-> config
-       (meta-merge overrides)
-       ig/init)))
-
 (defn start-resource
   ([resource-name]
    (start-resource resource-name :prod))
   ([resource-name profile]
-   (start-resource resource-name profile {}))
-  ([resource-name profile overrides]
    (-> resource-name
-       io/resource
-       (aero/read-config {:profile profile})
-       (start-config overrides))))
+       (config/load-resource profile)
+       ig/expand
+       ig/init)))
 
 (def start
   (partial start-resource default-resource-name))
