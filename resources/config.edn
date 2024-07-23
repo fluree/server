@@ -14,8 +14,8 @@
                                           #profile {:dev    100
                                                     :prod   1000
                                                     :docker 1000}]
-                     :defaults       {:indexer {:reindex-min-bytes 1000
-                                                :reindex-max-bytes 10000000}}}
+                     :defaults       {:indexer {:reindex-min-bytes 100000 ; 100KB
+                                                :reindex-max-bytes 50000000}}} ; 50MB
 
  :fluree/watcher {:max-tx-wait-ms #or [#env FLUREE_MAX_TX_WAIT_MS
                                        #profile {:dev    45000
