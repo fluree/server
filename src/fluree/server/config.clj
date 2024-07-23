@@ -78,13 +78,18 @@
                [:http ::http]]}))
 
 (def env-template
-  {:connection {:remote-servers "FLUREE_REMOTE_SERVERS"
-                :storage-method "FLUREE_STORAGE_METHOD"
+  {:connection {:storage-method "FLUREE_STORAGE_METHOD"
                 :parallelism    "FLUREE_CONNECTION_PARALLELISM"
-                :storage-path   "FLUREE_STORAGE_PATH"
                 :cache-max-mb   "FLUREE_CACHE_MAX_MB"
+                :storage-path   "FLUREE_STORAGE_PATH"
+                :remote-servers "FLUREE_REMOTE_SERVERS"
+                :ipfs-server    "FLUREE_IPFS_SERVER"
+                :s3-endpoint    "FLUREE_S3_ENDPOINT"
+                :s3-bucket      "FLUREE_S3_BUCKET"
+                :s3-prefix      "FLUREE_S3_PREFIX"
                 :defaults       {:index {:reindex-max-bytes "FLUREE_REINDEX_MAX_BYTES"
-                                         :reindex-min-bytes "FLUREE_REINDEX_MIN_BYTES"}}}
+                                         :reindex-min-bytes "FLUREE_REINDEX_MIN_BYTES"}
+                                 :did   "FLUREE_DEFAULT_DID"}}
    :consensus  {:protocol         "FLUREE_CONSENSUS_PROTOCOL"
                 :max-pending-txns "FLUREE_STANDALONE_MAX_PENDING_TXNS"
                 :log-history      "FLUREE_RAFT_LOG_HISTORY"
