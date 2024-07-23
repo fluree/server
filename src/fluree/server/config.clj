@@ -3,8 +3,79 @@
             [clojure.java.io :as io]
             [clojure.walk :as walk]
             [fluree.db.util.json :as json]
-            [malli.core :as m]))
+            [malli.core :as m]
+            [malli.transform :as transform]))
 
+(def registry
+  (merge
+    (m/predicate-schemas)
+    (m/class-schemas)
+    (m/comparator-schemas)
+    (m/type-schemas)
+    (m/sequence-schemas)
+    (m/base-schemas)
+    {::path string?
+     ::server-address string?
+     ::connection-storage-method [:enum {:decode/config keyword}
+                                  :ipfs :file :memory :s3 :remote]
+     ::indexing-options [:map
+                         [:reindex-min-bytes pos-int?]
+                         [:reindex-max-bytes pos-int?]]
+     ::connection-defaults [:map
+                            [:index ::indexing-options]
+                            [:did :string]]
+     ::file-connection [:map [:storage-path ::path]]
+     ::memory-connection [:map]
+     ::ipfs-connection [:map [:ipfs-server ::server-address]]
+     ::remote-connection [:map [:remote-servers [:sequential ::server-address]]]
+     ::s3-connection [:map
+                      [:s3-endpoint :string]
+                      [:s3-bucket :string]
+                      [:s3-prefix :string]]
+     ::connection [:and
+                   [:map
+                    [:storage-method ::connection-storage-method]
+                    [:parallelism pos-int?]
+                    [:cache-max-mb pos-int?]
+                    [:defaults ::connection-defaults]]
+                   [:multi {:dispatch :storage-method}
+                    [:file ::file-connection]
+                    [:memory ::memory-connection]
+                    [:ipfs ::ipfs-connection]
+                    [:remote ::remote-connection]
+                    [:s3 ::s3-connection]]]
+     ::consensus-protocol [:enum {:decode/config keyword}
+                           :raft :standalone]
+     ::raft [:map
+             [:log-history pos-int?]
+             [:entries-max pos-int?]
+             [:catch-up-rounds pos-int?]
+             [:servers [:sequential ::server-address]]
+             [:this-server ::server-address]
+             [:log-directory ::path]
+             [:ledger-directory ::path]]
+     ::standalone [:map [:max-pending-txns pos-int?]]
+     ::consensus [:and
+                  [:map [:protocol ::consensus-protocol]]
+                  [:multi {:dispatch :protocol}
+                   [:raft ::raft]
+                   [:standalone ::standalone]]]
+     ::http-server [:enum {:decode/config keyword}
+                    :jetty]
+     ::http-port pos-int?
+     ::max-txn-wait-ms pos-int?
+     ::jetty [:map [:server ::http-server]]
+     ::http [:and
+             [:map
+              [:server ::http-server]
+              [:port ::http-port]
+              [:max-txn-wait-ms ::max-txn-wait-ms]]
+             [:multi {:dispatch :server}
+              [:jetty ::jetty]]]
+     ::config [:map {:closed true}
+               [:connection ::connection]
+               [:consensus ::consensus]
+               [:http ::http]]}))
 
 (def env-template
   {:connection {:remote-servers "FLUREE_REMOTE_SERVERS"
