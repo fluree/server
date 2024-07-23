@@ -10,3 +10,4 @@
 !/.clj-kondo/config.edn
 !/.clj-kondo/ci-config.edn
 /.lsp/
+/dev/data/*

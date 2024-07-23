@@ -7,7 +7,7 @@
                                                     :prod   4
                                                     :docker 4}]
                      :storage-path   #or [#env FLUREE_STORAGE_PATH
-                                          #profile {:dev    "data"
+                                          #profile {:dev    "dev/data"
                                                     :prod   "data"
                                                     :docker "data"}]
                      :cache-max-mb   #or [#env FLUREE_CACHE_MAX_MB ;; integer, in MB
