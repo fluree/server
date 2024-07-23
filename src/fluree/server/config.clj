@@ -7,25 +7,26 @@
 
 
 (def env-template
-  {:fluree {:connection {:remote-servers "FLUREE_REMOTE_SERVERS"
-                         :storage-method "FLUREE_STORAGE_METHOD"
-                         :parallelism    "FLUREE_CONNECTION_PARALLELISM"
-                         :storage-path   "FLUREE_STORAGE_PATH"
-                         :cache-max-mb   "FLUREE_CACHE_MAX_MB"
-                         :defaults       {:index {:reindex-max-bytes "FLUREE_REINDEX_MAX_BYTES"
-                                                  :reindex-min-bytes "FLUREE_REINDEX_MIN_BYTES"}}}
-            :consensus  {:protocol         "FLUREE_CONSENSUS_PROTOCOL"
-                         :max-pending-txns "FLUREE_STANDALONE_MAX_PENDING_TXNS"
-                         :log-history      "FLUREE_RAFT_LOG_HISTORY"
-                         :entries-max      "FLUREE_RAFT_ENTRIES_MAX"
-                         :catch-up-rounds  "FLUREE_RAFT_CATCH_UP_ROUNDS"
-                         :storage-type     "FLUREE_RAFT_STORAGE_TYPE"
-                         :servers          "FLUREE_RAFT_SERVERS"
-                         :this-server      "FLUREE_RAFT_THIS_SERVER"
-                         :log-directory    "FLUREE_RAFT_LOG_DIRECTORY"
-                         :ledger-directory "FLUREE_RAFT_LEDGER_DIRECTORY"}}
-   :http   {:server "FLUREE_HTTP_SERVER"
-            :port   "FLUREE_HTTP_API_PORT"}})
+  {:connection {:remote-servers "FLUREE_REMOTE_SERVERS"
+                :storage-method "FLUREE_STORAGE_METHOD"
+                :parallelism    "FLUREE_CONNECTION_PARALLELISM"
+                :storage-path   "FLUREE_STORAGE_PATH"
+                :cache-max-mb   "FLUREE_CACHE_MAX_MB"
+                :defaults       {:index {:reindex-max-bytes "FLUREE_REINDEX_MAX_BYTES"
+                                         :reindex-min-bytes "FLUREE_REINDEX_MIN_BYTES"}}}
+   :consensus  {:protocol         "FLUREE_CONSENSUS_PROTOCOL"
+                :max-pending-txns "FLUREE_STANDALONE_MAX_PENDING_TXNS"
+                :log-history      "FLUREE_RAFT_LOG_HISTORY"
+                :entries-max      "FLUREE_RAFT_ENTRIES_MAX"
+                :catch-up-rounds  "FLUREE_RAFT_CATCH_UP_ROUNDS"
+                :storage-type     "FLUREE_RAFT_STORAGE_TYPE"
+                :servers          "FLUREE_RAFT_SERVERS"
+                :this-server      "FLUREE_RAFT_THIS_SERVER"
+                :log-directory    "FLUREE_RAFT_LOG_DIRECTORY"
+                :ledger-directory "FLUREE_RAFT_LEDGER_DIRECTORY"}
+   :http       {:server          "FLUREE_HTTP_SERVER"
+                :port            "FLUREE_HTTP_API_PORT"
+                :max-txn-wait-ms "FLUREE_HTTP_MAX_TXN_WAIT_MS"}})
 
 (defn env-config
   []
@@ -34,7 +35,8 @@
                          (map-entry? x) (when (some? (val x))
                                           x)
                          (coll? x)      (->> x
-                                             (into (empty x) (remove nil?))
+                                             (remove nil?)
+                                             (into (empty x))
                                              not-empty)
                          :else          x))
                  env-template))
