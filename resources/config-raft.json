@@ -1,0 +1,13 @@
+{
+  "consensus": {
+    "protocol": "raft",
+    "logHistory": 10,
+    "entriesMax": 50,
+    "catchUpRounds": 10,
+    "storageType": "file",
+    "servers": "/ip4/127.0.0.1/tcp/62071",
+    "this-server": "/ip4/127.0.0.1/tcp/62071",
+    "log-directory": "data/raft",
+    "ledger-directory": "data/ledger"
+  }
+}
