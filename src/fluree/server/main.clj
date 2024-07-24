@@ -7,7 +7,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def options
+(def cli-options
   [["-p" "--profile PROFILE" "Run profile"
     :parse-fn keyword]
    ["-c" "--config FILE" "Configuration file path"]
@@ -30,7 +30,7 @@
   (System/exit status))
 
 (defn start-server
-  [{:keys [profile] :as _options}]
+  [{:keys [profile] :as options}]
   (if-let [config-path (:config options)]
     (do (log/info "Starting Fluree server configuration at path:" config-path
                   "with profile:" profile)
@@ -40,7 +40,7 @@
 
 (defn -main
   [& args]
-  (let [{:keys [options errors summary]} (cli/parse-opts args options)]
+  (let [{:keys [options errors summary]} (cli/parse-opts args cli-options)]
     (cond (seq errors)
           (let [msg (error-message errors)]
             (exit 1 msg))
