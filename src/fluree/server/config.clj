@@ -16,7 +16,7 @@
     (m/base-schemas)
     {::path string?
      ::server-address string?
-     ::connection-storage-method [:enum {:decode/config keyword}
+     ::connection-storage-method [:enum
                                   :ipfs :file :memory :s3 :remote]
      ::indexing-options [:map
                          [:reindex-min-bytes {:optional true} pos-int?]
@@ -44,7 +44,7 @@
                     [:ipfs ::ipfs-connection]
                     [:remote ::remote-connection]
                     [:s3 ::s3-connection]]]
-     ::consensus-protocol [:enum {:decode/config keyword}
+     ::consensus-protocol [:enum
                            :raft :standalone]
      ::raft [:map
              [:log-history {:optional true} pos-int?]
@@ -60,7 +60,7 @@
                   [:multi {:dispatch :protocol}
                    [:raft ::raft]
                    [:standalone ::standalone]]]
-     ::http-server [:enum {:decode/config keyword}
+     ::http-server [:enum
                     :jetty]
      ::http-port pos-int?
      ::max-txn-wait-ms pos-int?
