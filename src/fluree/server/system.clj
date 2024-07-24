@@ -46,8 +46,11 @@
                       :subscriptions (ig/ref :fluree/subscriptions)}}))
 
 (defmethod ig/init-key :fluree/connection
-  [_ config]
-  @(fluree/connect config))
+  [_ {:keys [storage-method] :as config}]
+  (let [config* (-> config
+                    (assoc :method storage-method)
+                    (dissoc :storage-method))]
+    @(fluree/connect config*)))
 
 (defmethod ig/init-key :fluree/subscriptions
   [_ _]
