@@ -1,13 +1,46 @@
 {
+  "connection": {
+    "storageMethod": "file",
+    "parallelism": 4,
+    "storagePath": "dev/data/raft",
+    "cacheMaxMb": 1000,
+    "defaults": {
+      "index": {
+        "reindexMinBytes": 100000,
+        "reindexMaxBytes": 10000000
+      }
+    }
+  },
   "consensus": {
     "protocol": "raft",
     "logHistory": 10,
-    "entriesMax": 50,
+    "entriesMax": 200,
     "catchUpRounds": 10,
-    "storageType": "file",
-    "servers": "/ip4/127.0.0.1/tcp/62071",
-    "this-server": "/ip4/127.0.0.1/tcp/62071",
-    "log-directory": "data/raft",
-    "ledger-directory": "data/ledger"
+    "servers": [
+      "/ip4/127.0.0.1/tcp/62071"
+    ],
+    "thisServer": "/ip4/127.0.0.1/tcp/62071",
+    "logDirectory": "data/raftlog",
+    "ledgerDirectory": "data"
+  },
+  "http": {
+    "server": "jetty",
+    "port": 8090,
+    "maxTxnWaitMs": 120000
+  },
+  "profiles": {
+    "dev": {
+      "connection": {
+        "storagePath": "dev/data/raft",
+        "cacheMaxMb": 200
+      },
+      "consensus": {
+        "logDirectory": "dev/data/raft/raftlog",
+        "ledgerDirectory": "dev/data/raft"
+      },
+      "http": {
+        "port": 58090
+      }
+    }
   }
 }
