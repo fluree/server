@@ -135,7 +135,7 @@
 
 (defn with-ns
   [k]
-  (keyword *ns* (name k)))
+  (keyword "fluree.server.config" (name k)))
 
 (defn with-namespaced-keys
   [cfg]
