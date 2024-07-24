@@ -17,6 +17,7 @@
         org.xerial.snappy/snappy-java {:mvn/version "1.1.10.5"}
 
         ;; config
+        org.clojure/tools.cli               {:mvn/version "1.1.230"}
         camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
 
         ;; logging
