@@ -20,7 +20,8 @@
                                  :ipfs :file :memory :s3 :remote]
     ::indexing-options [:map
                         [:reindex-min-bytes {:optional true} pos-int?]
-                        [:reindex-max-bytes {:optional true} pos-int?]]
+                        [:reindex-max-bytes {:optional true} pos-int?]
+                        [:max-old-indexes {:optional true} pos-int?]]
     ::connection-defaults [:map
                            [:index {:optional true} ::indexing-options]
                            [:did {:optional true} :string]]
@@ -91,7 +92,8 @@
                 :s3-bucket      "FLUREE_S3_BUCKET"
                 :s3-prefix      "FLUREE_S3_PREFIX"
                 :defaults       {:index {:reindex-max-bytes "FLUREE_REINDEX_MAX_BYTES"
-                                         :reindex-min-bytes "FLUREE_REINDEX_MIN_BYTES"}
+                                         :reindex-min-bytes "FLUREE_REINDEX_MIN_BYTES"
+                                         :max-old-indexes   "FLUREE_MAX_OLD_INDEXES"}
                                  :did   "FLUREE_DEFAULT_DID"}}
    :consensus  {:protocol         "FLUREE_CONSENSUS_PROTOCOL"
                 :max-pending-txns "FLUREE_STANDALONE_MAX_PENDING_TXNS"
