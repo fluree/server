@@ -77,6 +77,9 @@
                [:consensus ::consensus]
                [:http ::http]]}))
 
+(def coerce
+  (m/coercer ::config transform/string-transformer {:registry registry}))
+
 (def env-template
   {:connection {:storage-method "FLUREE_STORAGE_METHOD"
                 :parallelism    "FLUREE_CONNECTION_PARALLELISM"
@@ -144,4 +147,5 @@
          env-overrides     (env-config)]
      (-> config
          (dissoc :profiles)
-         (deep-merge profile-overrides env-overrides)))))
+         (deep-merge profile-overrides env-overrides)
+         coerce))))
