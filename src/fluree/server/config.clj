@@ -22,7 +22,7 @@
     ::indexing-options [:map
                         [:reindex-min-bytes {:optional true} pos-int?]
                         [:reindex-max-bytes {:optional true} pos-int?]
-                        [:max-old-indexes {:optional true} pos-int?]]
+                        [:max-old-indexes {:optional true} nat-int?]]
     ::connection-defaults [:map
                            [:index {:optional true} ::indexing-options]
                            [:did {:optional true} :string]]
