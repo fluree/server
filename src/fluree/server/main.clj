@@ -1,6 +1,6 @@
 (ns fluree.server.main
-  (:require [clojure.tools.cli :as cli]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
+            [clojure.tools.cli :as cli]
             [fluree.db.util.log :as log]
             [fluree.server.system :as system])
   (:gen-class))
