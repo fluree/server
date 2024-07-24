@@ -19,12 +19,12 @@
      ::connection-storage-method [:enum {:decode/config keyword}
                                   :ipfs :file :memory :s3 :remote]
      ::indexing-options [:map
-                         [:reindex-min-bytes pos-int?]
-                         [:reindex-max-bytes pos-int?]]
+                         [:reindex-min-bytes {:optional true} pos-int?]
+                         [:reindex-max-bytes {:optional true} pos-int?]]
      ::connection-defaults [:map
-                            [:index ::indexing-options]
-                            [:did :string]]
-     ::file-connection [:map [:storage-path ::path]]
+                            [:index {:optional true} ::indexing-options]
+                            [:did {:optional true} :string]]
+     ::file-connection [:map [:storage-path {:optional true} ::path]]
      ::memory-connection [:map]
      ::ipfs-connection [:map [:ipfs-server ::server-address]]
      ::remote-connection [:map [:remote-servers [:sequential ::server-address]]]
@@ -35,9 +35,9 @@
      ::connection [:and
                    [:map
                     [:storage-method ::connection-storage-method]
-                    [:parallelism pos-int?]
-                    [:cache-max-mb pos-int?]
-                    [:defaults ::connection-defaults]]
+                    [:parallelism {:optional true} pos-int?]
+                    [:cache-max-mb {:optional true} pos-int?]
+                    [:defaults {:optional true} ::connection-defaults]]
                    [:multi {:dispatch :storage-method}
                     [:file ::file-connection]
                     [:memory ::memory-connection]
@@ -47,14 +47,14 @@
      ::consensus-protocol [:enum {:decode/config keyword}
                            :raft :standalone]
      ::raft [:map
-             [:log-history pos-int?]
-             [:entries-max pos-int?]
-             [:catch-up-rounds pos-int?]
+             [:log-history {:optional true} pos-int?]
+             [:entries-max {:optional true} pos-int?]
+             [:catch-up-rounds {:optional true} pos-int?]
              [:servers [:sequential ::server-address]]
              [:this-server ::server-address]
-             [:log-directory ::path]
+             [:log-directory {:optional true} ::path]
              [:ledger-directory ::path]]
-     ::standalone [:map [:max-pending-txns pos-int?]]
+     ::standalone [:map [:max-pending-txns {:optional true} pos-int?]]
      ::consensus [:and
                   [:map [:protocol ::consensus-protocol]]
                   [:multi {:dispatch :protocol}
@@ -69,7 +69,7 @@
              [:map
               [:server ::http-server]
               [:port ::http-port]
-              [:max-txn-wait-ms ::max-txn-wait-ms]]
+              [:max-txn-wait-ms {:optional true} ::max-txn-wait-ms]]
              [:multi {:dispatch :server}
               [:jetty ::jetty]]]
      ::config [:map {:closed true}
