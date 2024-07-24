@@ -1,40 +1,40 @@
-{:deps  {org.clojure/clojure            {:mvn/version "1.11.3"}
-         org.clojure/core.async         {:mvn/version "1.6.681"}
-         com.fluree/db                  {:git/url "https://github.com/fluree/db.git"
-                                         :git/sha "6bfc29a51da22dad60352a3e03b1588ce25c121f"}
-         com.fluree/json-ld             {:git/url "https://github.com/fluree/json-ld.git"
-                                         :git/sha "0958995acf5540271d1807fc6d8f2da131164e24"}
+{:deps {org.clojure/clojure    {:mvn/version "1.11.3"}
+        org.clojure/core.async {:mvn/version "1.6.681"}
+        com.fluree/db          {:git/url "https://github.com/fluree/db.git"
+                                :git/sha "fd294a379da36a9abd606a05864015e0b6051a1d"}
+        com.fluree/json-ld     {:git/url "https://github.com/fluree/json-ld.git"
+                                :git/sha "0958995acf5540271d1807fc6d8f2da131164e24"}
 
-         integrant/integrant            {:mvn/version "0.10.0"}
+        integrant/integrant {:mvn/version "0.10.0"}
 
-         ;; network, consensus
-         com.github.fluree/raft         {:git/tag "v1.0.0-beta2"
-                                         :git/sha "0fa1f90"}
-         net.async/async                {:mvn/version "0.1.1"}
+        ;; network, consensus
+        com.github.fluree/raft {:git/tag "v1.0.0-beta2"
+                                :git/sha "0fa1f90"}
+        net.async/async        {:mvn/version "0.1.1"}
 
-         ;; serialization, compression
-         com.taoensso/nippy             {:mvn/version "3.4.0"}
-         org.xerial.snappy/snappy-java  {:mvn/version "1.1.10.5"}
+        ;; serialization, compression
+        com.taoensso/nippy            {:mvn/version "3.4.0"}
+        org.xerial.snappy/snappy-java {:mvn/version "1.1.10.5"}
 
-         ;; config
-         aero/aero                      {:mvn/version "1.1.6"}
-         meta-merge/meta-merge          {:mvn/version "1.0.0"}
+        ;; config
+        org.clojure/tools.cli               {:mvn/version "1.1.230"}
+        camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
 
-         ;; logging
-         ch.qos.logback/logback-classic {:mvn/version "1.5.6"}
-         org.slf4j/slf4j-api            {:mvn/version "2.0.13"}
+        ;; logging
+        ch.qos.logback/logback-classic {:mvn/version "1.5.6"}
+        org.slf4j/slf4j-api            {:mvn/version "2.0.13"}
 
-         ;; http
-         ;; ring-jetty9-adapter 0.30.x+ uses Jetty 12 & requires JDK 17+
-         ;; so we have to stay on 0.22.x b/c our minimum JDK version is 11
-         info.sunng/ring-jetty9-adapter ^{:antq/exclude "0.3*"} {:mvn/version "0.22.6"}
-         metosin/reitit                 {:mvn/version "0.7.0"}
-         metosin/muuntaja               {:mvn/version "0.6.10"}
-         metosin/malli                  {:mvn/version "0.16.1"}
-         ring-cors/ring-cors            {:mvn/version "0.1.13"}
+        ;; http
+        ;; ring-jetty9-adapter 0.30.x+ uses Jetty 12 & requires JDK 17+
+        ;; so we have to stay on 0.22.x b/c our minimum JDK version is 11
+        info.sunng/ring-jetty9-adapter ^{:antq/exclude "0.3*"} {:mvn/version "0.22.6"}
+        metosin/reitit                 {:mvn/version "0.7.0"}
+        metosin/muuntaja               {:mvn/version "0.6.10"}
+        metosin/malli                  {:mvn/version "0.16.1"}
+        ring-cors/ring-cors            {:mvn/version "0.1.13"}
 
-         ;; retries
-         robert/bruce                   {:mvn/version "0.8.0"}}
+        ;; retries
+        robert/bruce {:mvn/version "0.8.0"}}
  :paths ["src" "resources"]
 
  :aliases

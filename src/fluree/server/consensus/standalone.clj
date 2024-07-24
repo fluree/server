@@ -79,8 +79,8 @@
                    "and of a supported event type. Received:" event e)))))
 
 (defn new-tx-queue
-  [conn subscriptions watcher max-pending-txs]
-  (let [tx-queue (async/chan max-pending-txs)]
+  [conn subscriptions watcher max-pending-txns]
+  (let [tx-queue (async/chan max-pending-txns)]
     (go-loop [i 0]
       (let [timeout-ch (async/timeout 5000)
             [event ch] (async/alts! [tx-queue timeout-ch])]
@@ -104,8 +104,8 @@
     tx-queue))
 
 (defn start
-  [conn subscriptions watcher max-pending-txs]
-  (let [tx-queue (new-tx-queue conn subscriptions watcher max-pending-txs)]
+  [conn subscriptions watcher max-pending-txns]
+  (let [tx-queue (new-tx-queue conn subscriptions watcher max-pending-txns)]
     (->StandaloneTransactor tx-queue)))
 
 (defn stop
