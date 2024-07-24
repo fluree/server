@@ -133,6 +133,14 @@
   ([x y & more]
    (reduce deep-merge x (cons y more))))
 
+(defn apply-overrides
+  [config profile]
+  (let [profile-overrides (get-in config [:profiles profile])
+        env-overrides     (env-config)]
+    (-> config
+        (dissoc :profiles)
+        (deep-merge profile-overrides env-overrides))))
+
 (defn with-config-ns
   [k]
   (keyword "fluree.server.config" (name k)))
@@ -142,6 +150,13 @@
   (reduce-kv (fn [m k v]
                (assoc m (with-config-ns k) v))
              {} cfg))
+
+(defn finalize
+  [config profile]
+  (-> config
+      (apply-overrides profile)
+      coerce
+      with-namespaced-keys))
 
 (defn parse-config
   [cfg]
@@ -154,28 +169,6 @@
       slurp
       parse-config))
 
-(defn read-file
-  [path]
-  (-> path
-      io/file
-      slurp
-      parse-config))
-
-(defn apply-overrides
-  [config profile]
-  (let [profile-overrides (get-in config [:profiles profile])
-        env-overrides     (env-config)]
-    (-> config
-        (dissoc :profiles)
-        (deep-merge profile-overrides env-overrides))))
-
-(defn finalize
-  [config profile]
-  (-> config
-      (apply-overrides profile)
-      coerce
-      with-namespaced-keys))
-
 (defn load-resource
   ([resource-name]
    (load-resource resource-name nil))
@@ -185,11 +178,18 @@
        read-resource
        (finalize profile))))
 
+(defn read-file
+  [path]
+  (-> path
+      io/file
+      slurp
+      parse-config))
+
 (defn load-file
   ([path]
    (load-file path nil))
 
   ([path profile]
    (-> path
-       load-file
+       read-file
        (finalize profile))))
