@@ -7,9 +7,20 @@
 
 (set! *warn-on-reflection* true)
 
+(defn strip-leading-colon
+  [s]
+  (if (str/starts-with? s ":")
+    (subs s 1)
+    s))
+
+(defn profile-string->keyword
+  [s]
+  (-> s strip-leading-colon keyword))
+
 (def cli-options
   [["-p" "--profile PROFILE" "Run profile"
-    :parse-fn keyword]
+    :default  :prod
+    :parse-fn profile-string->keyword]
    ["-c" "--config FILE" "Configuration file path"]
    ["-h" "--help" "Print this usage summary and exit"]])
 
@@ -31,14 +42,12 @@
 
 (defn start-server
   [{:keys [profile] :as options}]
-  (let [profile-str (when profile
-                      (str "with profile " profile))]
-    (if-let [config-path (:config options)]
-      (do (log/info "Starting Fluree server configuration at path:" config-path
-                    profile-str)
-          (system/start-file config-path profile))
-      (do (log/info "Starting Fluree server" profile-str)
-          (system/start profile)))))
+  (if-let [config-path (:config options)]
+    (do (log/info "Starting Fluree server configuration at path:" config-path
+                  "with profile:" profile)
+        (system/start-file config-path profile))
+    (do (log/info "Starting Fluree server with profile:" profile)
+        (system/start profile))))
 
 (defn -main
   [& args]
