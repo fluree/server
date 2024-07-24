@@ -130,6 +130,16 @@
   ([x y & more]
    (reduce deep-merge x (cons y more))))
 
+(defn with-ns
+  [k]
+  (keyword *ns* (name k)))
+
+(defn with-namespaced-keys
+  [cfg]
+  (reduce-kv (fn [m k v]
+               (assoc m (with-ns k) v))
+             {} cfg))
+
 (defn read-resource
   [resource-name]
   (-> resource-name
@@ -148,4 +158,5 @@
      (-> config
          (dissoc :profiles)
          (deep-merge profile-overrides env-overrides)
-         coerce))))
+         coerce
+         with-namespaced-keys))))

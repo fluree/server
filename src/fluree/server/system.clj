@@ -17,11 +17,11 @@
 (derive :fluree/standalone :fluree/consensus)
 (derive :http/jetty :http/server)
 
-(defmethod ig/expand-key :connection
+(defmethod ig/expand-key ::config/connection
   [_ config]
   {:fluree/connection config})
 
-(defmethod ig/expand-key :consensus
+(defmethod ig/expand-key ::config/consensus
   [_ config]
   (let [consensus-key    (keyword "fluree" (-> config :protocol name))
         consensus-config (-> config
@@ -32,7 +32,7 @@
     {consensus-key         consensus-config
      :fluree/subscriptions {}}))
 
-(defmethod ig/expand-key :http
+(defmethod ig/expand-key ::config/http
   [_ {:keys [server max-txn-wait-ms] :as config :or {server :jetty}}]
   (let [http-key    (keyword "http" (name server))
         http-config (-> config
@@ -93,14 +93,17 @@
   [_ http-server]
   (jetty/stop-server http-server))
 
+(defn start-config
+  [config]
+  (-> config ig/expand ig/init))
+
 (defn start-resource
   ([resource-name]
    (start-resource resource-name :prod))
   ([resource-name profile]
    (-> resource-name
        (config/load-resource profile)
-       ig/expand
-       ig/init)))
+       start-config)))
 
 (def start
   (partial start-resource default-resource-name))
