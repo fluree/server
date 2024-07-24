@@ -133,14 +133,14 @@
   ([x y & more]
    (reduce deep-merge x (cons y more))))
 
-(defn with-ns
+(defn with-config-ns
   [k]
   (keyword "fluree.server.config" (name k)))
 
 (defn with-namespaced-keys
   [cfg]
   (reduce-kv (fn [m k v]
-               (assoc m (with-ns k) v))
+               (assoc m (with-config-ns k) v))
              {} cfg))
 
 (defn parse-config
