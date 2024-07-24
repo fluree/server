@@ -31,12 +31,14 @@
 
 (defn start-server
   [{:keys [profile] :as options}]
-  (if-let [config-path (:config options)]
-    (do (log/info "Starting Fluree server configuration at path:" config-path
-                  "with profile:" profile)
-        (system/start-file config-path profile))
-    (do (log/info "Starting Fluree server with profile:" profile)
-        (system/start profile))))
+  (let [profile-str (when profile
+                      (str "with profile " profile))]
+    (if-let [config-path (:config options)]
+      (do (log/info "Starting Fluree server configuration at path:" config-path
+                    profile-str)
+          (system/start-file config-path profile))
+      (do (log/info "Starting Fluree server" profile-str)
+          (system/start profile)))))
 
 (defn -main
   [& args]
