@@ -100,6 +100,14 @@
   [config]
   (-> config ig/expand ig/init))
 
+(defn start-file
+  ([path]
+   (start-file path :prod))
+  ([path profile]
+   (-> path
+       (config/load-file profile)
+       start-config)))
+
 (defn start-resource
   ([resource-name]
    (start-resource resource-name :prod))

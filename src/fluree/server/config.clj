@@ -1,4 +1,5 @@
 (ns fluree.server.config
+  (:refer-clojure :exclude [load-file])
   (:require [camel-snake-kebab.core :refer [->kebab-case-keyword]]
             [clojure.java.io :as io]
             [clojure.walk :as walk]
@@ -142,23 +143,53 @@
                (assoc m (with-ns k) v))
              {} cfg))
 
+(defn parse-config
+  [cfg]
+  (json/parse cfg ->kebab-case-keyword))
+
 (defn read-resource
   [resource-name]
   (-> resource-name
       io/resource
       slurp
-      (json/parse ->kebab-case-keyword)))
+      parse-config))
+
+(defn read-file
+  [path]
+  (-> path
+      io/file
+      slurp
+      parse-config))
+
+(defn apply-overrides
+  [config profile]
+  (let [profile-overrides (get-in config [:profiles profile])
+        env-overrides     (env-config)]
+    (-> config
+        (dissoc :profiles)
+        (deep-merge profile-overrides env-overrides))))
+
+(defn finalize
+  [config profile]
+  (-> config
+      (apply-overrides profile)
+      coerce
+      with-namespaced-keys))
 
 (defn load-resource
   ([resource-name]
    (load-resource resource-name nil))
 
   ([resource-name profile]
-   (let [config            (read-resource resource-name)
-         profile-overrides (get-in config [:profiles profile])
-         env-overrides     (env-config)]
-     (-> config
-         (dissoc :profiles)
-         (deep-merge profile-overrides env-overrides)
-         coerce
-         with-namespaced-keys))))
+   (-> resource-name
+       read-resource
+       (finalize profile))))
+
+(defn load-file
+  ([path]
+   (load-file path nil))
+
+  ([path profile]
+   (-> path
+       load-file
+       (finalize profile))))
