@@ -6,7 +6,7 @@
     "cacheMaxMb": 1000,
     "defaults": {
       "index": {
-        "reindexMinBytes": 1000,
+        "reindexMinBytes": 100000,
         "reindexMaxBytes": 10000000,
         "maxOldIndexes": 3
       }
@@ -14,19 +14,18 @@
   },
   "consensus": {
     "protocol": "standalone",
-    "maxPendingTxns": 16
+    "maxPendingTxns": 42
   },
   "http": {
     "server": "jetty",
     "port": 8090,
-    "maxTxnWaitMs": 4500
+    "maxTxnWaitMs": 120000
   },
   "profiles": {
     "dev": {
       "connection": {
-        "remoteServers": ["http://127.0.0.1:58090"],
-        "parallelism": 1,
-        "cacheMaxMb": 100
+        "storagePath": "dev/data",
+        "cacheMaxMb": 200
       },
       "http": {
         "port": 58090
