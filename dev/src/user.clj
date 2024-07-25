@@ -4,38 +4,36 @@
             [fluree.server.handlers.create :as create-handler]
             [fluree.server.consensus.raft.handler :as consensus-handler]
             [fluree.server.consensus.raft]
-            [clojure.java.io :as io]
             [fluree.server.system :as system]
             [fluree.db.util.log :as log]
+            [fluree.server.config :as config]
             [integrant.core :as ig]
             [integrant.repl :refer [clear go halt init reset reset-all]]))
 
-;; Three Server Configuration
-(def server-1 "/ip4/127.0.0.1/tcp/62071")
-(def server-2 "/ip4/127.0.0.1/tcp/62072")
-(def server-3 "/ip4/127.0.0.1/tcp/62073")
-(def servers-str (str/join "," [server-1 server-2 server-3]))
+;; Register dev-config as the default config
+(def sys-config (ig/expand (config/load-resource "config.json" :dev)))
 
-(def server-1-overrides
-  {:http/jetty        {:port 58090}
-   :fluree/connection {:storage-path "data/srv1"}
-   :fluree/consensus  {:servers servers-str
-                       :this-server server-1}})
+(defn set-config!
+  "Sets a new config for use with (go)"
+  [config]
+  (alter-var-root #'sys-config (constantly config)))
 
-(def server-2-overrides
-  {:http/server       {:port 58091}
-   :fluree/connection {:storage-path "data/srv2"}
-   :fluree/consensus  {:consensus-servers     servers-str
-                       :consensus-this-server server-2}})
+(integrant.repl/set-prep! (fn [] sys-config))
 
-(def server-3-overrides
-  {:http/server       {:port 58092}
-   :fluree/connection {:storage-path "data/srv3"}
-   :fluree/consensus  {:consensus-servers     servers-str
-                       :consensus-this-server server-3}})
+(defn start!
+  "Starts dev repl. Optionally provide a config
+  to start with."
+  ([]
+   (go))
+  ([config]
+   (set-config! (ig/expand config))
+   (go)))
 
-(def query-server-1-overrides
-  {:http/server {:port 58095}
-   :fluree/connection {:method :remote
-                       :servers "http://localhost:58090"}
-   :fluree/consensus {:consensus-type :none}})
+(comment
+
+ (start!) ;; default :dev profile config
+
+ ;; single-server raft config startup
+ (start! (config/load-resource "config-raft.json" :dev))
+
+ )

@@ -13,8 +13,8 @@
 
     <logger name="user" level="ALL"/>
     <logger name="ch.qos.logback" level="WARN"/>
-    <logger name="fluree.server" level="TRACE"/>
-    <logger name="fluree.db" level="TRACE"/>
+    <logger name="fluree.server" level="INFO"/>
+    <logger name="fluree.db" level="INFO"/>
     <logger name="fluree.db.consensus" level="INFO"/>
     <logger name="fluree.db.messaging" level="INFO"/>
 
