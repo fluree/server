@@ -7,6 +7,8 @@
             [malli.core :as m]
             [malli.transform :as transform]))
 
+(set! *warn-on-reflection* true)
+
 (def registry
   (merge
    (m/predicate-schemas)
