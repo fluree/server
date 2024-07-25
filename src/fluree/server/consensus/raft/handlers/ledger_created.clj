@@ -3,9 +3,8 @@
             [clojure.java.io :as io]
             [fluree.db.util.filesystem :as fs]
             [fluree.db.util.log :as log]
-            [fluree.server.consensus.raft.handlers.new-commit :as new-commit]
-            [fluree.server.subscriptions :as subscriptions]
-            [fluree.server.watcher :as watcher])
+            [fluree.server.consensus.broadcast :as broadcast]
+            [fluree.server.consensus.raft.handlers.new-commit :as new-commit])
   (:import (java.io File)))
 
 (set! *warn-on-reflection* true)
@@ -47,12 +46,6 @@
                   :error  :db/unexpected-error}
                  e)))))
 
-(defn return-success-response
-  [watcher {:keys [ledger-id server tx-id] :as params} state-map]
-  (log/info (str "New Ledger successfully created by server " server ": " ledger-id " with tx-id: " tx-id "."))
-  (watcher/deliver-watch watcher tx-id params)
-  (get-in state-map [:ledgers ledger-id]))
-
 (defn clean-up-files
   [{:keys [fluree/conn] :as _config} {:keys [ledger-id] :as _params}]
   (let [local-path (fs/local-path (:storage-path conn))
@@ -90,9 +83,5 @@
 
 (defn broadcast!
   "Responsible for producing the event broadcast to connected peers."
-  [{:keys [fluree/watcher fluree/subscriptions] :as _config}
-   {:keys [ledger-id server tx-id commit-file-meta] :as handler-result}]
-  (log/info (str "New Ledger successfully created by server " server ": " ledger-id " with tx-id: " tx-id "."))
-  (watcher/deliver-watch watcher tx-id handler-result)
-  (subscriptions/send-message-to-all subscriptions "ledger-created" ledger-id (:json commit-file-meta))
-  :success) ;; result of this function is not used
+  [{:keys [fluree/watcher fluree/subscriptions] :as _config} handler-result]
+  (broadcast/announce-new-ledger! subscriptions watcher handler-result))

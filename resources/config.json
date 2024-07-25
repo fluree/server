@@ -1,0 +1,36 @@
+{
+  "connection": {
+    "storageMethod": "file",
+    "parallelism": 4,
+    "storagePath": "data",
+    "cacheMaxMb": 1000,
+    "defaults": {
+      "index": {
+        "reindexMinBytes": 1000,
+        "reindexMaxBytes": 10000000,
+        "maxOldIndexes": 3
+      }
+    }
+  },
+  "consensus": {
+    "protocol": "standalone",
+    "maxPendingTxns": 16
+  },
+  "http": {
+    "server": "jetty",
+    "port": 8090,
+    "maxTxnWaitMs": 4500
+  },
+  "profiles": {
+    "dev": {
+      "connection": {
+        "remoteServers": ["http://127.0.0.1:58090"],
+        "parallelism": 1,
+        "cacheMaxMb": 100
+      },
+      "http": {
+        "port": 58090
+      }
+    }
+  }
+}

@@ -69,7 +69,8 @@
                              "from"     ledger-name
                              "select"   {"?t" ["*"]}
                              "where"    {"@id"  "?t"
-                                         "type" "schema:Test"}}
+                                         "type" "schema:Test"}
+                             "opts"     {"default-allow?" true}}
                             (:private auth)))
             query-res (api-post :query
                                 {:body    (json/write-value-as-string query-req)

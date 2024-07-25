@@ -1,4 +1,4 @@
-(ns fluree.server.watcher
+(ns fluree.server.consensus.watcher
   "System to manage and track pending requests through consensus in order to
   respond with the result. When mutation requests happen over http (e.g.
   creating a new ledger), we want to wait for the operation to complete through
@@ -22,20 +22,20 @@
 
 (defn create-watch
   "Creates a new watch for transaction `id`.
-  If response not delivered by max-tx-wait-ms, will deliver :timeout response.
+  If response not delivered by max-txn-wait-ms, will deliver :timeout response.
 
   Note: purposefully do not close! timeout chan when delivering a response,
   core async shares similar timeout chans (< 10 ms difference) and closing
   can result in closing a different watch's timeout inadvertently."
-  [{:keys [watcher-atom max-tx-wait-ms] :as watcher} id]
+  [{:keys [watcher-atom max-txn-wait-ms] :as watcher} id]
   (let [promise-ch (async/promise-chan)]
     (swap! watcher-atom assoc id promise-ch)
     (async/go
-      (async/<! (async/timeout max-tx-wait-ms))
+      (async/<! (async/timeout max-txn-wait-ms))
       ;; we close the promise chan when delivering, so put! will be false if response already delivered
       (when (async/put! promise-ch :timeout)
         (log/debug "Timed out waiting for transaction to complete:" id
-                   "after" max-tx-wait-ms "ms."))
+                   "after" max-txn-wait-ms "ms."))
       (remove-watch watcher id))
     ;; return promise ch, will end up with result or closed at end of wait-ms
     promise-ch))
@@ -49,10 +49,10 @@
     (async/close! resp-chan)))
 
 (defn watch
-  ([max-tx-wait-ms]
-   (watch max-tx-wait-ms (new-watcher-atom)))
-  ([max-tx-wait-ms watcher-atom]
-   {:max-tx-wait-ms max-tx-wait-ms
+  ([max-txn-wait-ms]
+   (watch max-txn-wait-ms (new-watcher-atom)))
+  ([max-txn-wait-ms watcher-atom]
+   {:max-txn-wait-ms max-txn-wait-ms
     :watcher-atom   watcher-atom}))
 
 (defn close

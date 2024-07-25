@@ -1,6 +1,7 @@
 (ns fluree.server.integration.test-system
   (:require [clj-http.client :as http]
             [fluree.db.util.json :as json]
+            [fluree.server.config :as-alias config]
             [fluree.server.system :as system])
   (:import (java.net ServerSocket)))
 
@@ -57,15 +58,15 @@
 (defn run-test-server
   [run-tests]
   (set-server-ports)
-  (let [multi-addr-1     (str "/ip4/127.0.0.1/tcp/" @consensus-port-1)
-        config-overrides {:http/jetty        {:port @api-port}
-                          :fluree/watcher    {:max-tx-wait-ms 45000}
-                          :fluree/connection {:method       :memory
-                                              :parallelism  1
-                                              :cache-max-mb 100}
-                          :fluree/raft       {:servers     multi-addr-1
-                                              :this-server multi-addr-1}}
-        server           (system/start :dev config-overrides)]
+  (let [config {::config/connection {:storage-method :memory
+                                     :parallelism    1
+                                     :cache-max-mb   100}
+                ::config/consensus  {:protocol         :standalone
+                                     :max-pending-txns 16}
+                ::config/http       {:server          :jetty
+                                     :port            @api-port
+                                     :max-txn-wait-ms 45000}}
+        server (system/start-config config)]
     (run-tests)
     (system/stop server)))
 
