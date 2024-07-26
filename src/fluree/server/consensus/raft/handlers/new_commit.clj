@@ -2,11 +2,11 @@
   (:require [clojure.core.async :as async]
             [fluree.db.nameservice.core :as nameservice]
             [fluree.db.storage :as storage]
+            [fluree.db.storage.file :as file-storage]
             [fluree.db.util.async :refer [<? go-try]]
             [fluree.db.util.bytes :as bytes]
-            [fluree.db.util.json :as json]
             [fluree.db.util.filesystem :as fs]
-            [fluree.db.storage.file :as file-storage]
+            [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.broadcast :as broadcast]))
 
@@ -38,15 +38,15 @@
   [{:keys [consensus/raft-state fluree/conn] :as config}
    {:keys [data-file-meta commit-file-meta server] :as commit-result}]
   (go-try
-   (let [this-server (:this-server raft-state)]
-     (when (not= server this-server)
+    (let [this-server (:this-server raft-state)]
+      (when (not= server this-server)
        ;; if server that created the new ledger is this server, the files
        ;; were already written - only other servers need to write file
-       (when data-file-meta ;; if the commit is just being updated, there won't be more data (e.g. after indexing)
-         (write-file config data-file-meta))
-       (write-file config commit-file-meta)
-       (<? (push-nameservice conn commit-file-meta)))
-     commit-result)))
+        (when data-file-meta ;; if the commit is just being updated, there won't be more data (e.g. after indexing)
+          (write-file config data-file-meta))
+        (write-file config commit-file-meta)
+        (<? (push-nameservice conn commit-file-meta)))
+      commit-result)))
 
 (defn update-ledger-state
   "Updates the latest commit in the ledger, and removes the processed transaction in the queue"
