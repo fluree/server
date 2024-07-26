@@ -17,7 +17,7 @@
 
   See fluree.db.conn.file namespace for key/vals contained in `file-meta` map."
   [{:keys [fluree/conn]} {:keys [address json] :as _file-meta}]
-  (let [{:keys [method local]} (storage/parse-address address)]
+  (let [{:keys [method]} (storage/parse-address address)]
     (when (= "file" method)
       (let [root       (-> conn :store :root) ;; TODO - 'store' needs a write-bytes fn or
             path       (file-storage/storage-path root address)
