@@ -41,6 +41,60 @@
       "http": {
         "port": 58090
       }
+    },
+    "dev-3-server-1": {
+      "consensus": {
+        "servers": [
+          "/ip4/127.0.0.1/tcp/62071",
+          "/ip4/127.0.0.1/tcp/62072",
+          "/ip4/127.0.0.1/tcp/62073"
+        ],
+        "thisServer": "/ip4/127.0.0.1/tcp/62071",
+        "logDirectory": "dev/data/raft1/raftlog",
+        "ledgerDirectory": "dev/data/raft1"
+      },
+      "connection": {
+        "storagePath": "dev/data/raft1"
+      },
+      "http": {
+        "port": 58090
+      }
+    },
+    "dev-3-server-2": {
+      "consensus": {
+        "servers": [
+          "/ip4/127.0.0.1/tcp/62071",
+          "/ip4/127.0.0.1/tcp/62072",
+          "/ip4/127.0.0.1/tcp/62073"
+        ],
+        "thisServer": "/ip4/127.0.0.1/tcp/62072",
+        "logDirectory": "dev/data/raft2/raftlog",
+        "ledgerDirectory": "dev/data/raft2"
+      },
+      "connection": {
+        "storagePath": "dev/data/raft2"
+      },
+      "http": {
+        "port": 58091
+      }
+    },
+    "dev-3-server-3": {
+      "consensus": {
+        "servers": [
+          "/ip4/127.0.0.1/tcp/62071",
+          "/ip4/127.0.0.1/tcp/62072",
+          "/ip4/127.0.0.1/tcp/62073"
+        ],
+        "thisServer": "/ip4/127.0.0.1/tcp/62073",
+        "logDirectory": "dev/data/raft3/raftlog",
+        "ledgerDirectory": "dev/data/raft3"
+      },
+      "connection": {
+        "storagePath": "dev/data/raft3"
+      },
+      "http": {
+        "port": 58092
+      }
     }
   }
 }
