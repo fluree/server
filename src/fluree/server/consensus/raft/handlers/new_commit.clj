@@ -3,6 +3,10 @@
             [fluree.db.nameservice.core :as nameservice]
             [fluree.db.storage :as storage]
             [fluree.db.util.async :refer [<? go-try]]
+            [fluree.db.util.bytes :as bytes]
+            [fluree.db.util.json :as json]
+            [fluree.db.util.filesystem :as fs]
+            [fluree.db.storage.file :as file-storage]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.broadcast :as broadcast]))
 
@@ -15,7 +19,17 @@
   [{:keys [fluree/conn]} {:keys [address json] :as _file-meta}]
   (let [{:keys [method local]} (storage/parse-address address)]
     (when (= "file" method)
-      (async/<!! (storage/write (:store conn) local json)))))
+      (let [root       (-> conn :store :root) ;; TODO - 'store' needs a write-bytes fn or
+            path       (file-storage/storage-path root address)
+            json-bytes (bytes/string->UTF8 json)]
+        (async/<!! (fs/write-file path json-bytes))))))
+
+(defn push-nameservice
+  [conn {:keys [json address] :as _commit-file-meta}]
+  (let [commit-json (-> (json/parse json false)
+                        ;; address is not yet written into the commit file, add it
+                        (assoc "address" address))]
+    (nameservice/push! conn commit-json)))
 
 (defn store-ledger-files
   "Persist both the data-file and commit-file to disk only if redundant
@@ -24,15 +38,15 @@
   [{:keys [consensus/raft-state fluree/conn] :as config}
    {:keys [data-file-meta commit-file-meta server] :as commit-result}]
   (go-try
-    (let [this-server (:this-server raft-state)]
-      (when (not= server this-server)
-        ;; if server that created the new ledger is this server, the files
-        ;; were already written - only other servers need to write file
-        (when data-file-meta ;; if the commit is just being updated, there won't be more data (e.g. after indexing)
-          (write-file config data-file-meta))
-        (write-file config commit-file-meta)
-        (<? (nameservice/push! conn commit-file-meta)))
-      commit-result)))
+   (let [this-server (:this-server raft-state)]
+     (when (not= server this-server)
+       ;; if server that created the new ledger is this server, the files
+       ;; were already written - only other servers need to write file
+       (when data-file-meta ;; if the commit is just being updated, there won't be more data (e.g. after indexing)
+         (write-file config data-file-meta))
+       (write-file config commit-file-meta)
+       (<? (push-nameservice conn commit-file-meta)))
+     commit-result)))
 
 (defn update-ledger-state
   "Updates the latest commit in the ledger, and removes the processed transaction in the queue"
