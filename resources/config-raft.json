@@ -2,7 +2,7 @@
   "connection": {
     "storageMethod": "file",
     "parallelism": 4,
-    "storagePath": "dev/data/raft",
+    "storagePath": "data",
     "cacheMaxMb": 1000,
     "defaults": {
       "index": {
