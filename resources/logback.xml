@@ -8,7 +8,7 @@
         </encoder>
     </appender>
 
-    <logger name="fluree" level="debug" additivity="false">
+    <logger name="fluree" level="info" additivity="false">
         <appender-ref ref="CONSOLE"/>
     </logger>
 
