@@ -1,5 +1,6 @@
 (ns fluree.server.system
   (:require [fluree.db.api :as fluree]
+            [fluree.db.conn.cache :as conn-cache]
             [fluree.server.config :as config]
             [fluree.server.consensus.raft :as raft]
             [fluree.server.consensus.standalone :as standalone]
@@ -55,13 +56,16 @@
   [_ {:keys [storage-method server] :as config}]
   (let [config* (-> config
                     (assoc :method storage-method
-                           :storage-path (:storage-path server))
+                           :storage-path (:storage-path server)
+                           :lru-cache-atom (:lru-cache-atom server))
                     (dissoc :storage-method))]
     @(fluree/connect config*)))
 
 (defmethod ig/init-key :fluree/server
-  [_ config]
-  config)
+  [_ {:keys [cache-max-mb]
+      :or   {cache-max-mb 1000}
+      :as   config}]
+  (assoc config :lru-cache-atom (atom (conn-cache/create-lru-cache cache-max-mb))))
 
 (defmethod ig/init-key :fluree/subscriptions
   [_ _]
