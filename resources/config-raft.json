@@ -1,4 +1,7 @@
 {
+  "server": {
+    "storagePath": "data"
+  },
   "connection": {
     "storageMethod": "file",
     "parallelism": 4,
@@ -30,19 +33,23 @@
   },
   "profiles": {
     "dev": {
+      "server": {
+        "storagePath": "dev/data/raft"
+      },
       "connection": {
-        "storagePath": "dev/data/raft",
         "cacheMaxMb": 200
       },
       "consensus": {
-        "logDirectory": "dev/data/raft/raftlog",
-        "ledgerDirectory": "dev/data/raft"
+        "logDirectory": "dev/data/raft/raftlog"
       },
       "http": {
         "port": 58090
       }
     },
     "dev-3-server-1": {
+      "server": {
+        "storagePath": "dev/data/raft1"
+      },
       "consensus": {
         "servers": [
           "/ip4/127.0.0.1/tcp/62071",
@@ -50,17 +57,19 @@
           "/ip4/127.0.0.1/tcp/62073"
         ],
         "thisServer": "/ip4/127.0.0.1/tcp/62071",
-        "logDirectory": "dev/data/raft1/raftlog",
-        "ledgerDirectory": "dev/data/raft1"
+        "logDirectory": "dev/data/raft1/raftlog"
       },
       "connection": {
-        "storagePath": "dev/data/raft1"
+        "cacheMaxMb": 200
       },
       "http": {
         "port": 58090
       }
     },
     "dev-3-server-2": {
+      "server": {
+        "storagePath": "dev/data/raft2"
+      },
       "consensus": {
         "servers": [
           "/ip4/127.0.0.1/tcp/62071",
@@ -68,17 +77,19 @@
           "/ip4/127.0.0.1/tcp/62073"
         ],
         "thisServer": "/ip4/127.0.0.1/tcp/62072",
-        "logDirectory": "dev/data/raft2/raftlog",
-        "ledgerDirectory": "dev/data/raft2"
+        "logDirectory": "dev/data/raft2/raftlog"
       },
       "connection": {
-        "storagePath": "dev/data/raft2"
+        "cacheMaxMb": 200
       },
       "http": {
         "port": 58091
       }
     },
     "dev-3-server-3": {
+      "server": {
+        "storagePath": "dev/data/raft3"
+      },
       "consensus": {
         "servers": [
           "/ip4/127.0.0.1/tcp/62071",
@@ -86,11 +97,10 @@
           "/ip4/127.0.0.1/tcp/62073"
         ],
         "thisServer": "/ip4/127.0.0.1/tcp/62073",
-        "logDirectory": "dev/data/raft3/raftlog",
-        "ledgerDirectory": "dev/data/raft3"
+        "logDirectory": "dev/data/raft3/raftlog"
       },
       "connection": {
-        "storagePath": "dev/data/raft3"
+        "cacheMaxMb": 200
       },
       "http": {
         "port": 58092

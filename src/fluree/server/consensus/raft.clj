@@ -463,7 +463,7 @@
 
 (defn add-state-machine
   "Add state machine configuration options needed for raft"
-  [{:keys [conn watcher subscriptions this-server command-chan
+  [{:keys [conn watcher subscriptions server this-server command-chan
            storage-ledger-read storage-ledger-write]
     :as raft-config}
    config-handler]
@@ -471,6 +471,7 @@
         state-machine-config {:fluree/conn                    conn
                               :fluree/watcher                 watcher
                               :fluree/subscriptions           subscriptions
+                              :fluree/server                  server
                               :consensus/command-chan         command-chan
                               :consensus/this-server          this-server
                               :consensus/state-atom           state-machine-atom
@@ -522,8 +523,10 @@
   (str/join "/" ["." "data" server-name directory-type ""]))
 
 (defn default-log-directory
-  [server-name]
-  (default-data-directory server-name "raftlog"))
+  [ledger-directory server-name]
+  (if ledger-directory
+    (str ledger-directory "/raftlog")
+    (default-data-directory server-name "raftlog")))
 
 (defn default-ledger-directory
   [server-name]
@@ -533,7 +536,7 @@
   [{:keys [log-directory ledger-directory this-server] :as raft-config}]
   (let [server-name       (name this-server)
         log-directory*    (-> log-directory
-                              (or (default-log-directory server-name))
+                              (or (default-log-directory ledger-directory server-name))
                               io-file/canonicalize-path)
         ledger-directory* (-> ledger-directory
                               (or (default-ledger-directory server-name))

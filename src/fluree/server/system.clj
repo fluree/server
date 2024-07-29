@@ -19,14 +19,20 @@
 
 (defmethod ig/expand-key ::config/connection
   [_ config]
-  {:fluree/connection config})
+  (let [config* (assoc config :server (ig/ref :fluree/server))]
+    {:fluree/connection config*}))
+
+(defmethod ig/expand-key ::config/server
+  [_ config]
+  {:fluree/server config})
 
 (defmethod ig/expand-key ::config/consensus
   [_ config]
   (let [consensus-key    (keyword "fluree" (-> config :protocol name))
         consensus-config (-> config
                              (dissoc :protocol)
-                             (assoc :conn (ig/ref :fluree/connection)
+                             (assoc :server (ig/ref :fluree/server)
+                                    :conn (ig/ref :fluree/connection)
                                     :watcher (ig/ref :fluree/watcher)
                                     :subscriptions (ig/ref :fluree/subscriptions)))]
     {consensus-key         consensus-config
@@ -46,11 +52,16 @@
                       :subscriptions (ig/ref :fluree/subscriptions)}}))
 
 (defmethod ig/init-key :fluree/connection
-  [_ {:keys [storage-method] :as config}]
+  [_ {:keys [storage-method server] :as config}]
   (let [config* (-> config
-                    (assoc :method storage-method)
+                    (assoc :method storage-method
+                           :storage-path (:storage-path server))
                     (dissoc :storage-method))]
     @(fluree/connect config*)))
+
+(defmethod ig/init-key :fluree/server
+  [_ config]
+  config)
 
 (defmethod ig/init-key :fluree/subscriptions
   [_ _]
@@ -69,8 +80,9 @@
   (watcher/close watcher))
 
 (defmethod ig/init-key :fluree/raft
-  [_ config]
-  (raft/start config))
+  [_ {:keys [server] :as config}]
+  (let [config* (assoc config :ledger-directory (:storage-path server))]
+    (raft/start config*)))
 
 (defmethod ig/halt-key! :fluree/raft
   [_ {:keys [close] :as _raft-group}]

@@ -16,11 +16,10 @@
   "Only writes file to disk if address is of type 'file'
 
   See fluree.db.conn.file namespace for key/vals contained in `file-meta` map."
-  [{:keys [fluree/conn]} {:keys [address json] :as _file-meta}]
+  [storage-path {:keys [address json] :as _file-meta}]
   (let [{:keys [method]} (storage/parse-address address)]
     (when (= "file" method)
-      (let [root       (-> conn :store :root) ;; TODO - 'store' needs a write-bytes fn or
-            path       (file-storage/storage-path root address)
+      (let [path       (file-storage/storage-path storage-path address)
             json-bytes (bytes/string->UTF8 json)]
         (async/<!! (fs/write-file path json-bytes))))))
 
@@ -35,16 +34,18 @@
   "Persist both the data-file and commit-file to disk only if redundant
   local-storage. If using a networked file system (e.g. S3, IPFS) the
   file is already stored by the leader with the respective service."
-  [{:keys [consensus/raft-state fluree/conn] :as config}
-   {:keys [data-file-meta commit-file-meta server] :as commit-result}]
+  [{:keys [consensus/raft-state fluree/conn fluree/server] :as _config}
+   {:keys [data-file-meta commit-file-meta] :as commit-result}]
   (go-try
-    (let [this-server (:this-server raft-state)]
-      (when (not= server this-server)
+    (let [this-server   (:this-server raft-state)
+          commit-server (:server commit-result)
+          storage-path  (:storage-path server)]
+      (when (not= commit-server this-server)
        ;; if server that created the new ledger is this server, the files
        ;; were already written - only other servers need to write file
         (when data-file-meta ;; if the commit is just being updated, there won't be more data (e.g. after indexing)
-          (write-file config data-file-meta))
-        (write-file config commit-file-meta)
+          (write-file storage-path data-file-meta))
+        (write-file storage-path commit-file-meta)
         (<? (push-nameservice conn commit-file-meta)))
       commit-result)))
 

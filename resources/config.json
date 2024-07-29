@@ -1,8 +1,10 @@
 {
+  "server": {
+    "storagePath": "data"
+  },
   "connection": {
     "storageMethod": "file",
     "parallelism": 4,
-    "storagePath": "data",
     "cacheMaxMb": 1000,
     "defaults": {
       "index": {
@@ -23,8 +25,10 @@
   },
   "profiles": {
     "dev": {
+      "server": {
+        "storagePath": "dev/data"
+      },
       "connection": {
-        "storagePath": "dev/data",
         "cacheMaxMb": 200
       },
       "http": {
