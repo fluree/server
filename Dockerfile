@@ -39,5 +39,5 @@ EXPOSE 58090
 
 VOLUME ./data
 
-ENTRYPOINT ["java", "-jar", "server.jar"]
+ENTRYPOINT ["java", "-Xmx8g", "-jar", "server.jar"]
 CMD ["docker"]
