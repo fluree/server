@@ -20,8 +20,9 @@
 
 (defmethod ig/expand-key ::config/connection
   [_ config]
-  (let [config* (assoc config :server (ig/ref :fluree/server)
-                              :cache (ig/ref :fluree/cache))]
+  (let [config* (assoc config
+                       :server (ig/ref :fluree/server)
+                       :cache (ig/ref :fluree/cache))]
     {:fluree/connection config*}))
 
 (defmethod ig/expand-key ::config/server
