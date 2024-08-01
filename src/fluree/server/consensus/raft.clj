@@ -464,14 +464,14 @@
 (defn add-state-machine
   "Add state machine configuration options needed for raft"
   [{:keys [conn watcher subscriptions server this-server command-chan
-           storage-ledger-read storage-ledger-write]
+           storage-ledger-read storage-ledger-write store]
     :as raft-config}
    config-handler]
   (let [state-machine-atom   (atom default-state)
         state-machine-config {:fluree/conn                    conn
                               :fluree/watcher                 watcher
                               :fluree/subscriptions           subscriptions
-                              :fluree/server                  server
+                              :fluree/store                   store
                               :consensus/command-chan         command-chan
                               :consensus/this-server          this-server
                               :consensus/state-atom           state-machine-atom
@@ -546,7 +546,7 @@
            :ledger-directory ledger-directory*)))
 
 (defn start
-  [{:keys [log-history entries-max storage-type catch-up-rounds]
+  [{:keys [log-history entries-max storage-type store catch-up-rounds]
     :or   {log-history     10
            entries-max     50
            catch-up-rounds 10}
