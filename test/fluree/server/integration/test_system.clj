@@ -58,7 +58,8 @@
 (defn run-test-server
   [run-tests]
   (set-server-ports)
-  (let [config {::config/connection {:storage-method :memory
+  (let [config {::config/server     {}
+                ::config/connection {:storage-method :memory
                                      :parallelism    1
                                      :cache-max-mb   100}
                 ::config/consensus  {:protocol         :standalone

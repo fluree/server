@@ -26,7 +26,7 @@
     ::connection-defaults [:map
                            [:index {:optional true} ::indexing-options]
                            [:did {:optional true} :string]]
-    ::file-connection [:map [:storage-path {:optional true} ::path]]
+    ::file-connection [:map]
     ::memory-connection [:map]
     ::ipfs-connection [:map [:ipfs-server ::server-address]]
     ::remote-connection [:map [:remote-servers [:sequential ::server-address]]]
@@ -46,6 +46,8 @@
                    [:ipfs ::ipfs-connection]
                    [:remote ::remote-connection]
                    [:s3 ::s3-connection]]]
+    ::server-config [:map
+                     [:storage-path {:optional true} ::path]]
     ::consensus-protocol [:enum
                           :raft :standalone]
     ::raft [:map
@@ -54,8 +56,7 @@
             [:catch-up-rounds {:optional true} pos-int?]
             [:servers [:sequential ::server-address]]
             [:this-server ::server-address]
-            [:log-directory {:optional true} ::path]
-            [:ledger-directory ::path]]
+            [:log-directory {:optional true} ::path]]
     ::standalone [:map [:max-pending-txns {:optional true} pos-int?]]
     ::consensus [:and
                  [:map [:protocol ::consensus-protocol]]
@@ -75,6 +76,7 @@
             [:multi {:dispatch :server}
              [:jetty ::jetty]]]
     ::config [:map {:closed true}
+              [:server ::server-config]
               [:connection ::connection]
               [:consensus ::consensus]
               [:http ::http]]}))
@@ -83,10 +85,10 @@
   (m/coercer ::config transform/string-transformer {:registry registry}))
 
 (def env-template
-  {:connection {:storage-method "FLUREE_STORAGE_METHOD"
+  {:server     {:storage-path "FLUREE_STORAGE_PATH"}
+   :connection {:storage-method "FLUREE_STORAGE_METHOD"
                 :parallelism    "FLUREE_CONNECTION_PARALLELISM"
                 :cache-max-mb   "FLUREE_CACHE_MAX_MB"
-                :storage-path   "FLUREE_STORAGE_PATH"
                 :remote-servers "FLUREE_REMOTE_SERVERS"
                 :ipfs-server    "FLUREE_IPFS_SERVER"
                 :s3-endpoint    "FLUREE_S3_ENDPOINT"
@@ -104,8 +106,7 @@
                 :storage-type     "FLUREE_RAFT_STORAGE_TYPE"
                 :servers          "FLUREE_RAFT_SERVERS"
                 :this-server      "FLUREE_RAFT_THIS_SERVER"
-                :log-directory    "FLUREE_RAFT_LOG_DIRECTORY"
-                :ledger-directory "FLUREE_RAFT_LEDGER_DIRECTORY"}
+                :log-directory    "FLUREE_RAFT_LOG_DIRECTORY"}
    :http       {:server          "FLUREE_HTTP_SERVER"
                 :port            "FLUREE_HTTP_API_PORT"
                 :max-txn-wait-ms "FLUREE_HTTP_MAX_TXN_WAIT_MS"}})

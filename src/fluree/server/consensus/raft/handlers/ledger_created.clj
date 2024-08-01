@@ -47,8 +47,8 @@
                  e)))))
 
 (defn clean-up-files
-  [{:keys [fluree/conn] :as _config} {:keys [ledger-id] :as _params}]
-  (let [local-path (fs/local-path (:storage-path conn))
+  [{:keys [fluree/server] :as _config} {:keys [ledger-id] :as _params}]
+  (let [local-path (fs/local-path (:storage-path server))
         ledger-dir (io/file local-path ledger-id)
         files      (reverse (file-seq ledger-dir))]
     (doseq [^File file files]
