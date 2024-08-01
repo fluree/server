@@ -1,11 +1,8 @@
 (ns fluree.server.consensus.raft.handlers.ledger-created
-  (:require [clojure.core.async :as async]
-            [clojure.java.io :as io]
-            [fluree.db.util.filesystem :as fs]
-            [fluree.db.util.log :as log]
+  (:require [fluree.db.util.log :as log]
+            [fluree.db.util.async :refer [<??]]
             [fluree.server.consensus.broadcast :as broadcast]
-            [fluree.server.consensus.raft.handlers.new-commit :as new-commit])
-  (:import (java.io File)))
+            [fluree.server.consensus.raft.handlers.new-commit :as new-commit]))
 
 (set! *warn-on-reflection* true)
 
@@ -37,23 +34,14 @@
     create-result
 
     (catch Exception e
-      ; return exception (don't throw) for handler on error
-      (log/warn (ex-message e))
-      (if (ex-data e)
-        e
-        (ex-info (str "Unexpected error queuing new ledger: " (ex-message e))
-                 {:status 500
-                  :error  :db/unexpected-error}
-                 e)))))
-
-(defn clean-up-files
-  [{:keys [fluree/server] :as _config} {:keys [ledger-id] :as _params}]
-  (let [local-path (fs/local-path (:storage-path server))
-        ledger-dir (io/file local-path ledger-id)
-        files      (reverse (file-seq ledger-dir))]
-    (doseq [^File file files]
-      (log/info (str "After exception creating ledger " ledger-id ", removing: " (.getPath file)))
-      (io/delete-file file true))))
+      (let [ex (if (ex-data e)
+                 e
+                 (ex-info (str "Unexpected error queuing new ledger: " (ex-message e))
+                          {:status 500
+                           :error  :db/unexpected-error}
+                          e))]
+        (log/warn (ex-message ex))
+        (throw ex)))))
 
 (defn handler
   "Adds a new ledger along with its transaction into the state machine in a queue.
@@ -66,12 +54,14 @@
     (->> create-result
          (verify-still-pending config)
          (new-commit/store-ledger-files config)
-         async/<!!
-         (add-ledger-to-state config))
+         <??
+         (add-ledger-to-state config)
+         (new-commit/push-nameservice config)
+         <??)
 
     (catch Exception e
       (log/warn (str "Unexpected error creating new ledger: " (ex-message e)))
-      (clean-up-files config create-result)
+      (new-commit/delete-ledger-files config create-result)
       (let [e* (if (ex-data e)
                  e
                  (ex-info (str "Unexpected error creating new ledger: " (ex-message e))

@@ -2,10 +2,8 @@
   (:require [clojure.core.async :as async]
             [fluree.db.nameservice.core :as nameservice]
             [fluree.db.storage :as storage]
-            [fluree.db.storage.file :as file-storage]
-            [fluree.db.util.async :refer [<? go-try]]
+            [fluree.db.util.async :refer [<? <?? go-try]]
             [fluree.db.util.bytes :as bytes]
-            [fluree.db.util.filesystem :as fs]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.broadcast :as broadcast]))
@@ -16,38 +14,53 @@
   "Only writes file to disk if address is of type 'file'
 
   See fluree.db.conn.file namespace for key/vals contained in `file-meta` map."
-  [storage-path {:keys [address json] :as _file-meta}]
+  [store {:keys [address json] :as _file-meta}]
   (let [{:keys [method]} (storage/parse-address address)]
     (when (= "file" method)
-      (let [path       (file-storage/storage-path storage-path address)
-            json-bytes (bytes/string->UTF8 json)]
-        (async/<!! (fs/write-file path json-bytes))))))
+      (async/<!!
+       (storage/write-bytes store address (bytes/string->UTF8 json))))))
 
 (defn push-nameservice
-  [conn {:keys [json address] :as _commit-file-meta}]
-  (let [commit-json (-> (json/parse json false)
-                        ;; address is not yet written into the commit file, add it
-                        (assoc "address" address))]
-    (nameservice/push! conn commit-json)))
+  [{:keys [fluree/conn] :as _config} {:keys [commit-file-meta] :as commit-result}]
+  (go-try
+   (let [{:keys [json address]} commit-file-meta
+         commit-json (-> (json/parse json false)
+                         ;; address is not yet written into the commit file, add it
+                         (assoc "address" address))]
+     (<? (nameservice/push! conn commit-json))
+     commit-result)))
 
 (defn store-ledger-files
   "Persist both the data-file and commit-file to disk only if redundant
   local-storage. If using a networked file system (e.g. S3, IPFS) the
   file is already stored by the leader with the respective service."
-  [{:keys [consensus/raft-state fluree/conn fluree/server] :as _config}
+  [{:keys [consensus/raft-state fluree/store] :as _config}
    {:keys [data-file-meta commit-file-meta] :as commit-result}]
   (go-try
     (let [this-server   (:this-server raft-state)
-          commit-server (:server commit-result)
-          storage-path  (:storage-path server)]
+          commit-server (:server commit-result)]
       (when (not= commit-server this-server)
        ;; if server that created the new ledger is this server, the files
        ;; were already written - only other servers need to write file
         (when data-file-meta ;; if the commit is just being updated, there won't be more data (e.g. after indexing)
-          (write-file storage-path data-file-meta))
-        (write-file storage-path commit-file-meta)
-        (<? (push-nameservice conn commit-file-meta)))
+          (write-file store data-file-meta))
+        (write-file store commit-file-meta))
       commit-result)))
+
+(defn delete-ledger-file
+  [store {:keys [address] :as _file-meta}]
+  (storage/delete store address))
+
+(defn delete-ledger-files
+  "In the case of an exception or the proposed new files do not get accepted by consensus,
+  we want to remove the files that were stored."
+  [{:keys [fluree/store] :as _config}
+   {:keys [data-file-meta commit-file-meta] :as _commit-result}]
+  (when data-file-meta ;; if the commit is just being updated, there won't be more data (e.g. after indexing)
+    (delete-ledger-file store data-file-meta))
+  (delete-ledger-file store commit-file-meta)
+  ;; TODO - need to remove the entries from the nameservice
+  ::done)
 
 (defn update-ledger-state
   "Updates the latest commit in the ledger, and removes the processed transaction in the queue"
