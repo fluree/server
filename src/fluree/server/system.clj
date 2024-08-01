@@ -1,6 +1,7 @@
 (ns fluree.server.system
   (:require [fluree.db.api :as fluree]
             [fluree.db.conn.cache :as conn-cache]
+            [fluree.db.storage.file :as file-store]
             [fluree.server.config :as config]
             [fluree.server.consensus.raft :as raft]
             [fluree.server.consensus.standalone :as standalone]
@@ -17,25 +18,29 @@
 (derive :fluree/raft :fluree/consensus)
 (derive :fluree/standalone :fluree/consensus)
 (derive :http/jetty :http/server)
+(derive :fluree/file-store :fluree/store)
 
 (defmethod ig/expand-key ::config/connection
   [_ config]
   (let [config* (assoc config
                        :server (ig/ref :fluree/server)
+                       :store (ig/ref :fluree/store)
                        :cache (ig/ref :fluree/cache))]
     {:fluree/connection config*}))
 
 (defmethod ig/expand-key ::config/server
-  [_ {:keys [cache-max-mb] :as config}]
-  {:fluree/cache  cache-max-mb
-   :fluree/server (dissoc config :cache-max-mb)})
+  [_ {:keys [cache-max-mb storage-path] :as config}]
+           (cond->
+            {:fluree/cache  cache-max-mb
+             :fluree/server (dissoc config :cache-max-mb)}
+            storage-path (assoc :fluree/file-store {:storage-path storage-path})))
 
 (defmethod ig/expand-key ::config/consensus
   [_ config]
   (let [consensus-key    (keyword "fluree" (-> config :protocol name))
         consensus-config (-> config
                              (dissoc :protocol)
-                             (assoc :server (ig/ref :fluree/server)
+                             (assoc :store (ig/ref :fluree/store)
                                     :conn (ig/ref :fluree/connection)
                                     :watcher (ig/ref :fluree/watcher)
                                     :subscriptions (ig/ref :fluree/subscriptions)))]
@@ -59,7 +64,6 @@
   [_ {:keys [storage-method server cache] :as config}]
   (let [config* (-> config
                     (assoc :method storage-method
-                           :storage-path (:storage-path server)
                            :lru-cache-atom cache)
                     (dissoc :storage-method))]
     @(fluree/connect config*)))
@@ -76,6 +80,10 @@
 (defmethod ig/init-key :fluree/server
   [_ config]
   config)
+
+(defmethod ig/init-key :fluree/file-store
+  [_ {:keys [storage-path] :as _config}]
+  (file-store/open storage-path))
 
 (defmethod ig/init-key :fluree/subscriptions
   [_ _]
@@ -94,9 +102,8 @@
   (watcher/close watcher))
 
 (defmethod ig/init-key :fluree/raft
-  [_ {:keys [server] :as config}]
-  (let [config* (assoc config :ledger-directory (:storage-path server))]
-    (raft/start config*)))
+  [_ config]
+  (raft/start config))
 
 (defmethod ig/halt-key! :fluree/raft
   [_ {:keys [close] :as _raft-group}]
