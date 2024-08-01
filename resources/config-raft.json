@@ -1,12 +1,11 @@
 {
   "server": {
-    "storagePath": "data"
+    "storagePath": "data",
+    "cacheMaxMb": 1000
   },
   "connection": {
     "storageMethod": "file",
     "parallelism": 4,
-    "storagePath": "data",
-    "cacheMaxMb": 1000,
     "defaults": {
       "index": {
         "reindexMinBytes": 100000,
@@ -34,11 +33,9 @@
   "profiles": {
     "dev": {
       "server": {
-        "storagePath": "dev/data/raft"
-      },
-      "connection": {
+        "storagePath": "dev/data/raft",
         "cacheMaxMb": 200
-      },
+      }
       "consensus": {
         "logDirectory": "dev/data/raft/raftlog"
       },
@@ -48,7 +45,8 @@
     },
     "dev-3-server-1": {
       "server": {
-        "storagePath": "dev/data/raft1"
+        "storagePath": "dev/data/raft1",
+        "cacheMaxMb": 200
       },
       "consensus": {
         "servers": [
@@ -68,7 +66,8 @@
     },
     "dev-3-server-2": {
       "server": {
-        "storagePath": "dev/data/raft2"
+        "storagePath": "dev/data/raft2",
+        "cacheMaxMb": 200
       },
       "consensus": {
         "servers": [
@@ -79,16 +78,14 @@
         "thisServer": "/ip4/127.0.0.1/tcp/62072",
         "logDirectory": "dev/data/raft2/raftlog"
       },
-      "connection": {
-        "cacheMaxMb": 200
-      },
       "http": {
         "port": 58091
       }
     },
     "dev-3-server-3": {
       "server": {
-        "storagePath": "dev/data/raft3"
+        "storagePath": "dev/data/raft3",
+        "cacheMaxMb": 200
       },
       "consensus": {
         "servers": [
@@ -98,9 +95,6 @@
         ],
         "thisServer": "/ip4/127.0.0.1/tcp/62073",
         "logDirectory": "dev/data/raft3/raftlog"
-      },
-      "connection": {
-        "cacheMaxMb": 200
       },
       "http": {
         "port": 58092
