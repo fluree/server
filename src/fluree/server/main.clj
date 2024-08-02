@@ -15,7 +15,7 @@
 
 (defn profile-string->keyword
   [s]
-  (-> s strip-leading-colon keyword))
+  (-> s str/trim strip-leading-colon keyword))
 
 (def cli-options
   [["-p" "--profile PROFILE" "Run profile"
