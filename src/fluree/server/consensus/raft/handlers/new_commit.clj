@@ -59,7 +59,6 @@
   (when data-file-meta ;; if the commit is just being updated, there won't be more data (e.g. after indexing)
     (delete-ledger-file store data-file-meta))
   (delete-ledger-file store commit-file-meta)
-  ;; TODO - need to remove the entries from the nameservice
   ::done)
 
 (defn update-ledger-state
@@ -80,14 +79,14 @@
     commit-result
 
     (catch Exception e
-      ; return exception (don't throw) for handler on error
-      (log/warn (ex-message e))
-      (if (ex-data e)
-        e
-        (ex-info (str "Unexpected error queuing new ledger: " (ex-message e))
-                 {:status 500
-                  :error  :db/unexpected-error}
-                 e)))))
+      (let [ex (if (ex-data e)
+                 e
+                 (ex-info (str "Unexpected error queuing new ledger: " (ex-message e))
+                          {:status 500
+                           :error  :db/unexpected-error}
+                          e))]
+        (log/warn (ex-message ex))
+        (throw ex)))))
 
 (defn handler
   "Adds a new commit for a ledger into state machine and stores associated files
@@ -98,14 +97,17 @@
 
     (->> commit-result
          (store-ledger-files config)
-         async/<!!
-         (update-ledger-state config))
+         <??
+         (update-ledger-state config)
+         (push-nameservice config)
+         <??)
 
     (catch Exception e
       (log/warn (str "Error writing new commit: " (ex-message e)))
+      (delete-ledger-files config commit-result)
       (if (ex-data e)
         e
-        (ex-info (str "Unexpected error creating new ledger: " (ex-message e))
+        (ex-info (str "Unexpected error with new commit: " (ex-message e))
                  {:status 500
                   :error  :db/unexpected-error}
                  e)))))
