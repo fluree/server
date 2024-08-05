@@ -40,4 +40,4 @@ EXPOSE 58090
 VOLUME ./data
 
 ENTRYPOINT ["java", "-Xmx8g", "-jar", "server.jar"]
-CMD ["docker"]
+CMD ["--profile=docker"]
