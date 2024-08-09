@@ -7,7 +7,7 @@
     "storageMethod": "file",
     "parallelism": 4,
     "defaults": {
-      "index": {
+      "indexing": {
         "reindexMinBytes": 100000,
         "reindexMaxBytes": 10000000
       }
