@@ -35,7 +35,7 @@
       "server": {
         "storagePath": "dev/data/raft",
         "cacheMaxMb": 200
-      }
+      },
       "consensus": {
         "logDirectory": "dev/data/raft/raftlog"
       },
