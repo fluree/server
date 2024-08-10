@@ -1,9 +1,9 @@
 (ns fluree.server.task.migrate-sid
-  (:require [fluree.db.json-ld.migrate.sid :as migrate-sid]
-            [fluree.db.util.log :as log]
+  (:require [clojure.core.async :as async :refer [<! >! go-loop]]
+            [fluree.db.json-ld.migrate.sid :as migrate-sid]
             [fluree.db.util.async :refer [go-try]]
-            [clojure.core.async :as async :refer [go-loop >! <!]]
             [fluree.db.util.core :as util]
+            [fluree.db.util.log :as log]
             [malli.core :as m]))
 
 (def MigrateSidTask

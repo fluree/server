@@ -205,5 +205,5 @@
    (-> path
        read-file
        (cond->
-           (= profile :task) (task-config profile)
-           (not= profile :task) (finalize profile)))))
+        (= profile :task) (task-config profile)
+        (not= profile :task) (finalize profile)))))
