@@ -67,6 +67,7 @@
                    :jetty]
     ::http-port pos-int?
     ::max-txn-wait-ms pos-int?
+    ::task [:map [:id :keyword]]
     ::jetty [:map [:server ::http-server]]
     ::http [:and
             [:map
@@ -79,7 +80,11 @@
               [:server ::server-config]
               [:connection ::connection]
               [:consensus ::consensus]
-              [:http ::http]]}))
+              [:http ::http]]
+    ::task-config [:map {:closed true}
+                   [:server ::server-config]
+                   [:connection ::connection]
+                   [:task ::task]]}))
 
 (def coerce
   (m/coercer ::config transform/string-transformer {:registry registry}))
@@ -159,6 +164,12 @@
       coerce
       with-namespaced-keys))
 
+(defn task-config
+  [config profile]
+  (let [config* (apply-overrides config profile)]
+    (-> (m/coerce ::task-config config* transform/string-transformer {:registry registry})
+        with-namespaced-keys)))
+
 (defn parse-config
   [cfg]
   (json/parse cfg ->kebab-case-keyword))
@@ -193,4 +204,6 @@
   ([path profile]
    (-> path
        read-file
-       (finalize profile))))
+       (cond->
+           (= profile :task) (task-config profile)
+           (not= profile :task) (finalize profile)))))

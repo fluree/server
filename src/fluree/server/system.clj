@@ -7,6 +7,7 @@
             [fluree.server.consensus.subscriptions :as subscriptions]
             [fluree.server.consensus.watcher :as watcher]
             [fluree.server.handler :as handler]
+            [fluree.server.task :as task]
             [integrant.core :as ig]
             [ring.adapter.jetty9 :as jetty]))
 
@@ -54,6 +55,11 @@
                       :consensus     (ig/ref :fluree/consensus)
                       :watcher       (ig/ref :fluree/watcher)
                       :subscriptions (ig/ref :fluree/subscriptions)}}))
+
+(defmethod ig/expand-key ::config/task
+  [_ task]
+  {:fluree/task {:task task
+                 :conn (ig/ref :fluree/connection)}})
 
 (defmethod ig/init-key :fluree/connection
   [_ {:keys [storage-method server cache] :as config}]
@@ -121,6 +127,10 @@
 (defmethod ig/halt-key! :http/jetty
   [_ http-server]
   (jetty/stop-server http-server))
+
+(defmethod ig/init-key :fluree/task
+  [_ {:keys [conn task]}]
+  (task/run conn task))
 
 (defn start-config
   [config]
