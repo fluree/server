@@ -9,7 +9,11 @@
 (def MigrateSidTask
   [:map
    [:id [:enum :migrate/sid]]
-   [:ledgers {:doc "Collection of ledger aliases to migrate."} [:sequential :string]]])
+   [:ledgers {:doc "Collection of ledger aliases to migrate."}
+    [:sequential :string]]
+   [:force {:optional true
+            :doc "If true, run the migration regardless of whether the ledger has already been migrated."}
+    :boolean]])
 
 (defn log-migrated-index-files
   "Takes and logs any files from the `index-files-ch`"
@@ -24,7 +28,7 @@
             (recur))))))
 
 (defn migrate
-  [conn {:keys [id ledgers] :as task}]
+  [conn {:keys [id ledgers force] :as task}]
   (if-let [error (m/explain MigrateSidTask task)]
     (do (log/error "Invalid task configuration." error)
         (throw (ex-info "Invalid task configuration."
@@ -37,7 +41,7 @@
           (log-migrated-index-files index-files-ch error-ch)
           (if alias
             (let [_ (log/info id "ledger" alias "start" (util/current-time-iso))
-                  migrate-ch (migrate-sid/migrate conn alias nil index-files-ch)]
+                  migrate-ch (migrate-sid/migrate conn alias nil force index-files-ch)]
               (async/alt!
                 error-ch ([e]
                           (throw e))

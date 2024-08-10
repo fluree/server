@@ -16,6 +16,7 @@
   },
   "task": {
     "id": "migrate/sid",
-    "ledgers": ["ledger1", "ledger2"]
+    "ledgers": ["ledger1", "ledger2"],
+    "force": false
   }
 }
