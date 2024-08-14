@@ -67,7 +67,12 @@
                    :jetty]
     ::http-port pos-int?
     ::max-txn-wait-ms pos-int?
-    ::task [:map [:id :keyword]]
+    ::task [:or
+            [:map
+             [:id [:enum :migrate/sid]]
+             [:ledgers {:doc "Collection of ledger aliases to migrate."} [:sequential :string]]
+             [:force {:optional true :doc "If true, run the migration regardless of whether the ledger has already been migrated."}
+              :boolean]]]
     ::jetty [:map [:server ::http-server]]
     ::http [:and
             [:map
@@ -87,7 +92,7 @@
                    [:task ::task]]}))
 
 (def coerce
-  (m/coercer ::config transform/string-transformer {:registry registry}))
+  (m/coercer [:or ::config ::task-config] transform/string-transformer {:registry registry}))
 
 (def env-template
   {:server     {:storage-path "FLUREE_STORAGE_PATH"}
@@ -164,12 +169,6 @@
       coerce
       with-namespaced-keys))
 
-(defn task-config
-  [config profile]
-  (let [config* (apply-overrides config profile)]
-    (-> (m/coerce ::task-config config* transform/string-transformer {:registry registry})
-        with-namespaced-keys)))
-
 (defn parse-config
   [cfg]
   (json/parse cfg ->kebab-case-keyword))
@@ -204,6 +203,4 @@
   ([path profile]
    (-> path
        read-file
-       (cond->
-        (= profile :task) (task-config profile)
-        (not= profile :task) (finalize profile)))))
+       (finalize profile))))
