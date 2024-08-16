@@ -8,6 +8,7 @@
             [fluree.server.consensus.watcher :as watcher]
             [fluree.server.handler :as handler]
             [fluree.server.task :as task]
+            [fluree.server.task.migrate-sid :as task.migrate-sid]
             [integrant.core :as ig]
             [ring.adapter.jetty9 :as jetty]))
 
@@ -60,6 +61,11 @@
   [_ task]
   {:fluree/task {:task task
                  :conn (ig/ref :fluree/connection)}})
+
+(defmethod ig/expand-key ::config/sid-migration
+  [_ sid-migration]
+  {:fluree/sid-migration {:sid-migration sid-migration
+                          :conn (ig/ref :fluree/connection)}})
 
 (defmethod ig/init-key :fluree/connection
   [_ {:keys [storage-method server cache] :as config}]
@@ -131,6 +137,11 @@
 (defmethod ig/init-key :fluree/task
   [_ {:keys [conn task]}]
   (task/run conn task))
+
+(defmethod ig/init-key :fluree/sid-migration
+  [_ {:keys [conn sid-migration]}]
+  (let [{:keys [ledgers force]} sid-migration]
+    (task.migrate-sid/migrate conn ledgers force)))
 
 (defn start-config
   [config]

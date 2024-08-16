@@ -18,21 +18,21 @@
             (recur))))))
 
 (defn migrate
-  [conn {:keys [id ledgers force] :as task}]
+  [conn ledgers force]
   (go-try
-    (log/info id "start" (util/current-time-iso) "." task)
+    (log/info :migrate/sid "start" (util/current-time-iso) "." ledgers force)
     (loop [[alias & r] ledgers]
       (let [index-files-ch (async/chan)
             error-ch       (async/chan)]
         (log-migrated-index-files index-files-ch error-ch)
         (if alias
-          (let [_ (log/info id "ledger" alias "start" (util/current-time-iso))
+          (let [_ (log/info :migrate/sid "ledger" alias "start" (util/current-time-iso))
                 migrate-ch (migrate-sid/migrate conn alias nil force index-files-ch)]
             (async/alt!
               error-ch ([e]
                         (throw e))
 
               migrate-ch ([_ledger]
-                          (log/info id "ledger" alias "complete" (util/current-time-iso))))
+                          (log/info :migrate/sid "ledger" alias "complete" (util/current-time-iso))))
             (recur r))
-          (log/info id "complete" (util/current-time-iso) "."))))))
+          (log/info :migrate/sid "complete" (util/current-time-iso) "."))))))

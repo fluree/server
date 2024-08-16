@@ -6,8 +6,8 @@
 
 (defmethod run-task :default [_ task] (log/error "Unknown task id." (:id task)))
 (defmethod run-task :migrate/sid
-  [conn task]
-  (task.migrate-sid/migrate conn task))
+  [conn {:keys [ledgers force]}]
+  (task.migrate-sid/migrate conn ledgers force))
 
 (defn run
   [conn task]
