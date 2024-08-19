@@ -57,9 +57,8 @@
                       :subscriptions (ig/ref :fluree/subscriptions)}}))
 
 (defmethod ig/expand-key ::config/sid-migration
-  [_ sid-migration]
-  {:fluree/sid-migration {:sid-migration sid-migration
-                          :conn (ig/ref :fluree/connection)}})
+  [_ config]
+  {:fluree/sid-migration (assoc config :conn (ig/ref :fluree/connection))})
 
 (defmethod ig/init-key :fluree/connection
   [_ {:keys [storage-method server cache] :as config}]
@@ -129,9 +128,8 @@
   (jetty/stop-server http-server))
 
 (defmethod ig/init-key :fluree/sid-migration
-  [_ {:keys [conn sid-migration]}]
-  (let [{:keys [ledgers force]} sid-migration]
-    (task.migrate-sid/migrate conn ledgers force)))
+  [_ {:keys [conn ledgers force]}]
+  (task.migrate-sid/migrate conn ledgers force))
 
 (defn start-config
   [config]
