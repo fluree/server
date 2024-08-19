@@ -36,6 +36,8 @@
  ;; single-server raft config startup
  (start! (config/load-resource "config-raft.json" :dev))
 
+ (start! (config/load-resource "config-sid-migration.json" :dev))
+
  ;; 3 server raft config startup
  (start! (config/load-resource "config-raft.json" :dev-3-server-1))
  (start! (config/load-resource "config-raft.json" :dev-3-server-2))

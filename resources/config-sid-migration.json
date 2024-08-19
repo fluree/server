@@ -1,0 +1,21 @@
+{
+  "server": {
+    "storagePath": "data",
+    "cacheMaxMb": 1000
+  },
+  "connection": {
+    "storageMethod": "file",
+    "parallelism": 4,
+    "defaults": {
+      "index": {
+        "reindexMinBytes": 100000,
+        "reindexMaxBytes": 10000000,
+        "maxOldIndexes": 3
+      }
+    }
+  },
+  "sidMigration": {
+    "ledgers": ["ledger1", "ledger2"],
+    "force": false
+  }
+}

@@ -79,10 +79,20 @@
               [:server ::server-config]
               [:connection ::connection]
               [:consensus ::consensus]
-              [:http ::http]]}))
+              [:http ::http]]
+
+    ::sid-migration [:map
+                     [:ledgers {:doc "Collection of ledger aliases to migrate."} [:sequential :string]]
+                     [:force {:optional true :doc "If true, run the migration regardless of whether the ledger has already been migrated."}
+                      :boolean]]
+
+    ::sid-migration-config [:map {:closed true}
+                            [:server ::server-config]
+                            [:connection ::connection]
+                            [:sid-migration ::sid-migration]]}))
 
 (def coerce
-  (m/coercer ::config transform/string-transformer {:registry registry}))
+  (m/coercer [:or ::config ::sid-migration-config] transform/string-transformer {:registry registry}))
 
 (def env-template
   {:server     {:storage-path "FLUREE_STORAGE_PATH"}
