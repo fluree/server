@@ -2,6 +2,7 @@
   (:require [clojure.core.async :as async]
             [fluree.crypto :as crypto]
             [fluree.db.api :as fluree]
+            [fluree.db.api.transact :as api.transact]
             [fluree.db.constants :as const]
             [fluree.db.util.context :as ctx-util]
             [fluree.db.util.core :as util]
@@ -10,7 +11,8 @@
             [fluree.json-ld.processor.api :as jld-processor]
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.watcher :as watcher]
-            [fluree.server.handlers.shared :refer [defhandler deref!]]))
+            [fluree.server.handlers.shared :refer [defhandler deref!]]
+            [fluree.server.io.turtle :as turtle]))
 
 (set! *warn-on-reflection* true)
 
@@ -34,9 +36,8 @@
           (watcher/deliver-watch watcher tx-id persist-resp))))))
 
 (defn transact!
-  [p consensus watcher expanded-txn opts]
-  (let [ledger-id     (-> expanded-txn (get const/iri-ledger) (get 0) (get "@value"))
-        tx-id         (derive-tx-id (:raw-txn opts))
+  [p consensus watcher ledger-id expanded-txn opts]
+  (let [tx-id         (derive-tx-id (:raw-txn opts))
         final-resp-ch (watcher/create-watch watcher tx-id)]
 
     ;; register transaction into consensus
@@ -79,21 +80,56 @@
                     {:response {:status 409
                                 :body   {:error err-message}}}))))
 
+(defn throw-ledger-not-specified
+  []
+  (let [err-message (str "Ledger must be specified in the HTTP header key of 'Fluree-Ledger'")]
+    (throw (ex-info err-message
+                    {:response {:status 409
+                                :body   {:error err-message}}}))))
+
+(defhandler import
+  [{:keys          [content-type fluree/ledger-id fluree/conn fluree/consensus fluree/watcher credential/did raw-txn]
+    {:keys [body]} :parameters}]
+  (when (nil? ledger-id) (throw-ledger-not-specified))
+  (or (deref! (fluree/exists? conn ledger-id))
+      (throw-ledger-doesnt-exist ledger-id))
+  (let [parsed-opts (cond-> {:raw-txn raw-txn}
+                      did (assoc :did did))
+        resp-p      (promise)]
+
+    (cond
+      (= "application/json" content-type)
+      (transact! resp-p consensus watcher ledger-id {"insert" body} parsed-opts)
+
+      (= "text/turtle" content-type)
+      (let [parsed-txn {:insert (turtle/parse body)}]
+        (transact! resp-p consensus watcher ledger-id parsed-txn (assoc parsed-opts :parsed? true)))
+
+      :else
+      (let [err-message "Import API only supports 'application/json' and 'text/turtle' content types."]
+        (throw (ex-info err-message
+                        {:response {:status 415
+                                    :body   {:error err-message}}}))))
+
+    {:status 200
+     :body   (deref! resp-p)}))
+
 (defhandler default
   [{:keys          [fluree/conn fluree/consensus fluree/watcher credential/did raw-txn]
     {:keys [body]} :parameters}]
-  (let [txn-context    (ctx-util/txn-context body)
+  (let [txn-context (ctx-util/txn-context body)
         [expanded-txn] (-> (ctx-util/use-fluree-context body)
                            jld-processor/expand
                            util/sequential)
-        ledger-id  (-> expanded-txn (get const/iri-ledger) (get 0) (get "@value"))
-        resp-p     (promise)]
+        ledger-id   (-> expanded-txn (util/get-first-value const/iri-ledger))
+        parsed-opts (cond-> {:context txn-context :raw-txn raw-txn}
+                      did (assoc :did did))
+        resp-p      (promise)]
     (log/trace "parsed transact req:" expanded-txn)
     (or (deref! (fluree/exists? conn ledger-id))
         (throw-ledger-doesnt-exist ledger-id))
     ;; kick of async process that will eventually deliver resp or exception to resp-p
-    (transact! resp-p consensus watcher expanded-txn (cond-> {:context txn-context :raw-txn raw-txn}
-                                                       did (assoc :did did)))
+    (transact! resp-p consensus watcher ledger-id expanded-txn parsed-opts)
 
     {:status 200
      :body   (deref! resp-p)}))

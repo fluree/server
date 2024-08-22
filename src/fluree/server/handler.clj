@@ -62,6 +62,12 @@
 (def TransactRequestBody
   (m/schema [:map-of :any :any]))
 
+(def ImportRequestBody
+  (m/schema [:or
+             [:string {:min 1}]
+             [:map-of :any :any]
+             [:sequential map?]]))
+
 (def TransactResponseBody
   (m/schema [:and
              [:map-of :keyword :any]
@@ -380,6 +386,13 @@
                               400 {:body ErrorResponse}
                               500 {:body ErrorResponse}}
                  :handler    #'srv-tx/default}}]
+        ["/import"
+         {:post {:summary    "Endpoint for importing RDF (json-ld or turtle/ttl) data."
+                 :parameters {:body ImportRequestBody}
+                 :responses  {200 {:body TransactResponseBody}
+                              400 {:body ErrorResponse}
+                              500 {:body ErrorResponse}}
+                 :handler    #'srv-tx/import}}]
         ["/query"
          {:get  query-endpoint
           :post query-endpoint}]
