@@ -143,12 +143,25 @@
                  json/read-value))))))
 
 (def turtle-sample
-  "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-   @prefix ex: <http://example.org/> .
+  "@prefix ex: <http://example.org/> .
+   @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+   @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 
-   # --- Benchmark ---
+   # --- Named Node ---
    ex:foo ex:name \"Foo's Name\" ;
-          ex:age  \"42\"^^xsd:integer .")
+          ex:age  \"42\"^^xsd:integer .
+
+   # --- Blank Node related to other blank node ---
+   _:b1 a ex:Person ;
+        ex:name \"Blank Node\" ;
+        ex:age  \"41\"^^xsd:integer ;
+        ex:friend _:b1 .
+
+   # --- Numeric datatype without ---
+   _:b2 rdf:type ex:Person ;
+        ex:name \"Blank 2\" ;
+        ex:age 33 .
+   ")
 
 (deftest ^:integration import-turtle-test
   (testing "Can import Turtle"
@@ -164,16 +177,51 @@
                        "select"   {"?s" ["*"]}
                        "where"    {"@id"    "?s"
                                    "ex:age" {"@value" 42
-                                             "@type"  "xsd:integer"}}}]
+                                             "@type"  "xsd:integer"}}}
+          query2      {"@context" {"ex"  "http://example.org/"
+                                   "xsd" "http://www.w3.org/2001/XMLSchema#"}
+                       "from"     [ledger-name]
+                       "select"   {"?s" ["*"]}
+                       "where"    {"@id"    "?s"
+                                   "ex:age" {"@value" 41
+                                             "@type"  "xsd:integer"}}}
+          query3      {"@context" {"ex"  "http://example.org/"
+                                   "xsd" "http://www.w3.org/2001/XMLSchema#"}
+                       "from"     [ledger-name]
+                       "select"   {"?s" ["*"]}
+                       "where"    {"@id"    "?s"
+                                   "ex:age" 33}}]
+
       (is (= 200 (:status res)))
+
       (is (= {"ledger" ledger-name, "t" 2}
              (-> res :body json/read-value (select-keys ["ledger" "t"]))))
+
       (is (= [{"@id"     "ex:foo"
                "ex:name" "Foo's Name"
                "ex:age"  42}]
              (-> (api-post :query {:body (json/write-value-as-string query) :headers json-headers})
                  :body
-                 json/read-value))))))
+                 json/read-value)))
+
+      (is (= [{"@id"       "_:b1"
+               "@type"     "ex:Person"
+               "ex:name"   "Blank Node"
+               "ex:age"    41
+               "ex:friend" {"@id" "_:b1"}}]
+             (-> (api-post :query {:body (json/write-value-as-string query2) :headers json-headers})
+                 :body
+                 json/read-value))
+          "Blank nodes, rdf:type alias 'a' and blank node refs carry through")
+
+      (is (= [{"@id"     "_:b2"
+               "@type"   "ex:Person"
+               "ex:name" "Blank 2"
+               "ex:age"  33}]
+             (-> (api-post :query {:body (json/write-value-as-string query3) :headers json-headers})
+                 :body
+                 json/read-value))
+          "When no datatype is specified in TTL, it isn't needed in query either to retrieve data."))))
 
 (deftest ^:integration import-json-ld-test
   (testing "Can import JSON-LD"

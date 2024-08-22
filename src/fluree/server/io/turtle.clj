@@ -1,26 +1,21 @@
 (ns fluree.server.io.turtle
-  (:require [fluree.db.query.exec.where :as exec.where]
-            [quoll.raphael.core :as raphael]
-            [quoll.rdf :as rdf :refer [RDF-TYPE RDF-FIRST RDF-REST RDF-NIL]]))
+  (:require [fluree.db.constants :as const]
+            [fluree.db.json-ld.iri :as iri]
+            [fluree.db.query.exec.where :as exec.where]
+            [quoll.raphael.core :as raphael]))
 
 (set! *warn-on-reflection* true)
 
-(defrecord Generator [counter bnode-cache namespaces]
+(defrecord Generator [namespaces]
   raphael/NodeGenerator
   (new-node [this]
-    [(update this :counter inc) (rdf/unsafe-blank-node (str "b" counter))])
+    [this (exec.where/match-iri (iri/new-blank-node-id))])
   (new-node [this label]
-    (if-let [node (get bnode-cache label)]
-      [this node]
-      (let [node (rdf/unsafe-blank-node (str "b" counter))]
-        [(-> this
-             (update :counter inc)
-             (update :bnode-cache assoc label node))
-         node])))
+    [this (exec.where/match-iri (str "_:" label))])
   (add-base [this iri]
-    (update this :namespaces assoc :base (rdf/as-str iri)))
+    (update this :namespaces assoc :base (str iri)))
   (add-prefix [this prefix iri]
-    (update this :namespaces assoc prefix (rdf/as-str iri)))
+    (update this :namespaces assoc prefix (str iri)))
   (iri-for [_ prefix]
     (get namespaces prefix))
   (get-namespaces [_]
@@ -42,18 +37,17 @@
     (-> exec.where/unmatched
         (exec.where/match-lang s lang)))
   (rdf-type [_]
-    RDF-TYPE)
-  (rdf-first [_] RDF-FIRST)
-  (rdf-rest [_] RDF-REST)
-  (rdf-nil [_] RDF-NIL))
-
-(defn new-generator
-  []
-  (->Generator 0 {} {}))
+    (exec.where/match-iri const/iri-rdf-type))
+  (rdf-first [_]
+    (exec.where/match-iri const/iri-rdf-first))
+  (rdf-rest [_]
+    (exec.where/match-iri const/iri-rdf-rest))
+  (rdf-nil [_]
+    (exec.where/match-iri const/iri-rdf-nil)))
 
 (defn parse
   [ttl]
-  (let [gen (new-generator)]
+  (let [gen (->Generator {})]
     (-> ttl
         (raphael/parse gen)
         :triples)))
