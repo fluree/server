@@ -165,26 +165,30 @@
   as :body-params. If the signature is not valid, throws an invalid signature error. If
   the request body is not a credential, nothing is done."
   [handler]
-  (fn [{:keys [body-params] :as req}]
+  (fn [{:keys [body-params content-type] :as req}]
     (log/trace "unwrap-credential body-params:" body-params)
-    (let [verified (<!! (cred/verify body-params))
-          _        (log/trace "unwrap-credential verified:" verified)
-          {:keys [subject did]}
-          (cond
-            (:subject verified) ; valid credential
-            verified
+    (if (#{"application/json" "application/jwt"} content-type)
+      (let [verified (<!! (cred/verify body-params))
+            _        (log/trace "unwrap-credential verified:" verified)
+            {:keys [subject did]}
+            (cond
+              (:subject verified) ; valid credential
+              verified
 
-            (and (util/exception? verified)
-                 (not= 400 (-> verified ex-data :status))) ; no credential
-            {:subject body-params}
+              (and (util/exception? verified)
+                   (not= 400 (-> verified ex-data :status))) ; no credential
+              {:subject body-params}
 
-            :else ; invalid credential
-            (throw (ex-info "Invalid credential"
-                            {:response {:status 400
-                                        :body   {:error "Invalid credential"}}})))
-          req*     (assoc req :body-params subject :credential/did did :raw-txn body-params)]
-      (log/debug "Unwrapped credential with did:" did)
-      (handler req*))))
+              :else ; invalid credential
+              (throw (ex-info "Invalid credential"
+                              {:response {:status 400
+                                          :body   {:error "Invalid credential"}}})))
+            req*     (assoc req :body-params subject
+                            :credential/did did
+                            :raw-txn body-params)]
+        (log/debug "Unwrapped credential with did:" did)
+        (handler req*))
+      (handler (assoc req :raw-txn body-params)))))
 
 (defn wrap-set-fuel-header
   [handler]
