@@ -190,6 +190,13 @@
         (handler req*))
       (handler (assoc req :raw-txn body-params)))))
 
+(defn wrap-set-ledger-id
+  [handler]
+  (fn [req]
+    (->> (get-in req [:headers "fluree-ledger"])
+         (assoc req :fluree/ledger-id)
+         (handler))))
+
 (defn wrap-set-fuel-header
   [handler]
   (fn [req]
@@ -334,6 +341,7 @@
                                    [10 wrap-cors]
                                    [10 (partial wrap-assoc-system conn consensus watcher)]
                                    [50 unwrap-credential]
+                                   [75 wrap-set-ledger-id]
                                    [100 wrap-set-fuel-header]
                                    [200 coercion/coerce-exceptions-middleware]
                                    [300 coercion/coerce-response-middleware]
