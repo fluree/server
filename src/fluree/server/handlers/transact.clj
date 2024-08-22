@@ -2,7 +2,6 @@
   (:require [clojure.core.async :as async]
             [fluree.crypto :as crypto]
             [fluree.db.api :as fluree]
-            [fluree.db.api.transact :as api.transact]
             [fluree.db.constants :as const]
             [fluree.db.util.context :as ctx-util]
             [fluree.db.util.core :as util]
@@ -12,7 +11,8 @@
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.watcher :as watcher]
             [fluree.server.handlers.shared :refer [defhandler deref!]]
-            [fluree.server.io.turtle :as turtle]))
+            [fluree.server.io.turtle :as turtle])
+  (:refer-clojure :exclude [import]))
 
 (set! *warn-on-reflection* true)
 

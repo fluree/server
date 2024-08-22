@@ -21,31 +21,31 @@
     (update this :namespaces assoc :base (rdf/as-str iri)))
   (add-prefix [this prefix iri]
     (update this :namespaces assoc prefix (rdf/as-str iri)))
-  (iri-for [this prefix]
+  (iri-for [_ prefix]
     (get namespaces prefix))
-  (get-namespaces [this]
+  (get-namespaces [_]
     (dissoc namespaces :base))
-  (get-base [this]
+  (get-base [_]
     (:base namespaces))
-  (new-qname [this prefix local]
+  (new-qname [_ prefix local]
     (exec.where/match-iri (str (get namespaces prefix) local)))
-  (new-iri [this iri]
+  (new-iri [_ iri]
     iri)
-  (new-literal [this s]
+  (new-literal [_ s]
     (-> exec.where/unmatched
         (exec.where/match-value s)))
-  (new-literal [this s t]
+  (new-literal [_ s t]
     (let [datatype (-> t ::exec.where/iri)]
       (-> exec.where/unmatched
           (exec.where/match-value s datatype))))
-  (new-lang-string [this s lang]
+  (new-lang-string [_ s lang]
     (-> exec.where/unmatched
         (exec.where/match-lang s lang)))
-  (rdf-type [this]
+  (rdf-type [_]
     RDF-TYPE)
-  (rdf-first [this] RDF-FIRST)
-  (rdf-rest [this] RDF-REST)
-  (rdf-nil [this] RDF-NIL))
+  (rdf-first [_] RDF-FIRST)
+  (rdf-rest [_] RDF-REST)
+  (rdf-nil [_] RDF-NIL))
 
 (defn new-generator
   []
