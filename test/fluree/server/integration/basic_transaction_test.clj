@@ -22,43 +22,15 @@
               "t"      1}
              (-> res :body json/read-value (select-keys ["ledger" "t"])))))))
 
-#_(deftest ^:integration ^:edn create-endpoint-edn-test
-    (testing "can create a new ledger w/ EDN"
-      (let [ledger-name (str "create-endpoint-" (random-uuid))
-            address     (str "fluree:memory://" ledger-name "/main/head")
-            req         (pr-str {:ledger         ledger-name
-                                 :defaultContext ["" {:foo "http://foobar.com/"}]
-                                 :txn            [{:id      :ex/create-test
-                                                   :type    :foo/test
-                                                   :ex/name "create-endpoint-test"}]})
-            res         (api-post :create {:body req :headers edn-headers})]
-        (is (= 201 (:status res)))
-        (is (= {:address address
-                :alias   ledger-name
-                :t       1}
-               (-> res :body edn/read-string)))))
-
-    (testing "responds with 409 error if ledger already exists"
-      (let [ledger-name (str "create-endpoint-" (random-uuid))
-            req         (pr-str {:ledger         ledger-name
-                                 :defaultContext ["" {:foo "http://foobar.com/"}]
-                                 :txn            [{:id      :ex/create-test
-                                                   :type    :foo/test
-                                                   :ex/name "create-endpoint-test"}]})
-            res-success (api-post :create {:body req :headers edn-headers})
-            _           (assert (= 201 (:status res-success)))
-            res-fail    (api-post :create {:body req :headers edn-headers})]
-        (is (= 409 (:status res-fail))))))
-
 (deftest ^:integration ^:json transaction-json-test
   (testing "can transact in JSON"
     (let [ledger-name (create-rand-ledger "transact-endpoint-json-test")
           req         (json/write-value-as-string
                        {"@context" test-system/default-context
-                        "ledger" ledger-name
-                        "insert" {"id"      "ex:transaction-test"
-                                  "type"    "schema:Test"
-                                  "ex:name" "transact-endpoint-json-test"}})
+                        "ledger"   ledger-name
+                        "insert"   {"id"      "ex:transaction-test"
+                                    "type"    "schema:Test"
+                                    "ex:name" "transact-endpoint-json-test"}})
           res         (api-post :transact {:body req :headers json-headers})]
       (is (= 200 (:status res)))
       (is (= {"ledger" ledger-name, "t" 2}
@@ -143,20 +115,20 @@
                                    "ex:items1" {"@list" ["zero" "one" "two" "three"]}
                                    "ex:items2" ["four" "five" "six" "seven"]}}
 
-          q1 {"@context" test-system/default-context
-              "from"     ledger-name
-              "select"   {"ex:list-test" ["*"]}}
+          q1          {"@context" test-system/default-context
+                       "from"     ledger-name
+                       "select"   {"ex:list-test" ["*"]}}
 
-          req2   {"@context" [test-system/default-context {"ex:items2" {"@container" "@list"}}]
-                  "ledger" ledger-name
-                  "where" {"@id" "ex:list-test" "ex:items1" "?items1" "ex:items2" "?items2"}
-                  "delete" {"id" "ex:list-test"
-                            "ex:items1" "?items1"
-                            "ex:items2" "?items2"}}]
+          req2        {"@context" [test-system/default-context {"ex:items2" {"@container" "@list"}}]
+                       "ledger"   ledger-name
+                       "where"    {"@id" "ex:list-test" "ex:items1" "?items1" "ex:items2" "?items2"}
+                       "delete"   {"id"        "ex:list-test"
+                                   "ex:items1" "?items1"
+                                   "ex:items2" "?items2"}}]
       (is (= 200
              (-> (api-post :transact {:body (json/write-value-as-string req1), :headers json-headers})
                  :status)))
-      (is (= [{"id" "ex:list-test",
+      (is (= [{"id"        "ex:list-test",
                "ex:items1" ["zero" "one" "two" "three"]
                "ex:items2" ["four" "five" "six" "seven"]}]
              (-> (api-post :query {:body (json/write-value-as-string q1) :headers json-headers})
@@ -170,16 +142,65 @@
                  :body
                  json/read-value))))))
 
-#_(deftest ^:integration ^:edn transaction-edn-test
-    (testing "can transact in EDN"
-      (let [ledger-name (create-rand-ledger "transact-endpoint-edn-test")
-            address     (str "fluree:memory://" ledger-name "/main/head")
-            req         (pr-str
-                         {:ledger ledger-name
-                          :txn    [{:id      :ex/transaction-test
-                                    :type    :schema/Test
-                                    :ex/name "transact-endpoint-edn-test"}]})
-            res         (api-post :transact {:body req :headers edn-headers})]
-        (is (= 200 (:status res)))
-        (is (= {:address address, :alias ledger-name, :t 2}
-               (-> res :body edn/read-string))))))
+(def turtle-sample
+  "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+   @prefix ex: <http://example.org/> .
+
+   # --- Benchmark ---
+   ex:foo ex:name \"Foo's Name\" ;
+          ex:age  \"42\"^^xsd:integer .")
+
+(deftest ^:integration import-turtle-test
+  (testing "Can import Turtle"
+    (let [ledger-name (create-rand-ledger "transact-endpoint-turtle-import-test")
+          headers     {"Content-Type"  "text/turtle"
+                       "Accept"        "application/json"
+                       "Fluree-Ledger" ledger-name}
+          res         (api-post :import {:body    turtle-sample
+                                         :headers headers})
+          query       {"@context" {"ex"  "http://example.org/"
+                                   "xsd" "http://www.w3.org/2001/XMLSchema#"}
+                       "from"     [ledger-name]
+                       "select"   {"?s" ["*"]}
+                       "where"    {"@id"    "?s"
+                                   "ex:age" {"@value" 42
+                                             "@type"  "xsd:integer"}}}]
+      (is (= 200 (:status res)))
+      (is (= {"ledger" ledger-name, "t" 2}
+             (-> res :body json/read-value (select-keys ["ledger" "t"]))))
+      (is (= [{"@id"     "ex:foo"
+               "ex:name" "Foo's Name"
+               "ex:age"  42}]
+             (-> (api-post :query {:body (json/write-value-as-string query) :headers json-headers})
+                 :body
+                 json/read-value))))))
+
+(deftest ^:integration import-json-ld-test
+  (testing "Can import JSON-LD"
+    (let [ledger-name (create-rand-ledger "transact-endpoint-json-import-test")
+          txn         [{"@context" {"ex"  "http://example.org/"
+                                    "xsd" "http://www.w3.org/2001/XMLSchema#"}
+                        "@id"      "ex:foo"
+                        "ex:name"  "Foo's Name"
+                        "ex:age"   {"@value" 42
+                                    "@type"  "xsd:integer"}}]
+          res         (api-post :import {:body    (json/write-value-as-string txn)
+                                         :headers (assoc json-headers
+                                                         "Fluree-Ledger" ledger-name)})
+          query       {"@context" {"ex"  "http://example.org/"
+                                   "xsd" "http://www.w3.org/2001/XMLSchema#"}
+                       "from"     [ledger-name]
+                       "select"   {"?s" ["*"]}
+                       "where"    {"@id"    "?s"
+                                   "ex:age" {"@value" 42
+                                             "@type"  "xsd:integer"}}}]
+
+      (is (= 200 (:status res)))
+      (is (= {"ledger" ledger-name, "t" 2}
+             (-> res :body json/read-value (select-keys ["ledger" "t"]))))
+      (is (= [{"@id"     "ex:foo"
+               "ex:name" "Foo's Name"
+               "ex:age"  42}]
+             (-> (api-post :query {:body (json/write-value-as-string query) :headers json-headers})
+                 :body
+                 json/read-value))))))
