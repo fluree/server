@@ -1,7 +1,7 @@
 {:deps {org.clojure/clojure    {:mvn/version "1.11.3"}
         org.clojure/core.async {:mvn/version "1.6.681"}
         com.fluree/db          {:git/url "https://github.com/fluree/db.git"
-                                :git/sha "fbb8c415678de864e7a105ccb099c8051eab38cb"}
+                                :git/sha "a5929ff537609dc8b1a686b2d8f5a81bc8053610"}
         com.fluree/json-ld     {:git/url "https://github.com/fluree/json-ld.git"
                                 :git/sha "0958995acf5540271d1807fc6d8f2da131164e24"}
 
@@ -15,6 +15,7 @@
         ;; serialization, compression
         com.taoensso/nippy            {:mvn/version "3.4.0"}
         org.xerial.snappy/snappy-java {:mvn/version "1.1.10.5"}
+        org.clojars.quoll/raphael {:mvn/version "0.3.7"}
 
         ;; config
         org.clojure/tools.cli               {:mvn/version "1.1.230"}
