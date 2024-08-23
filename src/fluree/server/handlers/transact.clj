@@ -102,7 +102,14 @@
       (transact! resp-p consensus watcher ledger-id {"insert" body} parsed-opts)
 
       (= "text/turtle" content-type)
-      (let [parsed-txn {:insert (turtle/parse body)}]
+      (let [parsed-txn (try
+                         {:insert (turtle/parse body)}
+                         (catch Exception e
+                           (throw
+                            (ex-info (ex-message e)
+                                     (assoc (ex-data e)
+                                            :status 400
+                                            :error :db/invalid-data)))))]
         (transact! resp-p consensus watcher ledger-id parsed-txn (assoc parsed-opts :parsed? true)))
 
       :else
