@@ -221,7 +221,13 @@
              (-> (api-post :query {:body (json/write-value-as-string query3) :headers json-headers})
                  :body
                  json/read-value))
-          "When no datatype is specified in TTL, it isn't needed in query either to retrieve data."))))
+          "When no datatype is specified in TTL, it isn't needed in query either to retrieve data.")
+
+      (testing "importing bad data throws error"
+        (is (= 400
+               (:status
+                (api-post :import {:body    "some:bad turtle data"
+                                   :headers headers}))))))))
 
 (deftest ^:integration import-json-ld-test
   (testing "Can import JSON-LD"
