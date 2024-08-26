@@ -62,6 +62,12 @@
 (def TransactRequestBody
   (m/schema [:map-of :any :any]))
 
+(def ImportRequestBody
+  (m/schema [:or
+             [:string {:min 1}]
+             [:map-of :any :any]
+             [:sequential map?]]))
+
 (def TransactResponseBody
   (m/schema [:and
              [:map-of :keyword :any]
@@ -165,26 +171,37 @@
   as :body-params. If the signature is not valid, throws an invalid signature error. If
   the request body is not a credential, nothing is done."
   [handler]
-  (fn [{:keys [body-params] :as req}]
+  (fn [{:keys [body-params content-type] :as req}]
     (log/trace "unwrap-credential body-params:" body-params)
-    (let [verified (<!! (cred/verify body-params))
-          _        (log/trace "unwrap-credential verified:" verified)
-          {:keys [subject did]}
-          (cond
-            (:subject verified) ; valid credential
-            verified
+    (if (#{"application/json" "application/jwt"} content-type)
+      (let [verified (<!! (cred/verify body-params))
+            _        (log/trace "unwrap-credential verified:" verified)
+            {:keys [subject did]}
+            (cond
+              (:subject verified) ; valid credential
+              verified
 
-            (and (util/exception? verified)
-                 (not= 400 (-> verified ex-data :status))) ; no credential
-            {:subject body-params}
+              (and (util/exception? verified)
+                   (not= 400 (-> verified ex-data :status))) ; no credential
+              {:subject body-params}
 
-            :else ; invalid credential
-            (throw (ex-info "Invalid credential"
-                            {:response {:status 400
-                                        :body   {:error "Invalid credential"}}})))
-          req*     (assoc req :body-params subject :credential/did did :raw-txn body-params)]
-      (log/debug "Unwrapped credential with did:" did)
-      (handler req*))))
+              :else ; invalid credential
+              (throw (ex-info "Invalid credential"
+                              {:response {:status 400
+                                          :body   {:error "Invalid credential"}}})))
+            req*     (assoc req :body-params subject
+                            :credential/did did
+                            :raw-txn body-params)]
+        (log/debug "Unwrapped credential with did:" did)
+        (handler req*))
+      (handler (assoc req :raw-txn body-params)))))
+
+(defn wrap-set-ledger-id
+  [handler]
+  (fn [req]
+    (->> (get-in req [:headers "fluree-ledger"])
+         (assoc req :fluree/ledger-id)
+         (handler))))
 
 (defn wrap-set-fuel-header
   [handler]
@@ -220,6 +237,17 @@
   request map."
   (mf/map->Format
    {:name "application/jwt"
+    :decoder [(fn [_]
+                (reify mf/Decode
+                  (decode [_ data charset]
+                    (String. (.readAllBytes ^InputStream data)
+                             ^String charset))))]}))
+
+(def turtle-format
+  "Turn a Turtle from an InputStream into a string that will be found on :body-params in the
+  request map."
+  (mf/map->Format
+   {:name "text/turtle"
     :decoder [(fn [_]
                 (reify mf/Decode
                   (decode [_ data charset]
@@ -330,6 +358,7 @@
                                    [10 wrap-cors]
                                    [10 (partial wrap-assoc-system conn consensus watcher)]
                                    [50 unwrap-credential]
+                                   [75 wrap-set-ledger-id]
                                    [100 wrap-set-fuel-header]
                                    [200 coercion/coerce-exceptions-middleware]
                                    [300 coercion/coerce-response-middleware]
@@ -357,6 +386,13 @@
                               400 {:body ErrorResponse}
                               500 {:body ErrorResponse}}
                  :handler    #'srv-tx/default}}]
+        ["/import"
+         {:post {:summary    "Endpoint for importing RDF (json-ld or turtle/ttl) data."
+                 :parameters {:body ImportRequestBody}
+                 :responses  {200 {:body TransactResponseBody}
+                              400 {:body ErrorResponse}
+                              500 {:body ErrorResponse}}
+                 :handler    #'srv-tx/import}}]
         ["/query"
          {:get  query-endpoint
           :post query-endpoint}]
@@ -373,6 +409,7 @@
                            (-> muuntaja/default-options
                                (assoc-in [:formats "application/json"] json-format)
                                (assoc-in [:formats "application/sparql-query"] sparql-format)
+                               (assoc-in [:formats "text/turtle"] turtle-format)
                                (assoc-in [:formats "application/jwt"] jwt-format)))
               :middleware [swagger/swagger-feature
                            muuntaja-mw/format-negotiate-middleware

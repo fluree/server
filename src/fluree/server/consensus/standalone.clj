@@ -1,8 +1,9 @@
 (ns fluree.server.consensus.standalone
   (:require [clojure.core.async :as async :refer [<! go go-loop]]
             [fluree.db.api :as fluree]
+            [fluree.db.api.transact :as api.transact]
             [fluree.db.constants :as const]
-            [fluree.db.util.async :refer [go-try]]
+            [fluree.db.util.async :refer [go-try <?]]
             [fluree.db.util.core :refer [exception? get-first-value]]
             [fluree.db.util.log :as log]
             [fluree.server.consensus :as consensus]
@@ -43,7 +44,7 @@
       (broadcast/announce-new-ledger! subscriptions watcher broadcast-msg))))
 
 (defn transact!
-  [conn subscriptions watcher {:keys [ledger-id tx-id txn opts] :as params}]
+  [conn subscriptions watcher {:keys [ledger-id tx-id txn opts parsed?] :as params}]
   (go-try
     (let [start-time    (System/currentTimeMillis)
           _             (log/debug "Starting transaction processing for ledger:" ledger-id
@@ -52,10 +53,10 @@
           ledger        (if (deref! (fluree/exists? conn ledger-id))
                           (deref! (fluree/load conn ledger-id))
                           (throw (ex-info "Ledger does not exist" {:ledger ledger-id})))
-          staged-db     (-> ledger
-                            fluree/db
-                            (fluree/stage txn opts)
-                            deref!)
+          db (fluree/db ledger)
+          staged-db     (if parsed?
+                          (<? (api.transact/stage-triples db txn opts))
+                          (deref! (fluree/stage db txn opts)))
           commit-result (deref!
                          (fluree/commit! ledger staged-db {:file-data? true}))
           broadcast-msg (events/transaction-committed params commit-result)]

@@ -20,8 +20,9 @@
   message must be queued into the consensus state machine.
 
   Format is [event-name event-body]"
-  [ledger-id tx-id txn opts]
+  [ledger-id tx-id txn {:keys [parsed?] :as opts}]
   [:tx-queue {:txn       txn
+              :parsed?   parsed?
               :size      (count txn)
               :tx-id     tx-id
               :ledger-id ledger-id
