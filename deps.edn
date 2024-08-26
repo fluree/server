@@ -1,7 +1,7 @@
 {:deps {org.clojure/clojure    {:mvn/version "1.11.3"}
         org.clojure/core.async {:mvn/version "1.6.681"}
         com.fluree/db          {:git/url "https://github.com/fluree/db.git"
-                                :git/sha "df205bd9bea44cac2eb2beecc0b57b6d77081af7"}
+                                :git/sha "381344330ad75d72c8ee091603212d68ec10dbec"}
         com.fluree/json-ld     {:git/url "https://github.com/fluree/json-ld.git"
                                 :git/sha "0958995acf5540271d1807fc6d8f2da131164e24"}
 
