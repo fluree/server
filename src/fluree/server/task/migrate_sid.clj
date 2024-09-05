@@ -1,7 +1,6 @@
 (ns fluree.server.task.migrate-sid
   (:require [clojure.core.async :as async :refer [<! >! go-loop]]
             [fluree.db.json-ld.migrate.sid :as migrate-sid]
-            [fluree.db.util.async :refer [go-try]]
             [fluree.db.util.core :as util]
             [fluree.db.util.log :as log]))
 
@@ -19,20 +18,27 @@
 
 (defn migrate
   [conn ledgers force]
-  (go-try
-    (log/info :migrate/sid "start" (util/current-time-iso) "." ledgers force)
-    (loop [[alias & r] ledgers]
-      (let [index-files-ch (async/chan)
-            error-ch       (async/chan)]
-        (log-migrated-index-files index-files-ch error-ch)
-        (if alias
-          (let [_ (log/info :migrate/sid "ledger" alias "start" (util/current-time-iso))
-                migrate-ch (migrate-sid/migrate conn alias nil force index-files-ch)]
-            (async/alt!
-              error-ch ([e]
-                        (throw e))
+  (log/info :migrate/sid "start" (util/current-time-iso) "." ledgers force)
+  (try
+    (async/<!!
+      (go-loop [[alias & r] ledgers]
+        (let [index-files-ch (async/chan)
+              error-ch       (async/chan)]
+          (log-migrated-index-files index-files-ch error-ch)
+          (if alias
+            (let [_ (log/info :migrate/sid "ledger" alias "start" (util/current-time-iso))
+                  migrate-ch (migrate-sid/migrate conn alias nil force index-files-ch)]
+              (async/alt!
+                error-ch ([e]
+                          (throw e))
 
-              migrate-ch ([_ledger]
-                          (log/info :migrate/sid "ledger" alias "complete" (util/current-time-iso))))
-            (recur r))
-          (log/info :migrate/sid "complete" (util/current-time-iso) "."))))))
+                migrate-ch ([ledger]
+                            (if (util/exception? ledger)
+                              (do
+                                (log/error ledger :migrate/sid "ledger" alias "failed" (util/current-time-iso))
+                                (throw ledger))
+                              (log/info :migrate/sid "ledger" alias "complete" (util/current-time-iso) ))))
+              (recur r))
+            (log/info :migrate/sid "complete" (util/current-time-iso) ".")))))
+    (catch Exception e
+      (log/error e :migrate/sid "migration failure"))))
