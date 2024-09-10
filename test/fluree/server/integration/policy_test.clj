@@ -49,7 +49,12 @@
                                        "f:query"      {"@type"  "@json"
                                                        "@value" {"@context" {"ex" "http://example.org/ns/"}
                                                                  "where"    {"@id"     "?$identity"
-                                                                             "ex:user" {"@id" "?$this"}}}}}]})
+                                                                             "ex:user" {"@id" "?$this"}}}}}
+                                      {"@id"      "ex:defaultAllowView"
+                                       "@type"    ["f:AccessPolicy" "ex:EmployeePolicy"]
+                                       "f:action" {"@id" "f:view"}
+                                       "f:query"  {"@type"  "@json"
+                                                   "@value" {}}}]})
                         :headers json-headers}
           txn-res      (api-post :transact txn-req)
           _            (assert (= 200 (:status txn-res)))
