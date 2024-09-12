@@ -29,17 +29,15 @@
       (let [create-req {"ledger"   ledger-name
                         "@context" ["https://ns.flur.ee" default-context]
                         "insert"   {"@graph"
-                                    [{"id"      (:id auth)
-                                      "f:role"  {"id" "role:root"}
-                                      "type"    "schema:Person"
-                                      "ex:name" "Goose"}
-                                     {"id"           "ex:rootPolicy"
-                                      "type"         "f:Policy"
-                                      "f:targetNode" {"id" "f:allNodes"}
-                                      "f:allow"
-                                      [{"f:targetRole" {"id" "role:root"}
-                                        "f:action"     [{"id" "f:view"}
-                                                        {"id" "f:modify"}]}]}]}}
+                                    [{"id"            (:id auth)
+                                      "f:policyClass" {"id" "ex:RootPolicy"}
+                                      "type"          "schema:Person"
+                                      "ex:name"       "Goose"}
+                                     {"@id"      "ex:defaultAllowView"
+                                      "@type"    ["f:AccessPolicy" "ex:RootPolicy"]
+                                      "f:action" {"@id" "f:view"}
+                                      "f:query"  {"@type"  "@json"
+                                                  "@value" {}}}]}}
             create-res (api-post :create
                                  {:body    (json/write-value-as-string create-req)
                                   :headers json-headers})]
@@ -69,8 +67,7 @@
                              "from"     ledger-name
                              "select"   {"?t" ["*"]}
                              "where"    {"@id"  "?t"
-                                         "type" "schema:Test"}
-                             "opts"     {"default-allow?" true}}
+                                         "type" "schema:Test"}}
                             (:private auth)))
             query-res (api-post :query
                                 {:body    (json/write-value-as-string query-req)
