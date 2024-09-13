@@ -68,7 +68,7 @@
           query-req    {:body
                         (json/write-value-as-string
                          (assoc secret-query
-                           "opts" {"did" alice-did}))
+                                "opts" {"did" alice-did}))
                         :headers json-headers}
           query-res    (api-post :query query-req)]
 
@@ -96,7 +96,7 @@
             query-req {:body
                        (json/write-value-as-string
                         (assoc secret-query
-                          "opts" {"did" alice-did}))
+                               "opts" {"did" alice-did}))
                        :headers json-headers}
             query-res (api-post :query query-req)
             _         (assert (= 200 (:status query-res)))]
@@ -294,8 +294,8 @@
           query-req    {:body
                         (json/write-value-as-string
                          (assoc secret-query
-                           "opts" {"policyClass"  "ex:EmployeePolicy"
-                                   "policyValues" {"?$identity" alice-did}}))
+                                "opts" {"policyClass"  "ex:EmployeePolicy"
+                                        "policyValues" {"?$identity" alice-did}}))
                         :headers json-headers}
           query-res    (api-post :query query-req)]
 
@@ -349,23 +349,23 @@
           query-req    {:body
                         (json/write-value-as-string
                          (assoc secret-query
-                           "opts" {"policy"       {"@context" {"ex"     "http://example.org/ns/"
-                                                               "schema" "http://schema.org/"
-                                                               "f"      "https://ns.flur.ee/ledger#"}
-                                                   "@graph"   [{"@id"          "ex:ssnRestriction"
-                                                                "@type"        ["f:AccessPolicy" "ex:EmployeePolicy"]
-                                                                "f:onProperty" [{"@id" "schema:ssn"}]
-                                                                "f:action"     [{"@id" "f:view"} {"@id" "f:modify"}]
-                                                                "f:query"      {"@type"  "@json"
-                                                                                "@value" {"@context" {"ex" "http://example.org/ns/"}
-                                                                                          "where"    {"@id"     "?$identity"
-                                                                                                      "ex:user" {"@id" "?$this"}}}}}
-                                                               {"@id"      "ex:defaultAllowView"
-                                                                "@type"    ["f:AccessPolicy" "ex:EmployeePolicy"]
-                                                                "f:action" {"@id" "f:view"}
-                                                                "f:query"  {"@type"  "@json"
-                                                                            "@value" {}}}]}
-                                   "policyValues" {"?$identity" alice-did}}))
+                                "opts" {"policy"       {"@context" {"ex"     "http://example.org/ns/"
+                                                                    "schema" "http://schema.org/"
+                                                                    "f"      "https://ns.flur.ee/ledger#"}
+                                                        "@graph"   [{"@id"          "ex:ssnRestriction"
+                                                                     "@type"        ["f:AccessPolicy" "ex:EmployeePolicy"]
+                                                                     "f:onProperty" [{"@id" "schema:ssn"}]
+                                                                     "f:action"     [{"@id" "f:view"} {"@id" "f:modify"}]
+                                                                     "f:query"      {"@type"  "@json"
+                                                                                     "@value" {"@context" {"ex" "http://example.org/ns/"}
+                                                                                               "where"    {"@id"     "?$identity"
+                                                                                                           "ex:user" {"@id" "?$this"}}}}}
+                                                                    {"@id"      "ex:defaultAllowView"
+                                                                     "@type"    ["f:AccessPolicy" "ex:EmployeePolicy"]
+                                                                     "f:action" {"@id" "f:view"}
+                                                                     "f:query"  {"@type"  "@json"
+                                                                                 "@value" {}}}]}
+                                        "policyValues" {"?$identity" alice-did}}))
                         :headers json-headers}
           query-res    (api-post :query query-req)]
 
