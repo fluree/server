@@ -68,8 +68,7 @@
           query-req    {:body
                         (json/write-value-as-string
                          (assoc secret-query
-                                "opts" {"did"            alice-did
-                                        "default-allow?" true}))
+                           "opts" {"did" alice-did}))
                         :headers json-headers}
           query-res    (api-post :query query-req)]
 
@@ -97,8 +96,7 @@
             query-req {:body
                        (json/write-value-as-string
                         (assoc secret-query
-                               "opts" {"did"            alice-did
-                                       "default-allow?" true}))
+                          "opts" {"did" alice-did}))
                        :headers json-headers}
             query-res (api-post :query query-req)
             _         (assert (= 200 (:status query-res)))]
@@ -237,3 +235,143 @@
                        "schema:name"      "John"}]
                      (-> query-res :body json/read-value first (get "f:assert")))
                   "policy opts prevented seeing john's secret"))))))))
+
+(deftest ^:integration ^:json policy-class-opts-test
+  (testing "policy-enforcing opts for policyClass are correctly handled"
+    (let [ledger-name  (create-rand-ledger "policy-class-opts-test")
+          alice-did    (:id auth)
+          txn-req      {:body
+                        (json/write-value-as-string
+                         {"ledger"   ledger-name
+                          "@context" {"ex"     "http://example.org/ns/"
+                                      "schema" "http://schema.org/"
+                                      "f"      "https://ns.flur.ee/ledger#"}
+                          "insert"   [{"@id"              "ex:alice",
+                                       "@type"            "ex:User",
+                                       "schema:name"      "Alice"
+                                       "schema:email"     "alice@flur.ee"
+                                       "schema:birthDate" "2022-08-17"
+                                       "schema:ssn"       "111-11-1111"}
+                                      {"@id"              "ex:john",
+                                       "@type"            "ex:User",
+                                       "schema:name"      "John"
+                                       "schema:email"     "john@flur.ee"
+                                       "schema:birthDate" "2021-08-17"
+                                       "schema:ssn"       "888-88-8888"}
+                                      {"@id"                  "ex:widget",
+                                       "@type"                "ex:Product",
+                                       "schema:name"          "Widget"
+                                       "schema:price"         99.99
+                                       "schema:priceCurrency" "USD"}
+                                      ;; assign alice-did to "ex:EmployeePolicy" and also link the did to "ex:alice" via "ex:user"
+                                      {"@id"           alice-did
+                                       "f:policyClass" [{"@id" "ex:EmployeePolicy"}]
+                                       "ex:user"       {"@id" "ex:alice"}}
+                                      ;; embedded policy
+                                      {"@id"          "ex:ssnRestriction"
+                                       "@type"        ["f:AccessPolicy" "ex:EmployeePolicy"]
+                                       "f:onProperty" [{"@id" "schema:ssn"}]
+                                       "f:action"     [{"@id" "f:view"} {"@id" "f:modify"}]
+                                       "f:query"      {"@type"  "@json"
+                                                       "@value" {"@context" {"ex" "http://example.org/ns/"}
+                                                                 "where"    {"@id"     "?$identity"
+                                                                             "ex:user" {"@id" "?$this"}}}}}
+                                      {"@id"      "ex:defaultAllowView"
+                                       "@type"    ["f:AccessPolicy" "ex:EmployeePolicy"]
+                                       "f:action" {"@id" "f:view"}
+                                       "f:query"  {"@type"  "@json"
+                                                   "@value" {}}}]})
+                        :headers json-headers}
+          txn-res      (api-post :transact txn-req)
+          _            (assert (= 200 (:status txn-res)))
+          secret-query {"@context" {"ex"     "http://example.org/ns/"
+                                    "schema" "http://schema.org/"}
+                        "from"     ledger-name
+                        "select"   ["?s" "?ssn"]
+                        "where"    {"@id"        "?s"
+                                    "@type"      "ex:User"
+                                    "schema:ssn" "?ssn"}}
+          query-req    {:body
+                        (json/write-value-as-string
+                         (assoc secret-query
+                           "opts" {"policyClass"  "ex:EmployeePolicy"
+                                   "policyValues" {"?$identity" alice-did}}))
+                        :headers json-headers}
+          query-res    (api-post :query query-req)]
+
+      (is (= 200 (:status query-res))
+          (str "policy-enforced query response was: " (pr-str query-res)))
+
+      (is (= [["ex:alice" "111-11-1111"]]
+             (-> query-res :body json/read-value))
+          "query policy opts should prevent seeing john's ssn"))))
+
+(deftest ^:integration ^:json policy-json-ld-opts-test
+  (testing "policy-enforcing opts for json-ld policy are correctly handled"
+    (let [ledger-name  (create-rand-ledger "policy-json-ld-opts-test")
+          alice-did    (:id auth)
+          txn-req      {:body
+                        (json/write-value-as-string
+                         {"ledger"   ledger-name
+                          "@context" {"ex"     "http://example.org/ns/"
+                                      "schema" "http://schema.org/"
+                                      "f"      "https://ns.flur.ee/ledger#"}
+                          "insert"   [{"@id"              "ex:alice",
+                                       "@type"            "ex:User",
+                                       "schema:name"      "Alice"
+                                       "schema:email"     "alice@flur.ee"
+                                       "schema:birthDate" "2022-08-17"
+                                       "schema:ssn"       "111-11-1111"}
+                                      {"@id"              "ex:john",
+                                       "@type"            "ex:User",
+                                       "schema:name"      "John"
+                                       "schema:email"     "john@flur.ee"
+                                       "schema:birthDate" "2021-08-17"
+                                       "schema:ssn"       "888-88-8888"}
+                                      {"@id"                  "ex:widget",
+                                       "@type"                "ex:Product",
+                                       "schema:name"          "Widget"
+                                       "schema:price"         99.99
+                                       "schema:priceCurrency" "USD"}
+                                      ;; assign alice-did to "ex:EmployeePolicy" and also link the did to "ex:alice" via "ex:user"
+                                      {"@id"     alice-did
+                                       "ex:user" {"@id" "ex:alice"}}]})
+                        :headers json-headers}
+          txn-res      (api-post :transact txn-req)
+          _            (assert (= 200 (:status txn-res)))
+          secret-query {"@context" {"ex"     "http://example.org/ns/"
+                                    "schema" "http://schema.org/"}
+                        "from"     ledger-name
+                        "select"   ["?s" "?ssn"]
+                        "where"    {"@id"        "?s"
+                                    "@type"      "ex:User"
+                                    "schema:ssn" "?ssn"}}
+          query-req    {:body
+                        (json/write-value-as-string
+                         (assoc secret-query
+                           "opts" {"policy"       {"@context" {"ex"     "http://example.org/ns/"
+                                                               "schema" "http://schema.org/"
+                                                               "f"      "https://ns.flur.ee/ledger#"}
+                                                   "@graph"   [{"@id"          "ex:ssnRestriction"
+                                                                "@type"        ["f:AccessPolicy" "ex:EmployeePolicy"]
+                                                                "f:onProperty" [{"@id" "schema:ssn"}]
+                                                                "f:action"     [{"@id" "f:view"} {"@id" "f:modify"}]
+                                                                "f:query"      {"@type"  "@json"
+                                                                                "@value" {"@context" {"ex" "http://example.org/ns/"}
+                                                                                          "where"    {"@id"     "?$identity"
+                                                                                                      "ex:user" {"@id" "?$this"}}}}}
+                                                               {"@id"      "ex:defaultAllowView"
+                                                                "@type"    ["f:AccessPolicy" "ex:EmployeePolicy"]
+                                                                "f:action" {"@id" "f:view"}
+                                                                "f:query"  {"@type"  "@json"
+                                                                            "@value" {}}}]}
+                                   "policyValues" {"?$identity" alice-did}}))
+                        :headers json-headers}
+          query-res    (api-post :query query-req)]
+
+      (is (= 200 (:status query-res))
+          (str "policy-enforced query response was: " (pr-str query-res)))
+
+      (is (= [["ex:alice" "111-11-1111"]]
+             (-> query-res :body json/read-value))
+          "query policy opts should prevent seeing john's ssn"))))
