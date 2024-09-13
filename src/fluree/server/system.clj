@@ -1,6 +1,6 @@
 (ns fluree.server.system
   (:require [fluree.db.api :as fluree]
-            [fluree.db.conn.cache :as conn-cache]
+            [fluree.db.cache :as cache]
             [fluree.server.config :as config]
             [fluree.server.consensus.raft :as raft]
             [fluree.server.consensus.standalone :as standalone]
@@ -72,7 +72,7 @@
 (defmethod ig/init-key :fluree/cache
   [_ cache-max-mb]
   (let [cache-size (or cache-max-mb 1000)]
-    (atom (conn-cache/create-lru-cache cache-size))))
+    (atom (cache/create-lru-cache cache-size))))
 
 (defmethod ig/halt-key! :fluree/cache
   [_ cache-atom]
