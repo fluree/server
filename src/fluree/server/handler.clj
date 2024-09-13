@@ -38,9 +38,6 @@
 (def TransactOpts
   (m/schema [:map-of :keyword :any]))
 
-(def Context
-  (m/schema ::fql/context {:registry fql/registry}))
-
 (def CreateRequestBody
   (m/schema [:map-of [:orn [:string :string] [:keyword :keyword]] :any]))
 
