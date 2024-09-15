@@ -38,6 +38,7 @@
                   [:map
                    [:storage-method ::connection-storage-method]
                    [:parallelism {:optional true} pos-int?]
+                   [:cache-max-mb {:optional true} pos-int?]
                    [:defaults {:optional true} ::connection-defaults]]
                   [:multi {:dispatch :storage-method}
                    [:file ::file-connection]
@@ -46,7 +47,6 @@
                    [:remote ::remote-connection]
                    [:s3 ::s3-connection]]]
     ::server-config [:map
-                     [:cache-max-mb {:optional true} pos-int?]
                      [:storage-path {:optional true} ::path]]
     ::consensus-protocol [:enum
                           :raft :standalone]

@@ -6,6 +6,7 @@
   "connection": {
     "storageMethod": "file",
     "parallelism": 4,
+    "cacheMaxMb": 200,
     "defaults": {
       "indexing": {
         "reindexMinBytes": 100000,
@@ -26,8 +27,7 @@
   "profiles": {
     "dev": {
       "server": {
-        "storagePath": "dev/data",
-        "cacheMaxMb": 200
+        "storagePath": "dev/data"
       },
       "http": {
         "port": 58090
