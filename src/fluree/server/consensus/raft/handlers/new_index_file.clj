@@ -1,6 +1,6 @@
 (ns fluree.server.consensus.raft.handlers.new-index-file
-  (:require [clojure.core.async :as async]
-            [fluree.db.storage :as storage]
+  (:require [fluree.db.connection :as connection]
+            [fluree.db.util.async :refer [<??]]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.raft.participant :as participant]))
 
@@ -16,10 +16,7 @@
     (try
       (if (= server (participant/this-server raft-state))
         (log/debug "Consensus: new index file originated from this server, not writing: " address)
-        (let [{:keys [local]} (storage/parse-address address)]
-          (if local
-            (async/<!! (storage/write (:store conn) local (:json data)))
-            (log/error "Consensus: Cannot write new index file, not a file path address: " address))))
+        (<?? (connection/replicate-index-node conn address (:json data))))
       (catch Exception e
         (log/error e "Consensus: Unexpected error writing new index file: " (ex-message e))))))
 

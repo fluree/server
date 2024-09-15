@@ -28,7 +28,7 @@
   (let [commit-json (-> (json/parse json false)
                         ;; address is not yet written into the commit file, add it
                         (assoc "address" address))]
-    (connection/publish conn commit-json)))
+    (connection/publish-commit conn commit-json)))
 
 (defn store-ledger-files
   "Persist both the data-file and commit-file to disk only if redundant
