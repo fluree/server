@@ -59,9 +59,9 @@
   [run-tests]
   (set-server-ports)
   (let [config {::config/server     {}
-                ::config/connection {:storage-method :memory
-                                     :parallelism    1
-                                     :cache-max-mb   100}
+                ::config/connection {:method       :memory
+                                     :parallelism  1
+                                     :cache-max-mb 100}
                 ::config/consensus  {:protocol         :standalone
                                      :max-pending-txns 16}
                 ::config/http       {:server          :jetty

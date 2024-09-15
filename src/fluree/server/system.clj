@@ -33,7 +33,7 @@
         consensus-config (-> config
                              (dissoc :protocol)
                              (assoc :server (ig/ref :fluree/server)
-                                    :conn (ig/ref :fluree/connection)
+                                    :conn (ig/ref :fluree.server/connection)
                                     :watcher (ig/ref :fluree/watcher)
                                     :subscriptions (ig/ref :fluree/subscriptions)))]
     {consensus-key         consensus-config
@@ -47,17 +47,17 @@
                         (assoc :handler (ig/ref :fluree/handler)))]
     {http-key        http-config
      :fluree/watcher {:max-txn-wait-ms max-txn-wait-ms}
-     :fluree/handler {:conn          (ig/ref :fluree/connection)
+     :fluree/handler {:conn          (ig/ref :fluree.server/connection)
                       :consensus     (ig/ref :fluree/consensus)
                       :watcher       (ig/ref :fluree/watcher)
                       :subscriptions (ig/ref :fluree/subscriptions)}}))
 
 (defmethod ig/expand-key ::config/sid-migration
   [_ config]
-  {:fluree/sid-migration (assoc config :conn (ig/ref :fluree/connection))})
+  {:fluree/sid-migration (assoc config :conn (ig/ref :fluree.server/connection))})
 
-(defmethod ig/init-key :fluree/connection
-  [_ {:keys [storage-method server cache] :as config}]
+(defmethod ig/init-key :fluree.server/connection
+  [_ {:keys [server] :as config}]
   (let [config* (-> config
                     (assoc :storage-path (:storage-path server))
                     (dissoc :server))]
