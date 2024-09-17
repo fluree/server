@@ -21,7 +21,9 @@
   "http": {
     "server": "jetty",
     "port": 8090,
-    "maxTxnWaitMs": 120000
+    "maxTxnWaitMs": 120000,
+    "rootIdentities": [],
+    "closedMode": false
   },
   "profiles": {
     "dev": {

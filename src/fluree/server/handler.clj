@@ -186,6 +186,31 @@
       (log/debug "Unwrapped credential with did:" did)
       (handler req*))))
 
+(def root-only-routes
+  #{"/fluree/create"})
+
+(defn wrap-closed-mode
+  [root-identities closed-mode]
+  (fn [handler]
+    (fn [{:keys [body-params credential/did uri] :as req}]
+      (if closed-mode
+        (let [trusted-user (contains? root-identities did)]
+          (cond (nil? did)
+                (throw (ex-info "Authentication error: signed request required."
+                                {:response {:status 400 :body {:error "Missing credential."}}}))
+
+                (and (contains? root-only-routes uri)
+                     (not trusted-user))
+                (throw (ex-info "Authentication error: untrusted credential."
+                                {:response {:status 403 :body {:error "Untrusted credential."}}}))
+
+                :else
+                (let [body-params* (cond-> body-params
+                                     (not trusted-user) (update :opts dissoc :did :role))
+                      req* (assoc req :server/closed-mode closed-mode :body-params body-params*)]
+                  (handler req*))))
+        (handler req)))))
+
 (defn wrap-set-fuel-header
   [handler]
   (fn [req]
@@ -311,7 +336,7 @@
          resp)))))
 
 (defn app
-  [conn consensus watcher subscriptions]
+  [conn consensus watcher subscriptions root-identities closed-mode]
   (log/debug "HTTP server running with Fluree connection:" conn)
   (let [exception-middleware      (exception/create-exception-middleware
                                    (merge
@@ -334,6 +359,7 @@
                                    [200 coercion/coerce-exceptions-middleware]
                                    [300 coercion/coerce-response-middleware]
                                    [400 coercion/coerce-request-middleware]
+                                   [600 (wrap-closed-mode root-identities closed-mode)]
                                    [1000 exception-middleware]]
         fluree-middleware         (sort-middleware-by-weight default-fluree-middleware)]
     (ring/ring-handler

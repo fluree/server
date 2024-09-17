@@ -44,17 +44,19 @@
      :fluree/subscriptions {}}))
 
 (defmethod ig/expand-key ::config/http
-  [_ {:keys [server max-txn-wait-ms] :as config :or {server :jetty}}]
+  [_ {:keys [server max-txn-wait-ms root-identities closed-mode] :as config :or {server :jetty}}]
   (let [http-key    (keyword "http" (name server))
         http-config (-> config
-                        (dissoc :server :max-txn-wait-ms)
+                        (dissoc :server :max-txn-wait-ms :root-identities :closed-mode)
                         (assoc :handler (ig/ref :fluree/handler)))]
     {http-key        http-config
      :fluree/watcher {:max-txn-wait-ms max-txn-wait-ms}
-     :fluree/handler {:conn          (ig/ref :fluree/connection)
-                      :consensus     (ig/ref :fluree/consensus)
-                      :watcher       (ig/ref :fluree/watcher)
-                      :subscriptions (ig/ref :fluree/subscriptions)}}))
+     :fluree/handler {:root-identities (set root-identities)
+                      :closed-mode     closed-mode
+                      :conn            (ig/ref :fluree/connection)
+                      :consensus       (ig/ref :fluree/consensus)
+                      :watcher         (ig/ref :fluree/watcher)
+                      :subscriptions   (ig/ref :fluree/subscriptions)}}))
 
 (defmethod ig/expand-key ::config/sid-migration
   [_ config]
@@ -116,8 +118,8 @@
   (standalone/stop transactor))
 
 (defmethod ig/init-key :fluree/handler
-  [_ {:keys [conn consensus watcher subscriptions]}]
-  (handler/app conn consensus watcher subscriptions))
+  [_ {:keys [conn consensus watcher subscriptions root-identities closed-mode]}]
+  (handler/app conn consensus watcher subscriptions root-identities closed-mode))
 
 (defmethod ig/init-key :http/jetty
   [_ {:keys [handler port join?]}]
