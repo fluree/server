@@ -109,21 +109,30 @@
   [:or :string map?])
 
 (def query-coercer
-  (rcm/create
-   {:strip-extra-keys false
-    :error-keys #{}
-    :encode-error (fn [explained]
-                    {:error :db/invalid-query
-                     :message (v/format-explained-errors explained nil)})}))
+  (let [default-transfomers (:transformers rcm/default-options)
+        json-transformer    (-> default-transfomers :body :formats (get "application/json"))
+        transformers        (assoc-in default-transfomers [:body :formats "application/jwt"] json-transformer)]
+    (rcm/create
+      {:transformers transformers
+       :strip-extra-keys false
+       :error-keys #{}
+       :encode-error (fn [explained]
+                       {:error :db/invalid-query
+                        :message (v/format-explained-errors explained nil)})})))
 
 (def history-coercer
-  (rcm/create
-   {:strip-extra-keys false
-    :error-keys #{}
-    :transformers {:body {:default fql/fql-transformer}}
-    :encode-error (fn [explained]
-                    {:error :db/invalid-query
-                     :message (v/format-explained-errors explained nil)})}))
+  (let [default-transfomers (:transformers rcm/default-options)
+        json-transformer    (-> default-transfomers :body :formats (get "application/json"))
+        transformers        (-> default-transfomers
+                                (assoc-in [:body :formats "application/jwt"] json-transformer)
+                                (assoc-in [:body :default] fql/fql-transformer))]
+    (rcm/create
+      {:strip-extra-keys false
+       :error-keys #{}
+       :transformers transformers
+       :encode-error (fn [explained]
+                       {:error :db/invalid-query
+                        :message (v/format-explained-errors explained nil)})})))
 
 (def query-endpoint
   {:summary    "Endpoint for submitting queries"
