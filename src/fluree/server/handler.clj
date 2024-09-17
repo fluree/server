@@ -215,6 +215,7 @@
 
                 :else
                 (let [body-params* (cond-> body-params
+                                     ;; don't allow escalation of priveledge
                                      (not trusted-user) (update :opts dissoc :did :role))
                       req* (assoc req :server/closed-mode closed-mode :body-params body-params*)]
                   (handler req*))))

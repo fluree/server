@@ -134,6 +134,19 @@
                                      :headers jwt-headers})]
         (testing "is accepted"
           (is (= 200 (:status resp)))
+          (is (= [] (-> resp :body json/read-value))))))
+    (testing "to claim more authority"
+      (let [create-req {"from" "closed-test"
+                        "@context" default-context
+                        "where" [{"@id" "?s" "ex:name" "?name"}]
+                        "select" ["?s" "?name"]
+                        ;; claiming root-auth identity in opts
+                        "opts" {"did" (:id root-auth)}}
+            resp (api-post :query {:body (crypto/create-jws (json/write-value-as-string create-req)
+                                                            (:private non-root-auth))
+                                   :headers jwt-headers})]
+        (testing "is silently demoted"
+          (is (= 200 (:status resp)))
           (is (= [] (-> resp :body json/read-value)))))))
 
   (testing "unsigned request"
