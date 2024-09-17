@@ -34,7 +34,7 @@
       (let [create-req {"@context" default-context
                         "ledger" "closed-test"
                         "insert" {"@graph"
-                                  [{"id" (:id auth)
+                                  [{"id" (:id root-auth)
                                     "f:policyClass" {"id" "ex:RootPolicy"}
                                     "type" "schema:Person"
                                     "ex:name" "Root User"}
@@ -44,7 +44,7 @@
                                     "f:query" {"@type" "@json"
                                                "@value" {}}}]}}
             resp (api-post :create {:body    (crypto/create-jws (json/write-value-as-string create-req)
-                                                                (:private auth))
+                                                                (:private root-auth))
                                     :headers jwt-headers})]
         (testing "is accepted"
           (is (= 201 (:status resp))))))
@@ -53,7 +53,7 @@
                           "@context" ["https://ns.flur.ee" default-context]
                           "insert" [{"@id" "ex:coin" "ex:name" "nickel"}]}
             resp (api-post :transact {:body (crypto/create-jws (json/write-value-as-string transact-req)
-                                                               (:private auth))
+                                                               (:private root-auth))
                                       :headers jwt-headers})]
         (testing "is accepted"
           (is (= 200 (:status resp))))))
@@ -63,7 +63,7 @@
                        "where" [{"@id" "?s" "ex:name" "?name"}]
                        "select" "?s"}
             resp (api-post :query {:body (crypto/create-jws (json/write-value-as-string query-req)
-                                                            (:private auth))
+                                                            (:private root-auth))
                                    :headers jwt-headers})]
         (testing "is accepted"
           (is (= 200 (:status resp)))
@@ -75,7 +75,7 @@
                          "history" "ex:coin"
                          "t" {"from" 1 "to" "latest"}}
             resp (api-post :history {:body (crypto/create-jws (json/write-value-as-string history-req)
-                                                              (:private auth))
+                                                              (:private root-auth))
                                      :headers jwt-headers})]
         (testing "is accepted"
           (is (= 200 (:status resp)))
@@ -89,7 +89,7 @@
       (let [create-req {"ledger" "closed-test2"
                         "@context" ["https://ns.flur.ee" default-context]
                         "insert" {"@graph"
-                                  [{"id" (:id auth)
+                                  [{"id" (:id root-auth)
                                     "f:policyClass" {"id" "ex:RootPolicy"}
                                     "type" "schema:Person"
                                     "ex:name" "Root User"}
