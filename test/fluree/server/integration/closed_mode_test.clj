@@ -1,8 +1,8 @@
 (ns fluree.server.integration.closed-mode-test
   (:require [clojure.test :as test :refer [deftest testing is]]
+            [fluree.crypto :as crypto]
             [fluree.server.integration.test-system
              :refer [api-post auth json-headers jwt-headers run-closed-test-server]]
-            [fluree.crypto :as crypto]
             [jsonista.core :as json]))
 
 (test/use-fixtures :once run-closed-test-server)
@@ -50,8 +50,8 @@
           (is (= 201 (:status resp))))))
     (testing "to transact"
       (let [transact-req {"ledger" "closed-test"
-                        "@context" ["https://ns.flur.ee" default-context]
-                        "insert" [{"@id" "ex:coin" "ex:name" "nickel"}]}
+                          "@context" ["https://ns.flur.ee" default-context]
+                          "insert" [{"@id" "ex:coin" "ex:name" "nickel"}]}
             resp (api-post :transact {:body (crypto/create-jws (json/write-value-as-string transact-req)
                                                                (:private auth))
                                       :headers jwt-headers})]
@@ -157,8 +157,8 @@
           (is (= {"error" "Missing credential."} (-> resp :body json/read-value))))))
     (testing "to transact"
       (let [transact-req {"ledger" "closed-test3"
-                        "@context" ["https://ns.flur.ee" default-context]
-                        "insert" [{"@id" "ex:coin" "ex:name" "nickel"}]}
+                          "@context" ["https://ns.flur.ee" default-context]
+                          "insert" [{"@id" "ex:coin" "ex:name" "nickel"}]}
             resp (api-post :transact {:body (json/write-value-as-string transact-req)
                                       :headers json-headers})]
         (testing "is rejected"
