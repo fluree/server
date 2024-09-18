@@ -17,6 +17,7 @@
    (m/base-schemas)
    {::path string?
     ::server-address string?
+    ::auth-id string?
     ::connection-storage-method [:enum
                                  :ipfs :file :memory :s3 :remote]
     ::indexing-options [:map
@@ -72,7 +73,9 @@
             [:map
              [:server ::http-server]
              [:port ::http-port]
-             [:max-txn-wait-ms {:optional true} ::max-txn-wait-ms]]
+             [:max-txn-wait-ms {:optional true} ::max-txn-wait-ms]
+             [:root-identities {:optional true} [:sequential ::auth-id]]
+             [:closed-mode {:optional true} :boolean]]
             [:multi {:dispatch :server}
              [:jetty ::jetty]]]
     ::config [:map {:closed true}
