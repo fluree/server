@@ -80,7 +80,7 @@
                                 :body   {:error err-message}}}))))
 
 (defhandler default
-  [{:keys          [fluree/conn fluree/consensus fluree/watcher credential/did raw-txn]
+  [{:keys          [fluree/conn fluree/consensus fluree/watcher credential/did root/trusted-user raw-txn]
     {:keys [body]} :parameters}]
   (let [txn-context    (ctx-util/txn-context body)
         [expanded-txn] (-> (ctx-util/use-fluree-context body)
@@ -93,7 +93,7 @@
         (throw-ledger-doesnt-exist ledger-id))
     ;; kick of async process that will eventually deliver resp or exception to resp-p
     (transact! resp-p consensus watcher expanded-txn (cond-> {:context txn-context :raw-txn raw-txn}
-                                                       did (assoc :did did)))
+                                                       (and did (not trusted-user)) (assoc :did did)))
 
     {:status 200
      :body   (deref! resp-p)}))

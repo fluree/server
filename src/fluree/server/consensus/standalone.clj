@@ -49,15 +49,9 @@
           _             (log/debug "Starting transaction processing for ledger:" ledger-id
                                    "with tx-id" tx-id ". Transaction sat in queue for"
                                    (- start-time (:instant params)) "milliseconds.")
-          ledger        (if (deref! (fluree/exists? conn ledger-id))
-                          (deref! (fluree/load conn ledger-id))
-                          (throw (ex-info "Ledger does not exist" {:ledger ledger-id})))
-          staged-db     (-> ledger
-                            fluree/db
-                            (fluree/stage txn opts)
-                            deref!)
-          commit-result (deref!
-                         (fluree/commit! ledger staged-db {:file-data? true}))
+
+          commit-result (deref! (fluree/transact! conn txn (assoc opts :file-data? true)))
+
           broadcast-msg (events/transaction-committed params commit-result)]
       (broadcast/announce-new-commit! subscriptions watcher broadcast-msg))))
 

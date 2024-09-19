@@ -38,10 +38,19 @@
                                     "f:policyClass" {"id" "ex:RootPolicy"}
                                     "type" "schema:Person"
                                     "ex:name" "Root User"}
-                                   {"@id" "ex:defaultAllowView"
+                                   {"id" (:id non-root-auth)
+                                    "f:policyClass" {"id" "ex:NonRootPolicy"}
+                                    "type" "schema:Person"
+                                    "ex:name" "Non-Root User"}
+                                   {"@id" "ex:defaultAllowViewModify"
                                     "@type" ["f:AccessPolicy" "ex:RootPolicy"]
                                     "f:action" [{"@id" "f:view"} {"@id" "f:modify"}]
-                                    "f:query" {"@type" "@json" "@value" {}}}]}}
+                                    "f:query" {"@type" "@json" "@value" {}}}
+                                   {"@id" "ex:defaultAllowOwn"
+                                    "@type" ["f:AccessPolicy" "ex:NonRootPolicy"]
+                                    "f:action" [{"@id" "f:view"} {"@id" "f:modify"}]
+                                    "f:query" {"@type" "@json"
+                                               "@value" {"where" [["filter" "(= ?$this ?$identity)"]]}}}]}}
             resp (api-post :create {:body    (crypto/create-jws (json/write-value-as-string create-req)
                                                                 (:private root-auth))
                                     :headers jwt-headers})]
@@ -56,6 +65,18 @@
                                       :headers jwt-headers})]
         (testing "is accepted"
           (is (= 200 (:status resp))))))
+    (testing "to transact as non-root"
+      (let [transact-req {"ledger" "closed-test"
+                          "@context" ["https://ns.flur.ee" default-context]
+                          "insert" [{"@id" "ex:coin" "ex:name" "dime"}]
+                          "opts" {"did" (:id non-root-auth)}}
+            resp (api-post :transact {:body (crypto/create-jws (json/write-value-as-string transact-req)
+                                                               (:private root-auth))
+                                      :headers jwt-headers})]
+        (testing "is rejected for policy violation"
+          (is (= {"message" "Policy enforcement prevents modification.",
+                  "error" "db/policy-exception"}
+                 (-> resp :body json/read-value))))))
     (testing "to query"
       (let [query-req {"from" "closed-test"
                        "@context" default-context
@@ -66,7 +87,9 @@
                                    :headers jwt-headers})]
         (testing "is accepted"
           (is (= 200 (:status resp)))
-          (is (= ["did:fluree:TfHgFTQQiJMHaK1r1qxVPZ3Ridj9pCozqnh" "ex:coin"]
+          (is (= ["did:fluree:Tf4KTeKpWcZAJadKfJ4JUv84dkBYy5KFHod"
+                  "did:fluree:TfHgFTQQiJMHaK1r1qxVPZ3Ridj9pCozqnh"
+                  "ex:coin"]
                  (-> resp :body json/read-value))))))
     (testing "to query as non-root"
       (let [query-req {"from" "closed-test"
@@ -79,7 +102,7 @@
                                    :headers jwt-headers})]
         (testing "returns constrained results"
 
-          (is (= []
+          (is (= ["did:fluree:Tf4KTeKpWcZAJadKfJ4JUv84dkBYy5KFHod"]
                  (-> resp :body json/read-value))))))
     (testing "to query history"
       (let [history-req {"from" "closed-test"
@@ -136,8 +159,11 @@
             resp (api-post :transact {:body (crypto/create-jws (json/write-value-as-string create-req)
                                                                (:private non-root-auth))
                                       :headers jwt-headers})]
-        (testing "is accepted"
-          (is (= 200 (:status resp))))))
+        (testing "is rejected for policy violation"
+          (is (= 403 (:status resp)))
+          (is (= {"message" "Policy enforcement prevents modification.",
+                  "error" "db/policy-exception"}
+                 (-> resp :body json/read-value))))))
     (testing "to query"
       (let [create-req {"from" "closed-test"
                         "@context" default-context
@@ -148,7 +174,7 @@
                                    :headers jwt-headers})]
         (testing "is accepted"
           (is (= 200 (:status resp)))
-          (is (= [] (-> resp :body json/read-value))))))
+          (is (= [["did:fluree:Tf4KTeKpWcZAJadKfJ4JUv84dkBYy5KFHod" "Non-Root User"]] (-> resp :body json/read-value))))))
     (testing "to query history"
       (let [create-req {"@context" default-context
                         "from" "closed-test"
@@ -172,7 +198,8 @@
                                    :headers jwt-headers})]
         (testing "is silently demoted"
           (is (= 200 (:status resp)))
-          (is (= [] (-> resp :body json/read-value)))))))
+          (is (= [["did:fluree:Tf4KTeKpWcZAJadKfJ4JUv84dkBYy5KFHod" "Non-Root User"]]
+                 (-> resp :body json/read-value)))))))
 
   (testing "unsigned request"
     (testing "to create"
@@ -188,7 +215,7 @@
                                     "f:action" [{"@id" "f:view"} {"@id" "f:modify"}]
                                     "f:query" {"@type" "@json"
                                                "@value" {}}}]}}
-            resp (api-post :create {:body    (json/write-value-as-string create-req)
+            resp (api-post :create {:body (json/write-value-as-string create-req)
                                     :headers json-headers})]
         (testing "is rejected"
           (is (= 400 (:status resp)))
