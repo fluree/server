@@ -41,8 +41,7 @@
                                    {"@id" "ex:defaultAllowView"
                                     "@type" ["f:AccessPolicy" "ex:RootPolicy"]
                                     "f:action" [{"@id" "f:view"} {"@id" "f:modify"}]
-                                    "f:query" {"@type" "@json"
-                                               "@value" {}}}]}}
+                                    "f:query" {"@type" "@json" "@value" {}}}]}}
             resp (api-post :create {:body    (crypto/create-jws (json/write-value-as-string create-req)
                                                                 (:private root-auth))
                                     :headers jwt-headers})]
@@ -68,6 +67,19 @@
         (testing "is accepted"
           (is (= 200 (:status resp)))
           (is (= ["did:fluree:TfHgFTQQiJMHaK1r1qxVPZ3Ridj9pCozqnh" "ex:coin"]
+                 (-> resp :body json/read-value))))))
+    (testing "to query as non-root"
+      (let [query-req {"from" "closed-test"
+                       "@context" default-context
+                       "where" [{"@id" "?s" "ex:name" "?name"}]
+                       "select" "?s"
+                       "opts" {"did" (:id non-root-auth)}}
+            resp (api-post :query {:body (crypto/create-jws (json/write-value-as-string query-req)
+                                                            (:private root-auth))
+                                   :headers jwt-headers})]
+        (testing "returns constrained results"
+
+          (is (= []
                  (-> resp :body json/read-value))))))
     (testing "to query history"
       (let [history-req {"from" "closed-test"
