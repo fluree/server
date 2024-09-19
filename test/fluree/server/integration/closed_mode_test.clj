@@ -94,6 +94,19 @@
           (is (= [{"f:retract" [],
                    "f:assert" [{"ex:name" "nickel", "id" "ex:coin"}],
                    "f:t" 2}]
+                 (-> resp :body json/read-value))))))
+    (testing "to query history as non-root"
+      (let [history-req {"from" "closed-test"
+                         "@context" default-context
+                         "history" "ex:coin"
+                         "t" {"from" 1 "to" "latest"}
+                         "opts" {"identity" (:id non-root-auth)}}
+            resp (api-post :history {:body (crypto/create-jws (json/write-value-as-string history-req)
+                                                              (:private root-auth))
+                                     :headers jwt-headers})]
+        (testing "returns constrained results"
+          (is (= 200 (:status resp)))
+          (is (= []
                  (-> resp :body json/read-value)))))))
 
   (testing "non-root request"
