@@ -1,0 +1,121 @@
+{
+  "@context": {
+    "@base": "https://ns.acme.com/fluree/",
+    "@vocab": "https://ns.flur.ee/system#",
+    "profiles": {
+      "@container": ["@graph", "@id"]
+    }
+  },
+  "@id": "standaloneServer",
+  "@graph": [
+    {
+      "@id": "localDiskStorage",
+      "@type": "Storage",
+      "addressIdentifier": "com.acme/salesFiles",
+      "filePath": "/var/lib/fluree"
+    },
+    {
+      "@id": "awsS3Storage",
+      "@type": "Storage",
+      "storageMethod": "s3",
+      "addressIdentifier": "com.acme/salsesS3",
+      "s3Bucket": "my-bucket"
+    },
+    {
+      "@id": "connection",
+      "@type": "Connection",
+      "parallelism": 4,
+      "cacheMaxMb": 200,
+      "commitStorage": {
+        "@id": "localDiskStorage"
+      },
+      "indexStorage": {
+        "@id": "localDiskStorage"
+      },
+      "primaryPublisher": {
+        "@type": "Publisher",
+        "storage": {
+          "@id": "localDiskStorage"
+        }
+      },
+      "secondaryPublishers": [
+        {
+          "@type": "Publisher",
+          "ipnsServer": "localhost",
+          "ipnsProfile": "my-profile"
+        },
+        {
+          "@type": "Publisher",
+          "storage": {
+            "@id": "awsS3Storage"
+          }
+        }
+      ],
+      "remoteSystems": [
+        {
+          "@id": "accountsPayable",
+          "@type": "System",
+          "servers": [
+            "/ip4/12.34.56.78/tcp/1234",
+            "/ip4/12.34.67.89/tcp/1234",
+            "/ip4/12.34.78.90/tcp/1234"
+          ],
+          "addressIdentifiers": [
+            "com.acme/accountsPayableFiles",
+            "com.acme/accountsPayableS3"
+          ]
+        },
+        {
+          "@id": "engineering",
+          "@type": "System",
+          "servers": [
+            "/ip4/12.34.56.12/tcp/1234"
+          ],
+          "addressIdentifiers": [
+            "com.acme/engineeringFileStorage",
+            "com.acme/engineeringMemoryStorage"
+          ]
+        }
+      ],
+      "ledgerDefaults": {
+        "indexOptions": {
+          "reindexMinBytes": 100000,
+          "reindexMaxBytes": 10000000,
+          "maxOldIndexes": 3
+        }
+      }
+    },
+    {
+      "@id": "consensus",
+      "@type": "Consensus",
+      "consensusProtocol": "standalone",
+      "maxPendingTxns": 42,
+      "storage": {
+        "@id": "localDiskStorage"
+      },
+      "connection": {
+        "@id": "connection"
+      }
+    },
+    {
+      "@id": "http",
+      "@type": "API",
+      "httpPort": 8090,
+      "maxTxnWaitMs": 120000
+    }
+  ],
+  "profiles": {
+    "dev": {
+      "@graph": [
+        {
+          "@id": "localDiskStorage",
+          "filePath": "dev/data"
+        },
+        {
+          "@id": "http",
+          "httpPort": 58090
+        }
+      ]
+    }
+  }
+}
