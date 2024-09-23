@@ -1,5 +1,7 @@
 (ns fluree.server.system
-  (:require [fluree.db.api :as fluree]
+  (:require [clojure.string :as str]
+            [fluree.db.api :as fluree]
+            [fluree.db.json-ld.iri :as iri]
             [fluree.server.config :as config]
             [fluree.server.consensus.raft :as raft]
             [fluree.server.consensus.standalone :as standalone]
@@ -12,11 +14,39 @@
 
 (set! *warn-on-reflection* true)
 
-(def default-resource-name "config.json")
-
 (derive :fluree/raft :fluree/consensus)
 (derive :fluree/standalone :fluree/consensus)
 (derive :http/jetty :http/server)
+
+(defn encode-illegal-char
+  [c]
+  (case c
+    "&" "<am>"
+    "@" "<at>"
+    "]" "<cb>"
+    ")" "<cp>"
+    ":" "<cl>"
+    "," "<cm>"
+    "$" "<dl>"
+    "." "<do>"
+    "#" "<po>"
+    "(" "<op>"
+    "[" "<ob>"
+    ";" "<sc>"
+    "/" "<sl>"))
+
+(defn kw-encode
+  [s]
+  (str/replace s #"[:#@$&.,;~/\(\)\[\]]" encode-illegal-char))
+
+(defn iri->kw
+  [iri]
+  (->> iri
+       iri/decompose
+       (map kw-encode)
+       (apply keyword)))
+
+(def default-resource-name "config.json")
 
 (defmethod ig/expand-key ::config/connection
   [_ config]
