@@ -281,6 +281,29 @@
   [node]
   (-> node keywordize-node-id keywordize-child-ids))
 
+(defn reference?
+  [node]
+  (and (map? node)
+       (contains? node "@id")
+       (-> node (dissoc "@id") empty?)))
+
+(defn convert-reference
+  [node]
+  (if (reference? node)
+    (let [id (get-id node)]
+      (ig/ref id))
+    node))
+
+(defn convert-references
+  [node]
+  (into {}
+        (map (fn [[k v]]
+               (let [v* (if (coll? v)
+                          (mapv convert-reference v)
+                          (convert-reference v))]
+                 [k v*])))
+        node))
+
 (def default-resource-name "config.json")
 
 (defmethod ig/expand-key ::config/connection
