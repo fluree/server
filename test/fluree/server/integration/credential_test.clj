@@ -35,14 +35,14 @@
                                       "ex:name"       "Goose"}
                                      {"@id"      "ex:defaultAllowView"
                                       "@type"    ["f:AccessPolicy" "ex:RootPolicy"]
-                                      "f:action" {"@id" "f:view"}
+                                      "f:action" [{"@id" "f:view"} {"@id" "f:modify"}]
                                       "f:query"  {"@type"  "@json"
                                                   "@value" {}}}]}}
             create-res (api-post :create
                                  {:body    (json/write-value-as-string create-req)
                                   :headers json-headers})]
         (is (= 201 (:status create-res)))
-        (is (= {"ledger" "credential-test"
+        (is (= {"ledger" ledger-name
                 "t"      1}
                (-> create-res :body json/read-value (select-keys ["ledger" "t"]))))))
     (testing "transact"
@@ -58,7 +58,7 @@
                               {:body    (json/write-value-as-string txn-req)
                                :headers json-headers})]
         (is (= 200 (:status txn-res)))
-        (is (= {"ledger" "credential-test"
+        (is (= {"ledger" ledger-name
                 "t"      2}
                (-> txn-res :body json/read-value (select-keys ["ledger" "t"]))))))
     (testing "query"
@@ -101,14 +101,14 @@
                (-> history-res :body json/read-value)))))
 
     (testing "invalid credential"
-      (let [valid-tx    (<!!
-                         (cred/generate {"ledger"   ledger-name
-                                         "@context" ["https://ns.flur.ee", {"ex" "http://example.com/ns/"}]
-                                         "insert"   {"@id"    "ex:cred-test"
-                                                     "ex:KEY" "VALUE"}}
+      (let [valid-tx (<!!
+                      (cred/generate {"ledger"   ledger-name
+                                      "@context" ["https://ns.flur.ee", {"ex" "http://example.com/ns/"}]
+                                      "insert"   {"@id"    "ex:cred-test"
+                                                  "ex:KEY" "VALUE"}}
                                         (:private auth)))
 
-            invalid-tx  (assoc-in valid-tx ["credentialSubject" "insert" "ex:KEY"]
+            invalid-tx (assoc-in valid-tx ["credentialSubject" "insert" "ex:KEY"]
                                   "ALTEREDVALUE")
 
             invalid-res (api-post :transact

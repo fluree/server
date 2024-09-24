@@ -375,3 +375,46 @@
       (is (= [["ex:alice" "111-11-1111"]]
              (-> query-res :body json/read-value))
           "query policy opts should prevent seeing john's ssn"))))
+
+()
+
+(deftest ^:integration ^:json policy-rejected-transaction-test
+  (testing "policy-enforcing opts for json-ld policy are correctly handled"
+    (let [ledger-name  (create-rand-ledger "policy-rejected-transaction-test")
+          alice-did    (:id auth)
+          txn-req      {:body
+                        (json/write-value-as-string
+                         {"@context" {"ex"     "http://example.org/ns/"
+                                      "schema" "http://schema.org/"
+                                      "f" "https://ns.flur.ee/ledger#"},
+                          "ledger"   ledger-name,
+                          "insert"   [{"@id"              "ex:alice",
+                                       "@type"            "ex:User",
+                                       "schema:name"      "Alice"
+                                       "schema:email"     "alice@flur.ee"
+                                       "schema:birthDate" "2022-08-17"
+                                       "schema:ssn"       "111-11-1111"}],
+                          "opts"     {"policy"
+                                      {"@id"      "ex:ReadAllPolicy",
+                                       "@type"    ["f:AccessPolicy" "f:ReadAllGroup"],
+                                       "f:action" [{"@id" "f:view"}],
+                                       "f:query"  {"@type" "@json", "@value" {}}}}})
+                        :headers json-headers}
+          txn-res      (api-post :transact txn-req)
+          _            (assert (= 403 (:status txn-res)))
+          query-req {:body (json/write-value-as-string
+                            {"@context" {"ex"     "http://example.org/ns/"
+                                         "schema" "http://schema.org/"}
+                             "from"     ledger-name
+                             "select"   ["?s"]
+                             "where"    {"@id"         "?s"
+                                         "schema:name" "Alice"}})
+                     :headers json-headers}
+          query-res  (api-post :query query-req)]
+
+      (is (= 200 (:status query-res))
+          (str "policy-enforced query response was: " (pr-str query-res)))
+
+      (is (= []
+             (-> query-res :body json/read-value))
+          "query policy opts should prevent seeing john's ssn"))))
