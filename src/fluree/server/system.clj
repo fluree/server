@@ -16,6 +16,35 @@
 
 (derive :fluree/raft :fluree/consensus)
 (derive :fluree/standalone :fluree/consensus)
+
+(derive :fluree.storage/file :fluree/content-storage)
+(derive :fluree.storage/file :fluree/byte-storage)
+(derive :fluree.storage/file :fluree/json-archive)
+
+(derive :fluree.storage/memory :fluree/content-storage)
+(derive :fluree.storage/memory :fluree/byte-storage)
+(derive :fluree.storage/memory :fluree/json-archive)
+
+(derive :fluree.storage/s3 :fluree/content-storage)
+(derive :fluree.storage/s3 :fluree/byte-storage)
+(derive :fluree.storage/s3 :fluree/json-archive)
+
+(derive :fluree.storage/ipfs :fluree/content-storage)
+(derive :fluree.storage/ipfs :fluree/json-archive)
+
+(derive :fluree.storage/remote-resources :fluree/json-archive)
+
+(derive :fluree.publication/remote-resources :fluree/nameservice)
+(derive :fluree.publication/remote-resources :fluree/publication)
+
+(derive :fluree.nameservice/storage-backed :fluree/nameservice)
+(derive :fluree.nameservice/storage-backed :fluree/publisher)
+
+(derive :fluree.nameservice/ipns :fluree/nameservice)
+(derive :fluree.nameservice/ipns :fluree/publisher)
+
+(derive :fluree.serializer/json :fluree/serializer)
+
 (derive :http/jetty :http/server)
 
 (def system-ns
