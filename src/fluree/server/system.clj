@@ -72,6 +72,49 @@
 (def api-type
   (system-iri "API"))
 
+(def address-identifier-iri
+  (system-iri "addressIdentifier"))
+
+(def file-path-iri
+  (system-iri "filePath"))
+
+(def s3-bucket-iri
+  (system-iri "s3Bucket"))
+
+(def ipfs-endpoint-iri
+  (system-iri "ipfsEndpoint"))
+
+(defn type?
+  [node kind]
+  (-> node (get "@type") (= kind)))
+
+(defn storage?
+  [node]
+  (type? node storage-type))
+
+(defn memory-storage?
+  [node]
+  (and (storage? node)
+       (-> node
+           (dissoc "@id" "@type" address-identifier-iri)
+           empty?)))
+
+(defn file-storage?
+  [node]
+  (and (storage? node)
+       (contains? node file-path-iri)))
+
+(defn s3-storage?
+  [node]
+  (and (storage? node)
+       (contains? node s3-bucket-iri)))
+
+(defn ipfs-storage?
+  [node]
+  (and (storage? node)
+       (contains? node ipfs-endpoint-iri)))
+
+
 (defn encode-illegal-char
   [c]
   (case c
