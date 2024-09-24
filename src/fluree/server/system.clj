@@ -214,9 +214,27 @@
 (defn iri->kw
   [iri]
   (->> iri
+       (or (iri/new-blank-node-id))
        iri/decompose
        (map kw-encode)
        (apply keyword)))
+
+(defn keywordize-id
+  [node]
+  (update node "@id" iri->kw))
+
+(defn keywordize-child-ids
+  [node]
+  (into {}
+        (map (fn [k v]
+               (let [v* (cond-> v
+                          (map? v) keywordize-id)]
+                 [k v*])))
+        node))
+
+(defn keywordize-ids
+  [node]
+  (-> node keywordize-id keywordize-child-ids))
 
 (def default-resource-name "config.json")
 
