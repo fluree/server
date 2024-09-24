@@ -173,9 +173,13 @@
   (and (storage? node)
        (contains? node ipfs-endpoint-iri)))
 
+(defn get-id
+  [node]
+  (get node "@id"))
+
 (defn derive-node-id
   [node]
-  (let [id (get node "@id")]
+  (let [id (get-id node)]
     (cond
       (connection? node)                 (derive id :fluree/connection)
       (system? node)                     (derive id :fluree/remote-resources)
