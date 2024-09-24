@@ -57,6 +57,9 @@
 (def connection-type
   (system-iri "Connection"))
 
+(def consensus-type
+  (system-iri "Consensus"))
+
 (def storage-type
   (system-iri "Storage"))
 
@@ -81,12 +84,66 @@
 (def s3-bucket-iri
   (system-iri "s3Bucket"))
 
+(def storage-iri
+  (system-iri "storage"))
+
 (def ipfs-endpoint-iri
   (system-iri "ipfsEndpoint"))
+
+(def ipns-profile-iri
+  (system-iri "ipnsProfile"))
+
+(def consensus-protocol-iri
+  (system-iri "consensusProtocol"))
+
+(def http-port-iri
+  (system-iri "httpPort"))
 
 (defn type?
   [node kind]
   (-> node (get "@type") (= kind)))
+
+(defn connection?
+  [node]
+  (type? node connection-type))
+
+(defn system?
+  [node]
+  (type? node system-type))
+
+(defn consensus?
+  [node]
+  (type? node consensus-type))
+
+(defn raft-consensus?
+  [node]
+  (and (consensus? node)
+       (-> node (get consensus-protocol-iri) (= "raft"))))
+
+(defn standalone-consensus?
+  [node]
+  (and (consensus? node)
+       (-> node (get consensus-protocol-iri) (= "standalone"))))
+
+(defn http-api?
+  [node]
+  (and (type? node api-type)
+       (contains? node http-port-iri)))
+
+(defn publisher?
+  [node]
+  (type? node publisher-type))
+
+(defn storage-backed-nameservice?
+  [node]
+  (and (publisher? node)
+       (contains? node storage-iri)))
+
+(defn ipns-nameservice?
+  [node]
+  (and (publisher? node)
+       (contains? node ipfs-endpoint-iri)
+       (contains? node ipns-profile-iri)))
 
 (defn storage?
   [node]
