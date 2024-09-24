@@ -34,10 +34,9 @@
 (derive :fluree.storage/ipfs :fluree/content-storage)
 (derive :fluree.storage/ipfs :fluree/json-archive)
 
-(derive :fluree.storage/remote-resources :fluree/json-archive)
-
-(derive :fluree.publication/remote-resources :fluree/nameservice)
-(derive :fluree.publication/remote-resources :fluree/publication)
+(derive :fluree/remote-resources :fluree/json-archive)
+(derive :fluree/remote-resources :fluree/nameservice)
+(derive :fluree/remote-resources :fluree/publication)
 
 (derive :fluree.nameservice/storage-backed :fluree/nameservice)
 (derive :fluree.nameservice/storage-backed :fluree/publisher)
