@@ -14,8 +14,8 @@
 
 (set! *warn-on-reflection* true)
 
-(derive :fluree/raft :fluree/consensus)
-(derive :fluree/standalone :fluree/consensus)
+(derive :fluree.consensus/raft :fluree/consensus)
+(derive :fluree.consensus/standalone :fluree/consensus)
 
 (derive :fluree.storage/file :fluree/content-storage)
 (derive :fluree.storage/file :fluree/byte-storage)
@@ -45,7 +45,7 @@
 
 (derive :fluree.serializer/json :fluree/serializer)
 
-(derive :http/jetty :http/server)
+(derive :fluree.http/jetty :fluree/http)
 
 (def system-ns
   "https://ns.flur.ee/system#")
@@ -170,6 +170,23 @@
   [node]
   (and (storage? node)
        (contains? node ipfs-endpoint-iri)))
+
+(defn derive-node-id
+  [node]
+  (let [id (get node "@id")]
+    (cond
+      (connection? node)                 (derive id :fluree/connection)
+      (system? node)                     (derive id :fluree/remote-resources)
+      (raft-consensus? node)             (derive id :fluree.consensus/raft)
+      (standalone-consensus? node)       (derive id :fluree.consensus/standalone)
+      (http-api? node)                   (derive id :fluree.http/jetty) ; TODO: Enable other http servers
+      (memory-storage? node)             (derive id :fluree.storage/memory)
+      (file-storage? node)               (derive id :fluree.storage/file)
+      (s3-storage? node)                 (derive id :fluree.storage/s3)
+      (ipfs-storage? node)               (derive id :fluree.storage/ipfs)
+      (ipns-nameservice? node)           (derive id :fluree.nameservice/ipns)
+      (storage-backed-nameservice? node) (derive id :fluree.nameservice/storage-backed))
+    node))
 
 
 (defn encode-illegal-char
