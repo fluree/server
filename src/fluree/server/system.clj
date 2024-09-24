@@ -2,6 +2,8 @@
   (:require [clojure.string :as str]
             [fluree.db.api :as fluree]
             [fluree.db.json-ld.iri :as iri]
+            [fluree.db.util :as util]
+            [fluree.json-ld :as json-ld]
             [fluree.server.config :as config]
             [fluree.server.consensus.raft :as raft]
             [fluree.server.consensus.standalone :as standalone]
@@ -188,6 +190,42 @@
       (storage-backed-nameservice? node) (derive id :fluree.nameservice/storage-backed))
     node))
 
+(defn flatten-node
+  [node]
+  (loop [[[k v] & r] node
+         children    []
+         flat-node   {}]
+    (if k
+      (if (map? v)
+        (if (contains? v "@id")
+          (let [children*  (if (> (count v) 1)
+                             (conj children v)
+                             children)
+                ref-node   (select-keys v ["@id"])
+                flat-node* (assoc flat-node k ref-node)]
+            (recur r children* flat-node*))
+          (let [id         (iri/new-blank-node-id)
+                v*         (assoc v "@id" id)
+                children*  (conj children v*)
+                ref-node   {"@id" id}
+                flat-node* (assoc flat-node k ref-node)]
+            (recur r children* flat-node*)))
+        (let [flat-node* (assoc flat-node k v)]
+          (recur r children flat-node*)))
+      [flat-node children])))
+
+(defn flatten-nodes
+  [nodes]
+  (loop [remaining nodes
+         flattened []]
+    (if-let [node (peek remaining)]
+      (let [[flat-node children] (flatten-node node)
+            remaining* (-> remaining
+                           pop
+                           (into children))
+            flattened* (conj flattened flat-node)]
+        (recur remaining* flattened*))
+      flattened)))
 
 (defn encode-illegal-char
   [c]
