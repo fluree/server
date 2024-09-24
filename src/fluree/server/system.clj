@@ -29,6 +29,7 @@
     "," "<cm>"
     "$" "<dl>"
     "." "<do>"
+    "%" "<pe>"
     "#" "<po>"
     "(" "<op>"
     "[" "<ob>"
@@ -37,7 +38,7 @@
 
 (defn kw-encode
   [s]
-  (str/replace s #"[:#@$&.,;~/\(\)\[\]]" encode-illegal-char))
+  (str/replace s #"[:#@$&%.,;~/\(\)\[\]]" encode-illegal-char))
 
 (defn iri->kw
   [iri]
