@@ -257,22 +257,25 @@
        (map kw-encode)
        (apply keyword)))
 
-(defn keywordize-id
+(defn keywordize-node-id
   [node]
-  (update node "@id" iri->kw))
+  (if (map? node)
+    (update node "@id" iri->kw)
+    node))
 
 (defn keywordize-child-ids
   [node]
   (into {}
         (map (fn [k v]
-               (let [v* (cond-> v
-                          (map? v) keywordize-id)]
+               (let [v* (if (coll? v)
+                          (map keywordize-node-id v)
+                          (keywordize-node-id v))]
                  [k v*])))
         node))
 
-(defn keywordize-ids
+(defn keywordize-node-ids
   [node]
-  (-> node keywordize-id keywordize-child-ids))
+  (-> node keywordize-node-id keywordize-child-ids))
 
 (def default-resource-name "config.json")
 
