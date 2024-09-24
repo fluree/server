@@ -18,6 +18,31 @@
 (derive :fluree/standalone :fluree/consensus)
 (derive :http/jetty :http/server)
 
+(def system-ns
+  "https://ns.flur.ee/system#")
+
+(defn system-iri
+  [s]
+  (str system-ns s))
+
+(def connection-type
+  (system-iri "Connection"))
+
+(def storage-type
+  (system-iri "Storage"))
+
+(def publisher-type
+  (system-iri "Publisher"))
+
+(def system-type
+  (system-iri "System"))
+
+(def consensus-type
+  (system-iri "Consensus"))
+
+(def api-type
+  (system-iri "API"))
+
 (defn encode-illegal-char
   [c]
   (case c
