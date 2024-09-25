@@ -2,7 +2,11 @@
   (:require [clojure.string :as str]
             [fluree.db.api :as fluree]
             [fluree.db.json-ld.iri :as iri]
-            [fluree.db.util :as util]
+            [fluree.db.storage.file :as file-storage]
+            [fluree.db.storage.ipfs :as ipfs-storage]
+            [fluree.db.storage.memory :as memory-storage]
+            [fluree.db.storage.s3 :as s3-storage]
+            [fluree.db.util.core :as util]
             [fluree.json-ld :as json-ld]
             [fluree.server.config :as config]
             [fluree.server.consensus.raft :as raft]
@@ -44,8 +48,6 @@
 (derive :fluree.nameservice/ipns :fluree/nameservice)
 (derive :fluree.nameservice/ipns :fluree/publisher)
 
-(derive :fluree.serializer/json :fluree/serializer)
-
 (derive :fluree.http/jetty :fluree/http)
 
 (def system-ns
@@ -84,6 +86,12 @@
 
 (def s3-bucket-iri
   (system-iri "s3Bucket"))
+
+(def s3-prefix-iri
+  (system-iri "s3Prefix"))
+
+(def s3-endpoint-iri
+  (system-iri "s3Endpoint"))
 
 (def storage-iri
   (system-iri "storage"))
@@ -305,13 +313,50 @@
 
 (def default-resource-name "config.jsonld")
 
+(defn parse-config
+  [config]
+  (let [config*      (->> config json-ld/expand util/sequential first)
+        system-graph (-> config* (get "@graph") util/sequential)]
+    (->> system-graph
+         flatten-nodes
+         (map keywordize-node-ids)
+         (map derive-node-id)
+         (map convert-references)
+         (map (juxt get-id identity))
+         (into {}))))
+
+(defmethod ig/init-key :fluree.storage/memory
+  [_ config]
+  (let [identifier (get config address-identifier-iri)]
+    (memory-storage/open identifier)))
+
+(defmethod ig/init-key :fluree.storage/file
+  [_ config]
+  (let [identifier (get config address-identifier-iri)
+        root-path  (get config file-path-iri)]
+    (file-storage/open identifier root-path)))
+
+(defmethod ig/init-key :fluree.storage/s3
+  [_ config]
+  (let [identifier  (get config address-identifier-iri)
+        s3-bucket   (get config s3-bucket-iri)
+        s3-prefix   (get config s3-prefix-iri)
+        s3-endpoint (get config s3-endpoint-iri)]
+    (s3-storage/open identifier s3-bucket s3-prefix s3-endpoint)))
+
+(defmethod ig/init-key :fluree.storage/ipfs
+  [_ config]
+  (let [identifier (get config address-identifier-iri)
+        ipfs-endpoint (get config ipfs-endpoint-iri)]
+    (ipfs-storage/open identifier ipfs-endpoint)))
+
 (defmethod ig/init-key :fluree/subscriptions
   [_ _]
   (subscriptions/listen))
 
 (defmethod ig/halt-key! :fluree/subscriptions
-  [_ subs]
-  (subscriptions/close subs))
+  [_ subsc]
+  (subscriptions/close subsc))
 
 (defmethod ig/init-key :fluree/watcher
   [_ {:keys [max-txn-wait-ms]}]
@@ -321,32 +366,32 @@
   [_ watcher]
   (watcher/close watcher))
 
-(defmethod ig/init-key :fluree/raft
+(defmethod ig/init-key :fluree.consensus/raft
   [_ {:keys [server] :as config}]
   (let [config* (assoc config :ledger-directory (:storage-path server))]
     (raft/start config*)))
 
-(defmethod ig/halt-key! :fluree/raft
+(defmethod ig/halt-key! :fluree.consensus/raft
   [_ {:keys [close] :as _raft-group}]
   (close))
 
-(defmethod ig/init-key :fluree/standalone
+(defmethod ig/init-key :fluree.consensus/standalone
   [_ {:keys [conn subscriptions watcher max-pending-txns]}]
   (standalone/start conn subscriptions watcher max-pending-txns))
 
-(defmethod ig/halt-key! :fluree/standalone
+(defmethod ig/halt-key! :fluree.consensu/standalone
   [_ transactor]
   (standalone/stop transactor))
 
-(defmethod ig/init-key :fluree/handler
+(defmethod ig/init-key :fluree.api/handler
   [_ {:keys [conn consensus watcher subscriptions]}]
   (handler/app conn consensus watcher subscriptions))
 
-(defmethod ig/init-key :http/jetty
+(defmethod ig/init-key :fluree.http/jetty
   [_ {:keys [handler port join?]}]
   (jetty/run-jetty handler {:port port, :join? join?}))
 
-(defmethod ig/halt-key! :http/jetty
+(defmethod ig/halt-key! :fluree.http/jetty
   [_ http-server]
   (jetty/stop-server http-server))
 
@@ -354,9 +399,13 @@
   [_ {:keys [conn ledgers force]}]
   (task.migrate-sid/migrate conn ledgers force))
 
+(defmethod ig/init-key :default
+  [_ config]
+  config)
+
 (defn start-config
   [config]
-  (-> config ig/expand ig/init))
+  (-> config parse-config ig/init))
 
 (defn start-file
   ([path]
