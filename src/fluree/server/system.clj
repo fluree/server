@@ -72,9 +72,6 @@
 (def system-type
   (system-iri "System"))
 
-(def consensus-type
-  (system-iri "Consensus"))
-
 (def api-type
   (system-iri "API"))
 
@@ -108,6 +105,9 @@
 (def http-port-iri
   (system-iri "httpPort"))
 
+(def max-txn-wait-ms-iri
+  (system-iri "maxTxnWaitMs"))
+
 (defn type?
   [node kind]
   (-> node (get "@type") (= kind)))
@@ -138,6 +138,10 @@
   [node]
   (and (type? node api-type)
        (contains? node http-port-iri)))
+
+(defn jetty-api?
+  [node]
+  (http-api? node))
 
 (defn publisher?
   [node]
@@ -192,7 +196,7 @@
       (system? node)                     (derive id :fluree/remote-resources)
       (raft-consensus? node)             (derive id :fluree.consensus/raft)
       (standalone-consensus? node)       (derive id :fluree.consensus/standalone)
-      (http-api? node)                   (derive id :fluree.http/jetty) ; TODO: Enable other http servers
+      (jetty-api? node)                  (derive id :fluree.http/jetty) ; TODO: Enable other http servers
       (memory-storage? node)             (derive id :fluree.storage/memory)
       (file-storage? node)               (derive id :fluree.storage/file)
       (s3-storage? node)                 (derive id :fluree.storage/s3)
@@ -311,14 +315,12 @@
                  [k v*])))
         node))
 
-(def default-resource-name "config.jsonld")
-
-(def base-config
-  {:fluree/subscriptions {}
-   :fluree.api/handler   {:connection    (ig/ref :fluree/connection)
-                          :consensus     (ig/ref :fluree/consensus)
-                          :watcher       (ig/ref :fluree/watcher)
-                          :subscriptions (ig/ref :fluree/subscriptions)}})
+(defmethod ig/expand-key :fluree/http
+  [k config]
+  (let [max-txn-wait-ms (get config max-txn-wait-ms-iri)
+        config*         (dissoc config max-txn-wait-ms-iri)]
+    {k               config*
+     :fluree/watcher {:max-txn-wait-ms max-txn-wait-ms}}))
 
 (defmethod ig/init-key :fluree.storage/memory
   [_ config]
@@ -374,7 +376,7 @@
   [_ {:keys [conn subscriptions watcher max-pending-txns]}]
   (standalone/start conn subscriptions watcher max-pending-txns))
 
-(defmethod ig/halt-key! :fluree.consensu/standalone
+(defmethod ig/halt-key! :fluree.consenus/standalone
   [_ transactor]
   (standalone/stop transactor))
 
@@ -398,6 +400,15 @@
   [_ config]
   config)
 
+(def default-resource-name "config.jsonld")
+
+(def base-config
+  {:fluree/subscriptions {}
+   :fluree.api/handler   {:connection    (ig/ref :fluree/connection)
+                          :consensus     (ig/ref :fluree/consensus)
+                          :watcher       (ig/ref :fluree/watcher)
+                          :subscriptions (ig/ref :fluree/subscriptions)}})
+
 (defn parse-config
   [config]
   (let [config*      (->> config json-ld/expand util/sequential first)
@@ -412,7 +423,7 @@
 
 (defn start-config
   [config]
-  (-> config parse-config ig/init))
+  (-> config parse-config ig/expand ig/init))
 
 (defn start-file
   ([path]
