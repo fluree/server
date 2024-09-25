@@ -315,23 +315,10 @@
 
 (def base-config
   {:fluree/subscriptions {}
-   :fluree/watcher       {}
    :fluree.api/handler   {:connection    (ig/ref :fluree/connection)
                           :consensus     (ig/ref :fluree/consensus)
                           :watcher       (ig/ref :fluree/watcher)
                           :subscriptions (ig/ref :fluree/subscriptions)}})
-
-(defn parse-config
-  [config]
-  (let [config*      (->> config json-ld/expand util/sequential first)
-        system-graph (-> config* (get "@graph") util/sequential)]
-    (->> system-graph
-         flatten-nodes
-         (map keywordize-node-ids)
-         (map derive-node-id)
-         (map convert-references)
-         (map (juxt get-id identity))
-         (into base-config))))
 
 (defmethod ig/init-key :fluree.storage/memory
   [_ config]
@@ -410,6 +397,18 @@
 (defmethod ig/init-key :default
   [_ config]
   config)
+
+(defn parse-config
+  [config]
+  (let [config*      (->> config json-ld/expand util/sequential first)
+        system-graph (-> config* (get "@graph") util/sequential)]
+    (->> system-graph
+         flatten-nodes
+         (map keywordize-node-ids)
+         (map derive-node-id)
+         (map convert-references)
+         (map (juxt get-id identity))
+         (into base-config))))
 
 (defn start-config
   [config]
