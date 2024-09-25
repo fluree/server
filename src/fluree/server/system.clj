@@ -313,6 +313,14 @@
 
 (def default-resource-name "config.jsonld")
 
+(def base-config
+  {:fluree/subscriptions {}
+   :fluree/watcher       {}
+   :fluree.api/handler   {:connection    (ig/ref :fluree/connection)
+                          :consensus     (ig/ref :fluree/consensus)
+                          :watcher       (ig/ref :fluree/watcher)
+                          :subscriptions (ig/ref :fluree/subscriptions)}})
+
 (defn parse-config
   [config]
   (let [config*      (->> config json-ld/expand util/sequential first)
@@ -323,7 +331,7 @@
          (map derive-node-id)
          (map convert-references)
          (map (juxt get-id identity))
-         (into {}))))
+         (into base-config))))
 
 (defmethod ig/init-key :fluree.storage/memory
   [_ config]
