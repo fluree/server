@@ -6,7 +6,7 @@
             [fluree.db.storage.ipfs :as ipfs-storage]
             [fluree.db.storage.memory :as memory-storage]
             [fluree.db.storage.s3 :as s3-storage]
-            [fluree.db.util.core :as util]
+            [fluree.db.util.core :as util :refer [get-first]]
             [fluree.json-ld :as json-ld]
             [fluree.server.config :as config]
             [fluree.server.consensus.raft :as raft]
@@ -317,28 +317,28 @@
 
 (defmethod ig/expand-key :fluree/http
   [k config]
-  (let [max-txn-wait-ms (get config max-txn-wait-ms-iri)
+  (let [max-txn-wait-ms (get-first config max-txn-wait-ms-iri)
         config*         (dissoc config max-txn-wait-ms-iri)]
     {k               config*
      :fluree/watcher {:max-txn-wait-ms max-txn-wait-ms}}))
 
 (defmethod ig/init-key :fluree.storage/memory
   [_ config]
-  (let [identifier (get config address-identifier-iri)]
+  (let [identifier (get-first config address-identifier-iri)]
     (memory-storage/open identifier)))
 
 (defmethod ig/init-key :fluree.storage/file
   [_ config]
-  (let [identifier (get config address-identifier-iri)
-        root-path  (get config file-path-iri)]
+  (let [identifier (get-first config address-identifier-iri)
+        root-path  (get-first config file-path-iri)]
     (file-storage/open identifier root-path)))
 
 (defmethod ig/init-key :fluree.storage/s3
   [_ config]
-  (let [identifier  (get config address-identifier-iri)
-        s3-bucket   (get config s3-bucket-iri)
-        s3-prefix   (get config s3-prefix-iri)
-        s3-endpoint (get config s3-endpoint-iri)]
+  (let [identifier  (get-first config address-identifier-iri)
+        s3-bucket   (get-first config s3-bucket-iri)
+        s3-prefix   (get-first config s3-prefix-iri)
+        s3-endpoint (get-first config s3-endpoint-iri)]
     (s3-storage/open identifier s3-bucket s3-prefix s3-endpoint)))
 
 (defmethod ig/init-key :fluree.storage/ipfs
