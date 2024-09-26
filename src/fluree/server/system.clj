@@ -2,6 +2,7 @@
   (:require [clojure.string :as str]
             [fluree.db.api :as fluree]
             [fluree.db.json-ld.iri :as iri]
+            [fluree.db.remote-system :as remote-system]
             [fluree.db.storage.file :as file-storage]
             [fluree.db.storage.ipfs :as ipfs-storage]
             [fluree.db.storage.memory :as memory-storage]
@@ -388,6 +389,12 @@
   (let [identifier    (get-first config address-identifier-iri)
         ipfs-endpoint (get-first config ipfs-endpoint-iri)]
     (ipfs-storage/open identifier ipfs-endpoint)))
+
+(defmethod ig/init-key :fluree/remote-system
+  [_ config]
+  (let [servers     (get config servers-iri)
+        identifiers (get config address-identifiers-iri)]
+    (remote-system/connect servers identifiers)))
 
 (defmethod ig/init-key :fluree/subscriptions
   [_ _]
