@@ -239,7 +239,6 @@
 (deftest ^:integration ^:json policy-class-opts-test
   (testing "policy-enforcing opts for policyClass are correctly handled"
     (let [ledger-name  (create-rand-ledger "policy-class-opts-test")
-          alice-did    (:id auth)
           txn-req      {:body
                         (json/write-value-as-string
                          {"ledger"   ledger-name
@@ -375,8 +374,6 @@
       (is (= [["ex:alice" "111-11-1111"]]
              (-> query-res :body json/read-value))
           "query policy opts should prevent seeing john's ssn"))))
-
-()
 
 (deftest ^:integration ^:json policy-rejected-transaction-test
   (testing "policy-enforcing opts for json-ld policy are correctly handled"
