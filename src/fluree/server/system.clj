@@ -78,6 +78,9 @@
 (def address-identifier-iri
   (system-iri "addressIdentifier"))
 
+(def address-identifiers-iri
+  (system-iri "addressIdentifiers"))
+
 (def file-path-iri
   (system-iri "filePath"))
 
@@ -107,6 +110,45 @@
 
 (def max-txn-wait-ms-iri
   (system-iri "maxTxnWaitMs"))
+
+(def parallelism-iri
+  (system-iri "parallelism"))
+
+(def cache-max-mb-iri
+  (system-iri "cachMaxMb"))
+
+(def commit-storage-iri
+  (system-iri "commitStorage"))
+
+(def index-storage-iri
+  (system-iri "indexStorage"))
+
+(def primary-publisher-iri
+  (system-iri "primaryPublisher"))
+
+(def secondary-publishers-iri
+  (system-iri "secondaryPublishers"))
+
+(def remote-systems-iri
+  (system-iri "remoteSystems"))
+
+(def servers-iri
+  (system-iri "servers"))
+
+(def ledger-defaults-iri
+  (system-iri "ledgerDefaults"))
+
+(def index-options-iri
+  (system-iri "indexOptions"))
+
+(def reindex-min-bytes-iri
+  (system-iri "reindexMinBytes"))
+
+(def reindex-max-bytes-iri
+  (system-iri "reindexMaxBytes"))
+
+(def max-old-indexes-iri
+  (system-iri "maxOldIndexes"))
 
 (defn type?
   [node kind]
@@ -343,8 +385,8 @@
 
 (defmethod ig/init-key :fluree.storage/ipfs
   [_ config]
-  (let [identifier (get config address-identifier-iri)
-        ipfs-endpoint (get config ipfs-endpoint-iri)]
+  (let [identifier    (get-first config address-identifier-iri)
+        ipfs-endpoint (get-first config ipfs-endpoint-iri)]
     (ipfs-storage/open identifier ipfs-endpoint)))
 
 (defmethod ig/init-key :fluree/subscriptions
