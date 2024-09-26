@@ -38,9 +38,9 @@
 (derive :fluree.storage/ipfs :fluree/content-storage)
 (derive :fluree.storage/ipfs :fluree/json-archive)
 
-(derive :fluree/remote-resources :fluree/json-archive)
-(derive :fluree/remote-resources :fluree/nameservice)
-(derive :fluree/remote-resources :fluree/publication)
+(derive :fluree/remote-system :fluree/json-archive)
+(derive :fluree/remote-system :fluree/nameservice)
+(derive :fluree/remote-system :fluree/publication)
 
 (derive :fluree.nameservice/storage-backed :fluree/nameservice)
 (derive :fluree.nameservice/storage-backed :fluree/publisher)
@@ -193,7 +193,7 @@
   (let [id (get-id node)]
     (cond
       (connection? node)                 (derive id :fluree/connection)
-      (system? node)                     (derive id :fluree/remote-resources)
+      (system? node)                     (derive id :fluree/remote-system)
       (raft-consensus? node)             (derive id :fluree.consensus/raft)
       (standalone-consensus? node)       (derive id :fluree.consensus/standalone)
       (jetty-api? node)                  (derive id :fluree.http/jetty) ; TODO: Enable other http servers
