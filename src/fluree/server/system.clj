@@ -1,6 +1,6 @@
 (ns fluree.server.system
   (:require [clojure.string :as str]
-            [fluree.db.api :as fluree]
+            [fluree.db.connection :as connection]
             [fluree.db.json-ld.iri :as iri]
             [fluree.db.remote-system :as remote-system]
             [fluree.db.storage.file :as file-storage]
@@ -395,6 +395,28 @@
   (let [servers     (get config servers-iri)
         identifiers (get config address-identifiers-iri)]
     (remote-system/connect servers identifiers)))
+
+(defmethod ig/init-key :fluree/connection
+  [_ config]
+  (let [cache-max-mb         (get-first config cache-max-mb-iri)
+        parallelism          (get-first config parallelism-iri)
+        primary-publisher    (get-first config primary-publisher-iri)
+        secondary-publishers (get config secondary-publishers-iri)
+        remote-systems       (get config remote-systems-iri)
+        ledger-defaults      (get-first config ledger-defaults-iri)
+        index-options        (get-first ledger-defaults index-options-iri)
+        reindex-min-bytes    (get-first index-options reindex-min-bytes-iri)
+        reindex-max-bytes    (get-first index-options reindex-max-bytes-iri)
+        max-old-indexes      (get-first index-options max-old-indexes-iri)
+        ledger-defaults*     {:index-options {:reindex-min-bytes reindex-min-bytes
+                                              :reindex-max-bytes reindex-max-bytes
+                                              :max-old-indexes   max-old-indexes}}]
+    (connection/connect {:parallelism          parallelism
+                         :cache-max-mb         cache-max-mb
+                         :primary-publisher    primary-publisher
+                         :secondary-publishers secondary-publishers
+                         :remote-systems       remote-systems
+                         :defaults             ledger-defaults*})))
 
 (defmethod ig/init-key :fluree/subscriptions
   [_ _]
