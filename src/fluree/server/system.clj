@@ -7,7 +7,7 @@
             [fluree.db.storage.ipfs :as ipfs-storage]
             [fluree.db.storage.memory :as memory-storage]
             [fluree.db.storage.s3 :as s3-storage]
-            [fluree.db.util.core :as util :refer [get-first]]
+            [fluree.db.util.core :as util :refer [get-first get-first-value]]
             [fluree.json-ld :as json-ld]
             [fluree.server.config :as config]
             [fluree.server.consensus.raft :as raft]
@@ -153,7 +153,7 @@
 
 (defn type?
   [node kind]
-  (-> node (get "@type") (= kind)))
+  (-> node (get-first :type) (= kind)))
 
 (defn connection?
   [node]
@@ -170,12 +170,12 @@
 (defn raft-consensus?
   [node]
   (and (consensus? node)
-       (-> node (get consensus-protocol-iri) (= "raft"))))
+       (-> node (get-first-value consensus-protocol-iri) (= "raft"))))
 
 (defn standalone-consensus?
   [node]
   (and (consensus? node)
-       (-> node (get consensus-protocol-iri) (= "standalone"))))
+       (-> node (get-first-value consensus-protocol-iri) (= "standalone"))))
 
 (defn http-api?
   [node]
@@ -209,7 +209,7 @@
   [node]
   (and (storage? node)
        (-> node
-           (dissoc "@id" "@type" address-identifier-iri)
+           (dissoc :idx :id :type address-identifier-iri)
            empty?)))
 
 (defn file-storage?
@@ -229,7 +229,7 @@
 
 (defn get-id
   [node]
-  (get node "@id"))
+  (get node :id))
 
 (defn derive-node-id
   [node]
@@ -255,17 +255,17 @@
          flat-node   {}]
     (if k
       (if (map? v)
-        (if (contains? v "@id")
+        (if (contains? v :id)
           (let [children*  (if (> (count v) 1)
                              (conj children v)
                              children)
-                ref-node   (select-keys v ["@id"])
+                ref-node   (select-keys v [:id])
                 flat-node* (assoc flat-node k ref-node)]
             (recur r children* flat-node*))
           (let [id         (iri/new-blank-node-id)
-                v*         (assoc v "@id" id)
+                v*         (assoc v :id id)
                 children*  (conj children v*)
-                ref-node   {"@id" id}
+                ref-node   {:id id}
                 flat-node* (assoc flat-node k ref-node)]
             (recur r children* flat-node*)))
         (let [flat-node* (assoc flat-node k v)]
@@ -318,13 +318,13 @@
 (defn keywordize-node-id
   [node]
   (if (map? node)
-    (update node "@id" iri->kw)
+    (update node :id iri->kw)
     node))
 
 (defn keywordize-child-ids
   [node]
   (into {}
-        (map (fn [k v]
+        (map (fn [[k v]]
                (let [v* (if (coll? v)
                           (map keywordize-node-id v)
                           (keywordize-node-id v))]
@@ -338,8 +338,8 @@
 (defn reference?
   [node]
   (and (map? node)
-       (contains? node "@id")
-       (-> node (dissoc "@id") empty?)))
+       (contains? node :id)
+       (-> node (dissoc :idx :id) empty?)))
 
 (defn convert-reference
   [node]
@@ -458,21 +458,19 @@
                           :watcher       (ig/ref :fluree/watcher)
                           :subscriptions (ig/ref :fluree/subscriptions)}})
 
-(defn parse-config
+(defn parse
   [config]
-  (let [config*      (->> config json-ld/expand util/sequential first)
-        system-graph (-> config* (get "@graph") util/sequential)]
-    (->> system-graph
-         flatten-nodes
-         (map keywordize-node-ids)
-         (map derive-node-id)
-         (map convert-references)
-         (map (juxt get-id identity))
-         (into base-config))))
+  (->> config
+       flatten-nodes
+       (map keywordize-node-ids)
+       (map derive-node-id)
+       (map convert-references)
+       (map (juxt get-id identity))
+       (into base-config)))
 
 (defn start-config
   [config]
-  (-> config parse-config ig/expand ig/init))
+  (-> config json-ld/expand parse ig/expand ig/init))
 
 (defn start-file
   ([path]
