@@ -248,28 +248,67 @@
       (storage-backed-nameservice? node) (derive id :fluree.nameservice/storage-backed))
     node))
 
+(defn subject-node?
+  [x]
+  (and (map? x)
+       (not (contains? x :value))))
+
+(defn blank-node?
+  [x]
+  (and (subject-node? x)
+       (not (contains? x :id))))
+
+(defn ref-node?
+  [x]
+  (and (subject-node? x)
+       (not (blank-node? x))
+       (-> x
+           (dissoc :idx)
+           count
+           (= 1))))
+
+(defn split-subject-node
+  [node]
+  (let [node* (cond-> node
+                (blank-node? node) (assoc :id (iri/new-blank-node-id))
+                true               (dissoc :idx))]
+    (if (ref-node? node*)
+      [node*]
+      (let [ref-node (select-keys node* [:id])]
+        [ref-node node*]))))
+
+(defn flatten-sequence
+  [coll]
+  (loop [[child & r]   coll
+         child-nodes   []
+         flat-sequence []]
+    (if child
+      (if (subject-node? child)
+        (let [[ref-node child-node] (split-subject-node child)
+              child-nodes*          (if child-node
+                                      (conj child-nodes child-node)
+                                      child-nodes)]
+          (recur r child-nodes* (conj flat-sequence ref-node)))
+        (recur r child-nodes (conj flat-sequence child)))
+      [flat-sequence child-nodes])))
+
+
 (defn flatten-node
   [node]
-  (loop [[[k v] & r] node
+  (loop [[[k v] & r] (dissoc node :idx)
          children    []
          flat-node   {}]
     (if k
-      (if (map? v)
-        (if (contains? v :id)
-          (let [children*  (if (> (count v) 1)
-                             (conj children v)
-                             children)
-                ref-node   (select-keys v [:id])
-                flat-node* (assoc flat-node k ref-node)]
-            (recur r children* flat-node*))
-          (let [id         (iri/new-blank-node-id)
-                v*         (assoc v :id id)
-                children*  (conj children v*)
-                ref-node   {:id id}
-                flat-node* (assoc flat-node k ref-node)]
-            (recur r children* flat-node*)))
-        (let [flat-node* (assoc flat-node k v)]
-          (recur r children flat-node*)))
+      (if (sequential? v)
+        (let [[flat-sequence child-nodes] (flatten-sequence v)]
+          (recur r
+                 (into children child-nodes)
+                 (assoc flat-node k flat-sequence)))
+        (if (and (subject-node? v)
+                 (not (ref-node? v)))
+          (let [[ref-node child-node] (split-subject-node v)]
+            (recur r (conj children child-node) (assoc flat-node k ref-node)))
+          (recur r children (assoc flat-node k v))))
       [flat-node children])))
 
 (defn flatten-nodes
@@ -309,15 +348,14 @@
 
 (defn iri->kw
   [iri]
-  (->> iri
-       (or (iri/new-blank-node-id))
-       iri/decompose
-       (map kw-encode)
-       (apply keyword)))
+  (let [iri* (or iri (iri/new-blank-node-id))]
+    (->> (iri/decompose iri*)
+         (map kw-encode)
+         (apply keyword))))
 
 (defn keywordize-node-id
   [node]
-  (if (map? node)
+  (if (subject-node? node)
     (update node :id iri->kw)
     node))
 
