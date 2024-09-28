@@ -58,15 +58,28 @@
 (defn run-test-server
   [run-tests]
   (set-server-ports)
-  (let [config {::config/server     {}
-                ::config/connection {:method       :memory
-                                     :parallelism  1
-                                     :cache-max-mb 100}
-                ::config/consensus  {:protocol         :standalone
-                                     :max-pending-txns 16}
-                ::config/http       {:server          :jetty
-                                     :port            @api-port
-                                     :max-txn-wait-ms 45000}}
+  (let [config {"@context" {"@base"    "https://ns.flur.ee/dev/config/",
+                            "@vocab"   "https://ns.flur.ee/system#",
+                            "profiles" {"@container" ["@graph", "@id"]}}
+                "@id"      "testSystem"
+                "@graph"   [{"@id"   "memoryStorage"
+                             "@type" "Storage"}
+                            {"@id"              "testConnection"
+                             "@type"            "Connection"
+                             "parallelism"      1
+                             "cacheMaxMb"       100
+                             "commitStorage"    {"@id" "memoryStorage"}
+                             "indexStorage"     {"@id" "memoryStorage"}
+                             "primaryPublisher" {"@type"   "Publisher"
+                                                 "storage" {"@id" "memoryStorage"}}}
+                            {"@id"               "testConsensus"
+                             "@type"             "Consensus"
+                             "consensusProtocol" "standalone"
+                             "maxPendingTxns"    16}
+                            {"@id"          "testApiServer"
+                             "@type"        "API"
+                             "httpPort"     @api-port
+                             "maxTxnWaitMs" 45000}]}
         server (system/start-config config)]
     (run-tests)
     (system/stop server)))
