@@ -423,7 +423,9 @@
 (defmethod ig/expand-key :fluree/http
   [k config]
   (let [max-txn-wait-ms (get-first config max-txn-wait-ms-iri)
-        config*         (dissoc config max-txn-wait-ms-iri)]
+        config*         (-> config
+                            (assoc :handler (ig/ref :fluree.api/handler))
+                            (dissoc max-txn-wait-ms-iri))]
     {k               config*
      :fluree/watcher {:max-txn-wait-ms max-txn-wait-ms}}))
 
@@ -534,12 +536,13 @@
   (standalone/stop transactor))
 
 (defmethod ig/init-key :fluree.api/handler
-  [_ {:keys [conn consensus watcher subscriptions]}]
-  (handler/app conn consensus watcher subscriptions))
+  [_ {:keys [connection consensus watcher subscriptions]}]
+  (handler/app connection consensus watcher subscriptions))
 
 (defmethod ig/init-key :fluree.http/jetty
-  [_ {:keys [handler port join?]}]
-  (jetty/run-jetty handler {:port port, :join? join?}))
+  [_ {:keys [handler] :as config}]
+  (let [port (get-first-value config http-port-iri)]
+    (jetty/run-jetty handler {:port port, :join? false})))
 
 (defmethod ig/halt-key! :fluree.http/jetty
   [_ http-server]
