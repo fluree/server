@@ -169,6 +169,12 @@
 (def this-server-iri
   (system-iri "thisServer"))
 
+(def max-pending-txns-iri
+  (system-iri "maxPendingTxns"))
+
+(def connection-iri
+  (system-iri "connection"))
+
 (defn type?
   [node kind]
   (-> node (get-first :type) (= kind)))
@@ -421,6 +427,12 @@
     {k               config*
      :fluree/watcher {:max-txn-wait-ms max-txn-wait-ms}}))
 
+(defmethod ig/expand-key :fluree.consensus/standalone
+  [k config]
+  {k (assoc config
+            :subscriptions (ig/ref :fluree/subscriptions)
+            :watcher (ig/ref :fluree/watcher))})
+
 (defmethod ig/init-key :fluree.storage/memory
   [_ config]
   (let [identifier (get-first config address-identifier-iri)]
@@ -512,10 +524,12 @@
   (close))
 
 (defmethod ig/init-key :fluree.consensus/standalone
-  [_ {:keys [conn subscriptions watcher max-pending-txns]}]
-  (standalone/start conn subscriptions watcher max-pending-txns))
+  [_ {:keys [subscriptions watcher] :as config}]
+  (let [max-pending-txns (get-first-value config max-pending-txns-iri)
+        conn (get-first config connection-iri)]
+    (standalone/start conn subscriptions watcher max-pending-txns)))
 
-(defmethod ig/halt-key! :fluree.consenus/standalone
+(defmethod ig/halt-key! :fluree.consensus/standalone
   [_ transactor]
   (standalone/stop transactor))
 
