@@ -466,8 +466,8 @@
 
 (defmethod ig/init-key :fluree/connection
   [_ config]
-  (let [cache-max-mb         (get-first config cache-max-mb-iri)
-        parallelism          (get-first config parallelism-iri)
+  (let [cache-max-mb         (get-first-value config cache-max-mb-iri)
+        parallelism          (get-first-value config parallelism-iri)
         primary-publisher    (get-first config primary-publisher-iri)
         secondary-publishers (get config secondary-publishers-iri)
         remote-systems       (get config remote-systems-iri)
