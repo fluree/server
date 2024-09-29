@@ -151,6 +151,24 @@
 (def max-old-indexes-iri
   (system-iri "maxOldIndexes"))
 
+(def ledger-directory-iri
+  (system-iri "ledgerDirectory"))
+
+(def log-directory-iri
+  (system-iri "logDirectory"))
+
+(def log-history-iri
+  (system-iri "logHistory"))
+
+(def entries-max-iri
+  (system-iri "entriesMax"))
+
+(def catch-up-rounds-iri
+  (system-iri "catchUpRounds"))
+
+(def this-server-iri
+  (system-iri "thisServer"))
+
 (defn type?
   [node kind]
   (-> node (get-first :type) (= kind)))
@@ -473,9 +491,21 @@
   (watcher/close watcher))
 
 (defmethod ig/init-key :fluree.consensus/raft
-  [_ {:keys [server] :as config}]
-  (let [config* (assoc config :ledger-directory (:storage-path server))]
-    (raft/start config*)))
+  [_ config]
+  (let [log-history      (get-first-value config log-history-iri)
+        entries-max      (get-first-value config entries-max-iri)
+        catch-up-rounds  (get-first-value config catch-up-rounds-iri)
+        servers          (get-first-value config servers-iri)
+        this-server      (get-first-value config this-server-iri)
+        log-directory    (get-first-value config log-directory-iri)
+        ledger-directory (get-first-value config ledger-directory-iri)]
+    (raft/start {:log-history      log-history
+                 :entries-max      entries-max
+                 :catch-up-rounds  catch-up-rounds
+                 :servers          servers
+                 :this-server      this-server
+                 :log-directory    log-directory
+                 :ledger-directory ledger-directory})))
 
 (defmethod ig/halt-key! :fluree.consensus/raft
   [_ {:keys [close] :as _raft-group}]
