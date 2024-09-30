@@ -17,6 +17,10 @@
   {"Content-Type" "application/sparql-query"
    "Accept"       "application/json"})
 
+(def jwt-headers
+  {"Content-Type" "application/jwt"
+   "Accept"       "application/json"})
+
 (defn find-open-port
   ([] (find-open-port nil))
   ([_] ; so it can be used in swap!
@@ -114,3 +118,35 @@
   {:id      "did:fluree:TfHgFTQQiJMHaK1r1qxVPZ3Ridj9pCozqnh"
    :public  "03b160698617e3b4cd621afd96c0591e33824cb9753ab2f1dace567884b4e242b0"
    :private "509553eece84d5a410f1012e8e19e84e938f226aa3ad144e2d12f36df0f51c1e"})
+
+(defn run-closed-test-server
+  [run-tests]
+  (set-server-ports)
+  (let [config  {"@context" {"@base"    "https://ns.flur.ee/dev/config/",
+                             "@vocab"   "https://ns.flur.ee/system#",
+                             "profiles" {"@container" ["@graph", "@id"]}}
+                 "@id"      "testSystem"
+                 "@graph"   [{"@id"   "memoryStorage"
+                              "@type" "Storage"}
+                             {"@id"              "testConnection"
+                              "@type"            "Connection"
+                              "parallelism"      1
+                              "cacheMaxMb"       100
+                              "commitStorage"    {"@id" "memoryStorage"}
+                              "indexStorage"     {"@id" "memoryStorage"}
+                              "primaryPublisher" {"@type"   "Publisher"
+                                                  "storage" {"@id" "memoryStorage"}}}
+                             {"@id"               "testConsensus"
+                              "@type"             "Consensus"
+                              "consensusProtocol" "standalone"
+                              "connection"        {"@id" "testConnection"}
+                              "maxPendingTxns"    16}
+                             {"@id"          "testApiServer"
+                              "@type"        "API"
+                              "httpPort"     @api-port
+                              "closedMode"   true
+                              "rootIdentities" [(:id auth)]
+                              "maxTxnWaitMs" 45000}]}
+        server  (system/start-config config)]
+    (run-tests)
+    (system/stop server)))

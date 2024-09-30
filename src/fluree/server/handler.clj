@@ -115,21 +115,30 @@
   [:or :string map?])
 
 (def query-coercer
-  (rcm/create
-   {:strip-extra-keys false
-    :error-keys #{}
-    :encode-error (fn [explained]
-                    {:error :db/invalid-query
-                     :message (v/format-explained-errors explained nil)})}))
+  (let [default-transfomers (:transformers rcm/default-options)
+        json-transformer    (-> default-transfomers :body :formats (get "application/json"))
+        transformers        (assoc-in default-transfomers [:body :formats "application/jwt"] json-transformer)]
+    (rcm/create
+     {:transformers transformers
+      :strip-extra-keys false
+      :error-keys #{}
+      :encode-error (fn [explained]
+                      {:error :db/invalid-query
+                       :message (v/format-explained-errors explained nil)})})))
 
 (def history-coercer
-  (rcm/create
-   {:strip-extra-keys false
-    :error-keys #{}
-    :transformers {:body {:default fql/fql-transformer}}
-    :encode-error (fn [explained]
-                    {:error :db/invalid-query
-                     :message (v/format-explained-errors explained nil)})}))
+  (let [default-transfomers (:transformers rcm/default-options)
+        json-transformer    (-> default-transfomers :body :formats (get "application/json"))
+        transformers        (-> default-transfomers
+                                (assoc-in [:body :formats "application/jwt"] json-transformer)
+                                (assoc-in [:body :default] fql/fql-transformer))]
+    (rcm/create
+     {:strip-extra-keys false
+      :error-keys #{}
+      :transformers transformers
+      :encode-error (fn [explained]
+                      {:error :db/invalid-query
+                       :message (v/format-explained-errors explained nil)})})))
 
 (def query-endpoint
   {:summary    "Endpoint for submitting queries"
@@ -191,6 +200,32 @@
           req*     (assoc req :body-params subject :credential/did did :raw-txn body-params)]
       (log/debug "Unwrapped credential with did:" did)
       (handler req*))))
+
+(def root-only-routes
+  #{"/fluree/create"})
+
+(defn wrap-closed-mode
+  [root-identities closed-mode]
+  (fn [handler]
+    (fn [{:keys [body-params credential/did uri] :as req}]
+      (if closed-mode
+        (let [trusted-user (contains? root-identities did)]
+          (cond (nil? did)
+                (throw (ex-info "Authentication error: signed request required."
+                                {:response {:status 400 :body {:error "Missing credential."}}}))
+
+                (and (contains? root-only-routes uri)
+                     (not trusted-user))
+                (throw (ex-info "Authentication error: untrusted credential."
+                                {:response {:status 403 :body {:error "Untrusted credential."}}}))
+
+                :else
+                (let [body-params* (cond-> body-params
+                                     ;; don't allow escalation of priveledge
+                                     (not trusted-user) (update :opts dissoc :did :role))
+                      req* (assoc req :server/closed-mode closed-mode :body-params body-params*)]
+                  (handler req*))))
+        (handler req)))))
 
 (defn wrap-set-fuel-header
   [handler]
@@ -317,7 +352,7 @@
          resp)))))
 
 (defn app
-  [conn consensus watcher subscriptions]
+  [conn consensus watcher subscriptions root-identities closed-mode]
   (log/debug "HTTP server running with Fluree connection:" conn)
   (let [exception-middleware      (exception/create-exception-middleware
                                    (merge
@@ -340,6 +375,7 @@
                                    [200 coercion/coerce-exceptions-middleware]
                                    [300 coercion/coerce-response-middleware]
                                    [400 coercion/coerce-request-middleware]
+                                   [600 (wrap-closed-mode root-identities closed-mode)]
                                    [1000 exception-middleware]]
         fluree-middleware         (sort-middleware-by-weight default-fluree-middleware)]
     (ring/ring-handler

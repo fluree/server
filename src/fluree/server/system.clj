@@ -117,6 +117,12 @@
 (def max-txn-wait-ms-iri
   (system-iri "maxTxnWaitMs"))
 
+(def closed-mode-iri
+  (system-iri "closedMode"))
+
+(def root-identities-iri
+  (system-iri "rootIdentities"))
+
 (def parallelism-iri
   (system-iri "parallelism"))
 
@@ -450,11 +456,20 @@
 (defmethod ig/expand-key :fluree.server/http
   [k config]
   (let [max-txn-wait-ms (get-first-value config max-txn-wait-ms-iri)
+        closed-mode     (get-first-value config closed-mode-iri)
+        root-identities (get config root-identities-iri)
         config*         (-> config
                             (assoc :handler (ig/ref :fluree.server.api/handler))
-                            (dissoc max-txn-wait-ms-iri))]
-    {k                      config*
-     :fluree.server/watcher {:max-txn-wait-ms max-txn-wait-ms}}))
+                            (dissoc max-txn-wait-ms-iri closed-mode-iri
+                                    root-identities-iri))]
+    {k                          config*
+     :fluree.server/watcher     {:max-txn-wait-ms max-txn-wait-ms}
+     :fluree.server.api/handler {:root-identities (set root-identities)
+                                 :closed-mode     closed-mode
+                                 :connection      (ig/ref :fluree.server/connection)
+                                 :consensus       (ig/ref :fluree.server/consensus)
+                                 :watcher         (ig/ref :fluree.server/watcher)
+                                 :subscriptions   (ig/ref :fluree.server/subscriptions)}}))
 
 (defmethod ig/expand-key :fluree.server.consensus/standalone
   [k config]
@@ -583,8 +598,8 @@
   (standalone/stop transactor))
 
 (defmethod ig/init-key :fluree.server.api/handler
-  [_ {:keys [connection consensus watcher subscriptions]}]
-  (handler/app connection consensus watcher subscriptions))
+  [_ {:keys [connection consensus watcher subscriptions root-identities closed-mode]}]
+  (handler/app connection consensus watcher subscriptions root-identities closed-mode))
 
 (defmethod ig/init-key :fluree.server.http/jetty
   [_ {:keys [handler] :as config}]
@@ -606,11 +621,7 @@
 (def default-resource-name "config.jsonld")
 
 (def base-config
-  {:fluree.server/subscriptions {}
-   :fluree.server.api/handler   {:connection    (ig/ref :fluree.server/connection)
-                                 :consensus     (ig/ref :fluree.server/consensus)
-                                 :watcher       (ig/ref :fluree.server/watcher)
-                                 :subscriptions (ig/ref :fluree.server/subscriptions)}})
+  {:fluree.server/subscriptions {}})
 
 (defn parse
   [config]

@@ -22,7 +22,9 @@
   "http": {
     "server": "jetty",
     "port": 8090,
-    "maxTxnWaitMs": 120000
+    "maxTxnWaitMs": 120000,
+    "rootIdentities": ["did:fluree:<my-keypair-id>"],
+    "closedMode": false
   },
   "profiles": {
     "dev": {
