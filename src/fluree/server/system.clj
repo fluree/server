@@ -2,6 +2,7 @@
   (:require [clojure.string :as str]
             [fluree.db.connection :as connection]
             [fluree.db.json-ld.iri :as iri]
+            [fluree.db.nameservice.storage :as storage-nameservice]
             [fluree.db.remote-system :as remote-system]
             [fluree.db.storage.file :as file-storage]
             [fluree.db.storage.ipfs :as ipfs-storage]
@@ -214,7 +215,7 @@
   [node]
   (type? node publisher-type))
 
-(defn storage-backed-nameservice?
+(defn storage-nameservice?
   [node]
   (and (publisher? node)
        (contains? node storage-iri)))
@@ -259,17 +260,17 @@
   [node]
   (let [id (get-id node)]
     (cond
-      (connection? node)                 (derive id :fluree.server/connection)
-      (system? node)                     (derive id :fluree.server/remote-system)
-      (raft-consensus? node)             (derive id :fluree.server.consensus/raft)
-      (standalone-consensus? node)       (derive id :fluree.server.consensus/standalone)
-      (jetty-api? node)                  (derive id :fluree.server.http/jetty) ; TODO: Enable other http servers
-      (memory-storage? node)             (derive id :fluree.server.storage/memory)
-      (file-storage? node)               (derive id :fluree.server.storage/file)
-      (s3-storage? node)                 (derive id :fluree.server.storage/s3)
-      (ipfs-storage? node)               (derive id :fluree.server.storage/ipfs)
-      (ipns-nameservice? node)           (derive id :fluree.server.nameservice/ipns)
-      (storage-backed-nameservice? node) (derive id :fluree.server.nameservice/storage))
+      (connection? node)           (derive id :fluree.server/connection)
+      (system? node)               (derive id :fluree.server/remote-system)
+      (raft-consensus? node)       (derive id :fluree.server.consensus/raft)
+      (standalone-consensus? node) (derive id :fluree.server.consensus/standalone)
+      (jetty-api? node)            (derive id :fluree.server.http/jetty) ; TODO: Enable other http servers
+      (memory-storage? node)       (derive id :fluree.server.storage/memory)
+      (file-storage? node)         (derive id :fluree.server.storage/file)
+      (s3-storage? node)           (derive id :fluree.server.storage/s3)
+      (ipfs-storage? node)         (derive id :fluree.server.storage/ipfs)
+      (ipns-nameservice? node)     (derive id :fluree.server.nameservice/ipns)
+      (storage-nameservice? node)  (derive id :fluree.server.nameservice/storage))
     node))
 
 (defn subject-node?
@@ -342,8 +343,8 @@
     (if-let [node (peek remaining)]
       (let [[flat-node children] (flatten-node node)
             remaining*           (-> remaining
-                           pop
-                           (into children))
+                                     pop
+                                     (into children))
             flattened*           (conj flattened flat-node)]
         (recur remaining* flattened*))
       flattened)))
@@ -460,7 +461,12 @@
         ipfs-endpoint (get-first config ipfs-endpoint-iri)]
     (ipfs-storage/open identifier ipfs-endpoint)))
 
-(defmethod ig/init-key :fluree/remote-system
+(defmethod ig/init-key :fluree.server.nameservice/storage
+  [_ config]
+  (let [storage (get-first config storage-iri)]
+    (storage-nameservice/start storage)))
+
+(defmethod ig/init-key :fluree.server/remote-system
   [_ config]
   (let [servers     (get config servers-iri)
         identifiers (get config address-identifiers-iri)]
