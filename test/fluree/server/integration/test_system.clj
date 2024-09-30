@@ -75,6 +75,7 @@
                             {"@id"               "testConsensus"
                              "@type"             "Consensus"
                              "consensusProtocol" "standalone"
+                             "connection"        {"@id" "testConnection"}
                              "maxPendingTxns"    16}
                             {"@id"          "testApiServer"
                              "@type"        "API"
