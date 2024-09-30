@@ -3,8 +3,11 @@
             [fluree.db.cache :as cache]
             [fluree.db.connection :as connection]
             [fluree.db.json-ld.iri :as iri]
+            [fluree.db.flake.index.storage :as index-storage]
             [fluree.db.nameservice.storage :as storage-nameservice]
             [fluree.db.remote-system :as remote-system]
+            [fluree.db.serde.json :as json-serde]
+            [fluree.db.storage :as storage]
             [fluree.db.storage.file :as file-storage]
             [fluree.db.storage.ipfs :as ipfs-storage]
             [fluree.db.storage.memory :as memory-storage]
@@ -424,16 +427,29 @@
 
 (defmethod ig/expand-key :fluree.server/connection
   [k config]
-  (let [cache-max-mb (get-first-value config cache-max-mb-iri)
-        config*      (-> config
-                         (assoc :cache (ig/ref :fluree.server/cache))
-                         (dissoc cache-max-mb-iri))]
-    {:fluree.server/cache cache-max-mb
-     k                    config*}))
+  (let [cache-max-mb   (get-first-value config cache-max-mb-iri)
+        commit-storage (get-first config commit-storage-iri)
+        index-storage  (get-first config index-storage-iri)
+        remote-systems (get config remote-systems-iri)
+        serializer     (json-serde/json-serde)
+        config*        (-> config
+                           (assoc :cache (ig/ref :fluree.server/cache)
+                                  :commit-catalog (ig/ref :fluree.server/commit-catalog)
+                                  :index-catalog (ig/ref :fluree.server/index-catalog)
+                                  :serializer serializer)
+                           (dissoc cache-max-mb-iri commit-storage-iri index-storage-iri))]
+    {:fluree.server/cache          cache-max-mb
+     :fluree.server/commit-catalog {:content-stores     [commit-storage]
+                                    :read-only-archives remote-systems}
+     :fluree.server/index-catalog  {:content-stores     [index-storage]
+                                    :read-only-archives remote-systems
+                                    :cache              (ig/ref :fluree.server/cache)
+                                    :serializer         serializer}
+     k                             config*}))
 
 (defmethod ig/expand-key :fluree.server/http
   [k config]
-  (let [max-txn-wait-ms (get-first config max-txn-wait-ms-iri)
+  (let [max-txn-wait-ms (get-first-value config max-txn-wait-ms-iri)
         config*         (-> config
                             (assoc :handler (ig/ref :fluree.server.api/handler))
                             (dissoc max-txn-wait-ms-iri))]
@@ -482,12 +498,21 @@
         identifiers (get config address-identifiers-iri)]
     (remote-system/connect servers identifiers)))
 
+(defmethod ig/init-key :fluree.server/commit-catalog
+  [_ {:keys [content-stores read-only-archives]}]
+  (storage/catalog content-stores read-only-archives))
+
+(defmethod ig/init-key :fluree.server/index-catalog
+  [_ {:keys [content-stores read-only-archives serializer cache]}]
+  (let [catalog (storage/catalog content-stores read-only-archives)]
+    (index-storage/index-catalog catalog serializer cache)))
+
 (defmethod ig/init-key :fluree.server/cache
   [_ max-mb]
   (-> max-mb cache/memory->cache-size cache/create-lru-cache atom))
 
 (defmethod ig/init-key :fluree.server/connection
-  [_ {:keys [cache] :as config}]
+  [_ {:keys [cache commit-catalog index-catalog serializer] :as config}]
   (let [parallelism          (get-first-value config parallelism-iri)
         primary-publisher    (get-first config primary-publisher-iri)
         secondary-publishers (get config secondary-publishers-iri)
@@ -502,9 +527,12 @@
                                               :max-old-indexes   max-old-indexes}}]
     (connection/connect {:parallelism          parallelism
                          :cache                cache
+                         :commit-catalog       commit-catalog
+                         :index-catalog        index-catalog
                          :primary-publisher    primary-publisher
                          :secondary-publishers secondary-publishers
                          :remote-systems       remote-systems
+                         :serializer           serializer
                          :defaults             ledger-defaults*})))
 
 (defmethod ig/init-key :fluree.server/subscriptions
