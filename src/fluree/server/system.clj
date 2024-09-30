@@ -21,35 +21,35 @@
 
 (set! *warn-on-reflection* true)
 
-(derive :fluree.consensus/raft :fluree/consensus)
-(derive :fluree.consensus/standalone :fluree/consensus)
+(derive :fluree.server.consensus/raft :fluree.server/consensus)
+(derive :fluree.server.consensus/standalone :fluree.server/consensus)
 
-(derive :fluree.storage/file :fluree/content-storage)
-(derive :fluree.storage/file :fluree/byte-storage)
-(derive :fluree.storage/file :fluree/json-archive)
+(derive :fluree.server.storage/file :fluree.server/content-storage)
+(derive :fluree.server.storage/file :fluree.server/byte-storage)
+(derive :fluree.server.storage/file :fluree.server/json-archive)
 
-(derive :fluree.storage/memory :fluree/content-storage)
-(derive :fluree.storage/memory :fluree/byte-storage)
-(derive :fluree.storage/memory :fluree/json-archive)
+(derive :fluree.server.storage/memory :fluree.server/content-storage)
+(derive :fluree.server.storage/memory :fluree.server/byte-storage)
+(derive :fluree.server.storage/memory :fluree.server/json-archive)
 
-(derive :fluree.storage/s3 :fluree/content-storage)
-(derive :fluree.storage/s3 :fluree/byte-storage)
-(derive :fluree.storage/s3 :fluree/json-archive)
+(derive :fluree.server.storage/s3 :fluree.server/content-storage)
+(derive :fluree.server.storage/s3 :fluree.server/byte-storage)
+(derive :fluree.server.storage/s3 :fluree.server/json-archive)
 
-(derive :fluree.storage/ipfs :fluree/content-storage)
-(derive :fluree.storage/ipfs :fluree/json-archive)
+(derive :fluree.server.storage/ipfs :fluree.server/content-storage)
+(derive :fluree.server.storage/ipfs :fluree.server/json-archive)
 
-(derive :fluree/remote-system :fluree/json-archive)
-(derive :fluree/remote-system :fluree/nameservice)
-(derive :fluree/remote-system :fluree/publication)
+(derive :fluree.server/remote-system :fluree.server/json-archive)
+(derive :fluree.server/remote-system :fluree.server/nameservice)
+(derive :fluree.server/remote-system :fluree.server/publication)
 
-(derive :fluree.nameservice/storage-backed :fluree/nameservice)
-(derive :fluree.nameservice/storage-backed :fluree/publisher)
+(derive :fluree.server.nameservice/storage :fluree.server/publisher)
+(derive :fluree.server.nameservice/storage :fluree.server/nameservice)
 
-(derive :fluree.nameservice/ipns :fluree/nameservice)
-(derive :fluree.nameservice/ipns :fluree/publisher)
+(derive :fluree.server.nameservice/ipns :fluree.server/nameservice)
+(derive :fluree.server.nameservice/ipns :fluree.server/publisher)
 
-(derive :fluree.http/jetty :fluree/http)
+(derive :fluree.server.http/jetty :fluree.server/http)
 
 (def system-ns
   "https://ns.flur.ee/system#")
@@ -259,17 +259,17 @@
   [node]
   (let [id (get-id node)]
     (cond
-      (connection? node)                 (derive id :fluree/connection)
-      (system? node)                     (derive id :fluree/remote-system)
-      (raft-consensus? node)             (derive id :fluree.consensus/raft)
-      (standalone-consensus? node)       (derive id :fluree.consensus/standalone)
-      (jetty-api? node)                  (derive id :fluree.http/jetty) ; TODO: Enable other http servers
-      (memory-storage? node)             (derive id :fluree.storage/memory)
-      (file-storage? node)               (derive id :fluree.storage/file)
-      (s3-storage? node)                 (derive id :fluree.storage/s3)
-      (ipfs-storage? node)               (derive id :fluree.storage/ipfs)
-      (ipns-nameservice? node)           (derive id :fluree.nameservice/ipns)
-      (storage-backed-nameservice? node) (derive id :fluree.nameservice/storage-backed))
+      (connection? node)                 (derive id :fluree.server/connection)
+      (system? node)                     (derive id :fluree.server/remote-system)
+      (raft-consensus? node)             (derive id :fluree.server.consensus/raft)
+      (standalone-consensus? node)       (derive id :fluree.server.consensus/standalone)
+      (jetty-api? node)                  (derive id :fluree.server.http/jetty) ; TODO: Enable other http servers
+      (memory-storage? node)             (derive id :fluree.server.storage/memory)
+      (file-storage? node)               (derive id :fluree.server.storage/file)
+      (s3-storage? node)                 (derive id :fluree.server.storage/s3)
+      (ipfs-storage? node)               (derive id :fluree.server.storage/ipfs)
+      (ipns-nameservice? node)           (derive id :fluree.server.nameservice/ipns)
+      (storage-backed-nameservice? node) (derive id :fluree.server.nameservice/storage))
     node))
 
 (defn subject-node?
@@ -341,10 +341,10 @@
          flattened []]
     (if-let [node (peek remaining)]
       (let [[flat-node children] (flatten-node node)
-            remaining* (-> remaining
+            remaining*           (-> remaining
                            pop
                            (into children))
-            flattened* (conj flattened flat-node)]
+            flattened*           (conj flattened flat-node)]
         (recur remaining* flattened*))
       flattened)))
 
@@ -420,33 +420,33 @@
                  [k v*])))
         node))
 
-(defmethod ig/expand-key :fluree/http
+(defmethod ig/expand-key :fluree.server/http
   [k config]
   (let [max-txn-wait-ms (get-first config max-txn-wait-ms-iri)
         config*         (-> config
-                            (assoc :handler (ig/ref :fluree.api/handler))
+                            (assoc :handler (ig/ref :fluree.server.api/handler))
                             (dissoc max-txn-wait-ms-iri))]
-    {k               config*
-     :fluree/watcher {:max-txn-wait-ms max-txn-wait-ms}}))
+    {k                      config*
+     :fluree.server/watcher {:max-txn-wait-ms max-txn-wait-ms}}))
 
-(defmethod ig/expand-key :fluree.consensus/standalone
+(defmethod ig/expand-key :fluree.server.consensus/standalone
   [k config]
   {k (assoc config
-            :subscriptions (ig/ref :fluree/subscriptions)
-            :watcher (ig/ref :fluree/watcher))})
+            :subscriptions (ig/ref :fluree.server/subscriptions)
+            :watcher (ig/ref :fluree.server/watcher))})
 
-(defmethod ig/init-key :fluree.storage/memory
+(defmethod ig/init-key :fluree.server.storage/memory
   [_ config]
   (let [identifier (get-first config address-identifier-iri)]
     (memory-storage/open identifier)))
 
-(defmethod ig/init-key :fluree.storage/file
+(defmethod ig/init-key :fluree.server.storage/file
   [_ config]
   (let [identifier (get-first config address-identifier-iri)
         root-path  (get-first config file-path-iri)]
     (file-storage/open identifier root-path)))
 
-(defmethod ig/init-key :fluree.storage/s3
+(defmethod ig/init-key :fluree.server.storage/s3
   [_ config]
   (let [identifier  (get-first config address-identifier-iri)
         s3-bucket   (get-first config s3-bucket-iri)
@@ -454,7 +454,7 @@
         s3-endpoint (get-first config s3-endpoint-iri)]
     (s3-storage/open identifier s3-bucket s3-prefix s3-endpoint)))
 
-(defmethod ig/init-key :fluree.storage/ipfs
+(defmethod ig/init-key :fluree.server.storage/ipfs
   [_ config]
   (let [identifier    (get-first config address-identifier-iri)
         ipfs-endpoint (get-first config ipfs-endpoint-iri)]
@@ -466,7 +466,7 @@
         identifiers (get config address-identifiers-iri)]
     (remote-system/connect servers identifiers)))
 
-(defmethod ig/init-key :fluree/connection
+(defmethod ig/init-key :fluree.server/connection
   [_ config]
   (let [cache-max-mb         (get-first-value config cache-max-mb-iri)
         parallelism          (get-first-value config parallelism-iri)
@@ -488,23 +488,23 @@
                          :remote-systems       remote-systems
                          :defaults             ledger-defaults*})))
 
-(defmethod ig/init-key :fluree/subscriptions
+(defmethod ig/init-key :fluree.server/subscriptions
   [_ _]
   (subscriptions/listen))
 
-(defmethod ig/halt-key! :fluree/subscriptions
+(defmethod ig/halt-key! :fluree.server/subscriptions
   [_ subsc]
   (subscriptions/close subsc))
 
-(defmethod ig/init-key :fluree/watcher
+(defmethod ig/init-key :fluree.server/watcher
   [_ {:keys [max-txn-wait-ms]}]
   (watcher/watch max-txn-wait-ms))
 
-(defmethod ig/halt-key! :fluree/watcher
+(defmethod ig/halt-key! :fluree.server/watcher
   [_ watcher]
   (watcher/close watcher))
 
-(defmethod ig/init-key :fluree.consensus/raft
+(defmethod ig/init-key :fluree.server.consensus/raft
   [_ config]
   (let [log-history      (get-first-value config log-history-iri)
         entries-max      (get-first-value config entries-max-iri)
@@ -521,34 +521,34 @@
                  :log-directory    log-directory
                  :ledger-directory ledger-directory})))
 
-(defmethod ig/halt-key! :fluree.consensus/raft
+(defmethod ig/halt-key! :fluree.server.consensus/raft
   [_ {:keys [close] :as _raft-group}]
   (close))
 
-(defmethod ig/init-key :fluree.consensus/standalone
+(defmethod ig/init-key :fluree.server.consensus/standalone
   [_ {:keys [subscriptions watcher] :as config}]
   (let [max-pending-txns (get-first-value config max-pending-txns-iri)
-        conn (get-first config connection-iri)]
+        conn             (get-first config connection-iri)]
     (standalone/start conn subscriptions watcher max-pending-txns)))
 
-(defmethod ig/halt-key! :fluree.consensus/standalone
+(defmethod ig/halt-key! :fluree.server.consensus/standalone
   [_ transactor]
   (standalone/stop transactor))
 
-(defmethod ig/init-key :fluree.api/handler
+(defmethod ig/init-key :fluree.server.api/handler
   [_ {:keys [connection consensus watcher subscriptions]}]
   (handler/app connection consensus watcher subscriptions))
 
-(defmethod ig/init-key :fluree.http/jetty
+(defmethod ig/init-key :fluree.server.http/jetty
   [_ {:keys [handler] :as config}]
   (let [port (get-first-value config http-port-iri)]
     (jetty/run-jetty handler {:port port, :join? false})))
 
-(defmethod ig/halt-key! :fluree.http/jetty
+(defmethod ig/halt-key! :fluree.server.http/jetty
   [_ http-server]
   (jetty/stop-server http-server))
 
-(defmethod ig/init-key :fluree/sid-migration
+(defmethod ig/init-key :fluree.server/sid-migration
   [_ {:keys [conn ledgers force]}]
   (task.migrate-sid/migrate conn ledgers force))
 
@@ -559,11 +559,11 @@
 (def default-resource-name "config.jsonld")
 
 (def base-config
-  {:fluree/subscriptions {}
-   :fluree.api/handler   {:connection    (ig/ref :fluree/connection)
-                          :consensus     (ig/ref :fluree/consensus)
-                          :watcher       (ig/ref :fluree/watcher)
-                          :subscriptions (ig/ref :fluree/subscriptions)}})
+  {:fluree.server/subscriptions {}
+   :fluree.server.api/handler   {:connection    (ig/ref :fluree.server/connection)
+                                 :consensus     (ig/ref :fluree.server/consensus)
+                                 :watcher       (ig/ref :fluree.server/watcher)
+                                 :subscriptions (ig/ref :fluree.server/subscriptions)}})
 
 (defn parse
   [config]
