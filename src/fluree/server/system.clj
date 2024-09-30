@@ -1,5 +1,6 @@
 (ns fluree.server.system
   (:require [clojure.string :as str]
+            [fluree.db.cache :as cache]
             [fluree.db.connection :as connection]
             [fluree.db.json-ld.iri :as iri]
             [fluree.db.nameservice.storage :as storage-nameservice]
@@ -421,6 +422,15 @@
                  [k v*])))
         node))
 
+(defmethod ig/expand-key :fluree.server/connection
+  [k config]
+  (let [cache-max-mb (get-first-value config cache-max-mb-iri)
+        config*      (-> config
+                         (assoc :cache (ig/ref :fluree.server/cache))
+                         (dissoc cache-max-mb-iri))]
+    {:fluree.server/cache cache-max-mb
+     k                    config*}))
+
 (defmethod ig/expand-key :fluree.server/http
   [k config]
   (let [max-txn-wait-ms (get-first config max-txn-wait-ms-iri)
@@ -472,10 +482,13 @@
         identifiers (get config address-identifiers-iri)]
     (remote-system/connect servers identifiers)))
 
+(defmethod ig/init-key :fluree.server/cache
+  [_ max-mb]
+  (-> max-mb cache/memory->cache-size cache/create-lru-cache atom))
+
 (defmethod ig/init-key :fluree.server/connection
-  [_ config]
-  (let [cache-max-mb         (get-first-value config cache-max-mb-iri)
-        parallelism          (get-first-value config parallelism-iri)
+  [_ {:keys [cache] :as config}]
+  (let [parallelism          (get-first-value config parallelism-iri)
         primary-publisher    (get-first config primary-publisher-iri)
         secondary-publishers (get config secondary-publishers-iri)
         remote-systems       (get config remote-systems-iri)
@@ -488,7 +501,7 @@
                                               :reindex-max-bytes reindex-max-bytes
                                               :max-old-indexes   max-old-indexes}}]
     (connection/connect {:parallelism          parallelism
-                         :cache-max-mb         cache-max-mb
+                         :cache                cache
                          :primary-publisher    primary-publisher
                          :secondary-publishers secondary-publishers
                          :remote-systems       remote-systems
