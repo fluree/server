@@ -21,34 +21,25 @@
   {"Content-Type" "application/jwt"
    "Accept"       "application/json"})
 
-(defn find-open-port
-  ([] (find-open-port nil))
-  ([_] ; so it can be used in swap!
-   (let [socket (ServerSocket. 0)]
-     (.close socket)
-     (.getLocalPort socket))))
-
-(defn find-host-address
-  ([] (find-open-port nil))
-  ([_] ; so it can be used in swap!
-   (let [socket (ServerSocket. 0)]
-     (.close socket)
-     (-> socket
-         (.getInetAddress)
-         (.getHostAddress)))))
+(defn find-open-ports
+  [n]
+  (let [sockets (repeatedly n #(ServerSocket. 0))
+        ports   (mapv ServerSocket/.getLocalPort sockets)]
+    (->> sockets (map ServerSocket/.close) dorun)
+    ports))
 
 (defonce api-port (atom nil))
-(defonce host-address (atom nil))
 (defonce consensus-port-1 (atom nil))
 (defonce consensus-port-2 (atom nil))
 (defonce consensus-port-3 (atom nil))
 
 (defn set-server-ports
   []
-  (swap! api-port find-open-port)
-  (swap! consensus-port-1 find-open-port)
-  (swap! consensus-port-2 find-open-port)
-  (swap! consensus-port-3 find-open-port))
+  (let [ports (find-open-ports 4)]
+    (reset! api-port (nth ports 0))
+    (reset! consensus-port-1 (nth ports 1))
+    (reset! consensus-port-2 (nth ports 2))
+    (reset! consensus-port-3 (nth ports 3))))
 
 (def default-context
   {"id"     "@id"
