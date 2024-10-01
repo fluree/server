@@ -457,14 +457,16 @@
   [k config]
   (let [max-txn-wait-ms (get-first-value config max-txn-wait-ms-iri)
         closed-mode     (get-first-value config closed-mode-iri)
-        root-identities (get config root-identities-iri)
+        root-identities (into #{}
+                              (map :value)
+                              (get config root-identities-iri))
         config*         (-> config
                             (assoc :handler (ig/ref :fluree.server.api/handler))
                             (dissoc max-txn-wait-ms-iri closed-mode-iri
                                     root-identities-iri))]
     {k                          config*
      :fluree.server/watcher     {:max-txn-wait-ms max-txn-wait-ms}
-     :fluree.server.api/handler {:root-identities (set root-identities)
+     :fluree.server.api/handler {:root-identities root-identities
                                  :closed-mode     closed-mode
                                  :connection      (ig/ref :fluree.server/connection)
                                  :consensus       (ig/ref :fluree.server/consensus)
