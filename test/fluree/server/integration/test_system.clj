@@ -80,14 +80,23 @@
     (run-tests)
     (system/stop server)))
 
-(defn api-url [endpoint]
-  (str "http://localhost:" @api-port "/fluree/" (name endpoint)))
+(defn api-url
+  ([endpoint]
+   (api-url endpoint @api-port))
+  ([endpoint port]
+   (str "http://localhost:" port "/fluree/" (name endpoint))))
 
-(defn api-post [endpoint req]
-  (http/post (api-url endpoint) (assoc req :throw-exceptions false)))
+(defn api-post
+  ([endpoint req]
+   (api-post endpoint req @api-port))
+  ([endpoint req port]
+   (http/post (api-url endpoint port) (assoc req :throw-exceptions false))))
 
-(defn api-get [endpoint req]
-  (http/get (api-url endpoint) (assoc req :throw-exceptions false)))
+(defn api-get
+  ([endpoint req]
+   (api-get endpoint req @api-port))
+  ([endpoint req port]
+   (http/get (api-url endpoint port) (assoc req :throw-exceptions false))))
 
 (defn create-rand-ledger
   [name-root]
