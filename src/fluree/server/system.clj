@@ -12,7 +12,7 @@
             [fluree.db.storage.ipfs :as ipfs-storage]
             [fluree.db.storage.memory :as memory-storage]
             [fluree.db.storage.s3 :as s3-storage]
-            [fluree.db.util.core :as util :refer [get-first get-first-value]]
+            [fluree.db.util.core :as util :refer [get-first get-first-value get-values]]
             [fluree.json-ld :as json-ld]
             [fluree.server.config :as config]
             [fluree.server.consensus.raft :as raft]
@@ -457,9 +457,7 @@
   [k config]
   (let [max-txn-wait-ms (get-first-value config max-txn-wait-ms-iri)
         closed-mode     (get-first-value config closed-mode-iri)
-        root-identities (into #{}
-                              (map :value)
-                              (get config root-identities-iri))
+        root-identities (set (get-values config root-identities-iri))
         config*         (-> config
                             (assoc :handler (ig/ref :fluree.server.api/handler))
                             (dissoc max-txn-wait-ms-iri closed-mode-iri
@@ -511,8 +509,8 @@
 
 (defmethod ig/init-key :fluree.server/remote-system
   [_ config]
-  (let [servers     (get config servers-iri)
-        identifiers (get config address-identifiers-iri)]
+  (let [servers      (get-values config servers-iri)
+        identifiers  (get-values config address-identifiers-iri)]
     (remote-system/connect servers identifiers)))
 
 (defmethod ig/init-key :fluree.server/commit-catalog
@@ -573,7 +571,7 @@
   (let [log-history      (get-first-value config log-history-iri)
         entries-max      (get-first-value config entries-max-iri)
         catch-up-rounds  (get-first-value config catch-up-rounds-iri)
-        servers          (get-first-value config servers-iri)
+        servers          (get-values config servers-iri)
         this-server      (get-first-value config this-server-iri)
         log-directory    (get-first-value config log-directory-iri)
         ledger-directory (get-first-value config ledger-directory-iri)]
