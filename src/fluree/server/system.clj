@@ -145,8 +145,11 @@
 (def remote-systems-iri
   (system-iri "remoteSystems"))
 
-(def servers-iri
-  (system-iri "servers"))
+(def raft-servers-iri
+  (system-iri "raftServers"))
+
+(def server-urls-iri
+  (system-iri "serverUrls"))
 
 (def ledger-defaults-iri
   (system-iri "ledgerDefaults"))
@@ -510,9 +513,9 @@
 
 (defmethod ig/init-key :fluree.server/remote-system
   [_ config]
-  (let [servers      (get-values config servers-iri)
-        identifiers  (get-values config address-identifiers-iri)]
-    (<?? (remote-system/connect servers identifiers))))
+  (let [urls        (get-values config server-urls-iri)
+        identifiers (get-values config address-identifiers-iri)]
+    (<?? (remote-system/connect urls identifiers))))
 
 (defmethod ig/init-key :fluree.server/commit-catalog
   [_ {:keys [content-stores read-only-archives]}]
@@ -572,7 +575,7 @@
   (let [log-history      (get-first-value config log-history-iri)
         entries-max      (get-first-value config entries-max-iri)
         catch-up-rounds  (get-first-value config catch-up-rounds-iri)
-        servers          (get-values config servers-iri)
+        servers          (get-values config raft-servers-iri)
         this-server      (get-first-value config this-server-iri)
         log-directory    (get-first-value config log-directory-iri)
         ledger-directory (get-first-value config ledger-directory-iri)]
