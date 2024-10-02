@@ -515,7 +515,7 @@
   [_ config]
   (let [urls        (get-values config server-urls-iri)
         identifiers (get-values config address-identifiers-iri)]
-    (<?? (remote-system/connect urls identifiers))))
+    (remote-system/connect urls identifiers)))
 
 (defmethod ig/init-key :fluree.server/commit-catalog
   [_ {:keys [content-stores read-only-archives]}]
