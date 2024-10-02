@@ -13,6 +13,7 @@
             [fluree.db.storage.memory :as memory-storage]
             [fluree.db.storage.s3 :as s3-storage]
             [fluree.db.util.core :as util :refer [get-first get-first-value get-values]]
+            [fluree.db.util.async :refer [<??]]
             [fluree.json-ld :as json-ld]
             [fluree.server.config :as config]
             [fluree.server.consensus.raft :as raft]
@@ -511,7 +512,7 @@
   [_ config]
   (let [servers      (get-values config servers-iri)
         identifiers  (get-values config address-identifiers-iri)]
-    (remote-system/connect servers identifiers)))
+    (<?? (remote-system/connect servers identifiers))))
 
 (defmethod ig/init-key :fluree.server/commit-catalog
   [_ {:keys [content-stores read-only-archives]}]
