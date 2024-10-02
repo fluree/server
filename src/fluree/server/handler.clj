@@ -406,7 +406,7 @@
          {:get  history-endpoint
           :post history-endpoint}]
         ["/remote"
-         ["/latest-commit"
+         ["/latestCommit"
           {:post {:summary "Read latest commit for a ledger"
                   :parameters {:body LatestCommitRequestBody}
                   :handler #'remote/latest-commit}}]
