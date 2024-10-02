@@ -483,27 +483,27 @@
 
 (defmethod ig/init-key :fluree.server.storage/memory
   [_ config]
-  (let [identifier (get-first config address-identifier-iri)]
+  (let [identifier (get-first-value config address-identifier-iri)]
     (memory-storage/open identifier)))
 
 (defmethod ig/init-key :fluree.server.storage/file
   [_ config]
-  (let [identifier (get-first config address-identifier-iri)
-        root-path  (get-first config file-path-iri)]
+  (let [identifier (get-first-value config address-identifier-iri)
+        root-path  (get-first-value config file-path-iri)]
     (file-storage/open identifier root-path)))
 
 (defmethod ig/init-key :fluree.server.storage/s3
   [_ config]
-  (let [identifier  (get-first config address-identifier-iri)
-        s3-bucket   (get-first config s3-bucket-iri)
-        s3-prefix   (get-first config s3-prefix-iri)
-        s3-endpoint (get-first config s3-endpoint-iri)]
+  (let [identifier  (get-first-value config address-identifier-iri)
+        s3-bucket   (get-first-value config s3-bucket-iri)
+        s3-prefix   (get-first-value config s3-prefix-iri)
+        s3-endpoint (get-first-value config s3-endpoint-iri)]
     (s3-storage/open identifier s3-bucket s3-prefix s3-endpoint)))
 
 (defmethod ig/init-key :fluree.server.storage/ipfs
   [_ config]
-  (let [identifier    (get-first config address-identifier-iri)
-        ipfs-endpoint (get-first config ipfs-endpoint-iri)]
+  (let [identifier    (get-first-value config address-identifier-iri)
+        ipfs-endpoint (get-first-value config ipfs-endpoint-iri)]
     (ipfs-storage/open identifier ipfs-endpoint)))
 
 (defmethod ig/init-key :fluree.server.nameservice/storage
