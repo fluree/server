@@ -423,7 +423,7 @@
          ["/address"
           {:post {:summary "Retrieve ledger address from alias"
                   :parameters {:body AliasRequestBody}
-                  :handler #'remote/lookup-ledger-address}}]]]]
+                  :handler #'remote/ledger-address}}]]]]
       {:data {:coercion   (reitit.coercion.malli/create
                            {:strip-extra-keys false})
               :muuntaja   (muuntaja/create
