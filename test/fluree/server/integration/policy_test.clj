@@ -1,5 +1,6 @@
 (ns fluree.server.integration.policy-test
   (:require [clojure.core.async :refer [<!!]]
+            [fluree.crypto :as crypto]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [fluree.db.json-ld.credential :as cred]
             [fluree.server.integration.test-system
