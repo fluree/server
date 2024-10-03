@@ -1,7 +1,6 @@
 (ns fluree.server.integration.policy-test
   (:require [clojure.core.async :refer [<!!]]
             [clojure.test :refer [deftest is testing use-fixtures]]
-            [fluree.crypto :as crypto]
             [fluree.db.json-ld.credential :as cred]
             [fluree.server.integration.test-system
              :as test-system
@@ -387,7 +386,6 @@
 (deftest ^:integration ^:json policy-rejected-transaction-test
   (testing "policy-enforcing opts for json-ld policy are correctly handled"
     (let [ledger-name  (create-rand-ledger "policy-rejected-transaction-test")
-          alice-did    (:id auth)
           txn-req      {:body
                         (json/write-value-as-string
                          {"@context" {"ex"     "http://example.org/ns/"
