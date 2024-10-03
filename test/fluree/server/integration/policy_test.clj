@@ -72,7 +72,7 @@
 
       (is (= 200 (:status query-res))
           (str "policy-enforced query response was: " (pr-str query-res)))
-
+      
       (is (= [["ex:alice" "111-11-1111"]]
              (-> query-res :body json/read-value))
           "query policy opts should prevent seeing john's ssn")
@@ -185,8 +185,7 @@
                      (-> query-res :body json/read-value first (get "f:assert")))
                   "policy opts prevented seeing john's ssn"))))
 
-        ;; NQS and CT doesn't handle JWS yet (I think)
-        #_(testing "JWS requests"
+        (testing "JWS requests"
           (testing "authorized signer"
             (let [txn-req {"@context" {"ex"     "http://example.org/ns/"
                                        "schema" "http://schema.org/"

@@ -106,11 +106,11 @@
                                       "@context" ["https://ns.flur.ee", {"ex" "http://example.com/ns/"}]
                                       "insert"   {"@id"    "ex:cred-test"
                                                   "ex:KEY" "VALUE"}}
-                                        (:private auth)))
+                                     (:private auth)))
 
             invalid-tx (assoc-in valid-tx ["credentialSubject" "insert" "ex:KEY"]
-                                  "ALTEREDVALUE")
-
+                                 "ALTEREDVALUE")
+            
             invalid-res (api-post :transact
                                   {:body    (json/write-value-as-string invalid-tx)
                                    :headers json-headers})]
