@@ -111,6 +111,12 @@
              [:map
               [:resource Address]]]))
 
+(def AliasRequestBody
+  (m/schema [:and
+             [:map-of :keyword :any]
+             [:map
+              [:ledger LedgerAlias]]]))
+
 (def ErrorResponse
   [:or :string map?])
 
@@ -413,7 +419,11 @@
          ["/resource"
           {:post {:summary "Read resource from address"
                   :parameters {:body AddressRequestBody}
-                  :handler #'remote/read-resource-address}}]]]]
+                  :handler #'remote/read-resource-address}}]
+         ["/address"
+          {:post {:summary "Retrieve ledger address from alias"
+                  :parameters {:body AliasRequestBody}
+                  :handler #'remote/lookup-ledger-address}}]]]]
       {:data {:coercion   (reitit.coercion.malli/create
                            {:strip-extra-keys false})
               :muuntaja   (muuntaja/create
