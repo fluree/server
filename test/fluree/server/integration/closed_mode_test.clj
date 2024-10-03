@@ -85,7 +85,7 @@
                      "f:assert"  [{"ex:name" "nickel", "id" "ex:coin"}],
                      "f:t"       2}]
                    (-> resp :body json/read-value)))))))
-    
+
     (testing "non-root request"
       (testing "to create"
         (let [create-req {"ledger"   ledger2
@@ -154,7 +154,7 @@
           (testing "is silently demoted"
             (is (= 200 (:status resp)))
             (is (= [] (-> resp :body json/read-value)))))))
-    
+
     (testing "unsigned request"
       (testing "to create"
         (let [create-req {"ledger"   "closed-test3"

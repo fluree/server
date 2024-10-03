@@ -72,7 +72,7 @@
 
       (is (= 200 (:status query-res))
           (str "policy-enforced query response was: " (pr-str query-res)))
-      
+
       (is (= [["ex:alice" "111-11-1111"]]
              (-> query-res :body json/read-value))
           "query policy opts should prevent seeing john's ssn")

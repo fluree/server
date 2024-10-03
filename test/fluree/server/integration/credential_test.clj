@@ -110,7 +110,7 @@
 
             invalid-tx (assoc-in valid-tx ["credentialSubject" "insert" "ex:KEY"]
                                  "ALTEREDVALUE")
-            
+
             invalid-res (api-post :transact
                                   {:body    (json/write-value-as-string invalid-tx)
                                    :headers json-headers})]
