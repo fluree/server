@@ -138,8 +138,8 @@
           (testing "is accepted"
             (is (= 200 (:status resp)))
             (is (= [{"f:retract" [],
-	             "f:assert"  [{"ex:name" "nickel", "id" "ex:coin"}],
-	             "f:t"       2}]
+                     "f:assert"  [{"ex:name" "nickel", "id" "ex:coin"}],
+                     "f:t"       2}]
                    (-> resp :body json/read-value))))))
       (testing "to claim more authority"
         (let [query-req {"from"     ledger1
