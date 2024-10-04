@@ -420,10 +420,10 @@
           {:post {:summary "Read resource from address"
                   :parameters {:body AddressRequestBody}
                   :handler #'remote/read-resource-address}}]
-         ["/address"
+         ["/addresses"
           {:post {:summary "Retrieve ledger address from alias"
                   :parameters {:body AliasRequestBody}
-                  :handler #'remote/ledger-address}}]]]]
+                  :handler #'remote/published-ledger-addresses}}]]]]
       {:data {:coercion   (reitit.coercion.malli/create
                            {:strip-extra-keys false})
               :muuntaja   (muuntaja/create

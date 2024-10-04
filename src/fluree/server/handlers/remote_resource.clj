@@ -21,10 +21,10 @@
     {:status 200
      :body   result}))
 
-(defhandler ledger-address
+(defhandler published-ledger-addresses
   [{:keys [fluree/conn]
     {{:keys [ledger] :as body} :body} :parameters}]
   (log/debug "Retrieve ledger address request:" body)
-  (let [result (<?? (connection/primary-address conn ledger))]
+  (let [result (<?? (connection/published-addresses conn ledger))]
     {:status 200
-     :body   {:address result}}))
+     :body   {:addresses result}}))
