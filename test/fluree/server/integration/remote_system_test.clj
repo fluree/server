@@ -1,5 +1,6 @@
 (ns fluree.server.integration.remote-system-test
   (:require [clojure.test :refer [are deftest is testing use-fixtures]]
+            [fluree.db.util.log :as log]
             [fluree.server.system :as system]
             [fluree.server.integration.test-system :as test-system
              :refer [api-post create-rand-ledger json-headers]]
@@ -155,8 +156,8 @@
 (use-fixtures :once run-systems)
 
 (deftest remote-system-test
-  (testing "Interaction between separate systems"
-    (testing "with three systems populated with distinct data"
+  (testing "Groups of remote systems"
+    (testing "with three separate systems populated with distinct data"
       (let [context {"id"     "@id",
                      "type"   "@type",
                      "ex"     "http://example.org/",
@@ -230,5 +231,31 @@
                                 :headers json-headers}
             movies-insert-resp (api-post :transact movies-insert-req movies-port)]
 
+        ;; Adding data to each system is successful
         (are [resp] (= (:status resp) 200)
-          authors-insert-resp books-insert-resp movies-insert-resp)))))
+          authors-insert-resp books-insert-resp movies-insert-resp)
+
+        (testing "can be queried for their combined data set no matter which system the query originates"
+          (let [query-req         {:body    (json/write-value-as-string
+                                              {"@context" "https://schema.org"
+                                               "from"     [authors-ledger books-ledger movies-ledger]
+                                               "select"   ["?movieName" "?bookIsbn" "?authorName"]
+                                               "where"    {"type"      "Movie"
+                                                           "name"      "?movieName"
+                                                           "isBasedOn" {"isbn"   "?bookIsbn"
+                                                                        "author" {"name" "?authorName"}}}})
+                                   :headers json-headers}
+                author-query-resp (api-post :query query-req authors-port)
+                book-query-resp   (api-post :query query-req books-port)
+                movie-query-resp  (api-post :query query-req movies-port)
+
+                correct-answer [["Gone with the Wind" "0-582-41805-4" "Margaret Mitchell"]
+                                ["The Hitchhiker's Guide to the Galaxy" "0-330-25864-8" "Douglas Adams"]]]
+
+            ;; No systems returned errors when queried
+            (are [resp] (-> resp :status (= 200))
+              author-query-resp book-query-resp movie-query-resp)
+
+            ;; Each system returned the same and correct answer when queired
+            (are [resp] (-> resp :body json/read-value (= correct-answer))
+              author-query-resp book-query-resp movie-query-resp)))))))
