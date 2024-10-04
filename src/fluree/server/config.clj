@@ -45,7 +45,7 @@
 
 (defn parse-config
   [cfg]
-  (json/parse cfg ->kebab-case-keyword))
+  (json/parse cfg false))
 
 (defn read-resource
   [resource-name]
@@ -59,9 +59,7 @@
    (load-resource resource-name nil))
 
   ([resource-name profile]
-   (-> resource-name
-       read-resource
-       (finalize profile))))
+   (read-resource resource-name)))
 
 (defn read-file
   [path]
@@ -73,8 +71,5 @@
 (defn load-file
   ([path]
    (load-file path nil))
-
   ([path profile]
-   (-> path
-       read-file
-       (finalize profile))))
+   (read-file path)))
