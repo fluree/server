@@ -13,7 +13,6 @@
             [fluree.db.storage.memory :as memory-storage]
             [fluree.db.storage.s3 :as s3-storage]
             [fluree.db.util.core :as util :refer [get-first get-first-value get-values]]
-            [fluree.db.util.async :refer [<??]]
             [fluree.json-ld :as json-ld]
             [fluree.server.config :as config]
             [fluree.server.consensus.raft :as raft]
