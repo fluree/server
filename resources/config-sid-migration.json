@@ -1,11 +1,11 @@
 {
   "server": {
-    "storagePath": "data",
-    "cacheMaxMb": 1000
+    "storagePath": "data"
   },
   "connection": {
     "storageMethod": "file",
     "parallelism": 4,
+    "cacheMaxMb": 1000,
     "defaults": {
       "index": {
         "reindexMinBytes": 100000,

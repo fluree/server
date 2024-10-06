@@ -21,34 +21,33 @@
   {"Content-Type" "application/jwt"
    "Accept"       "application/json"})
 
-(defn find-open-port
-  ([] (find-open-port nil))
-  ([_] ; so it can be used in swap!
-   (let [socket (ServerSocket. 0)]
-     (.close socket)
-     (.getLocalPort socket))))
+(defn get-socket-port
+  [^ServerSocket s]
+  (.getLocalPort s))
 
-(defn find-host-address
-  ([] (find-open-port nil))
-  ([_] ; so it can be used in swap!
-   (let [socket (ServerSocket. 0)]
-     (.close socket)
-     (-> socket
-         (.getInetAddress)
-         (.getHostAddress)))))
+(defn close-socket
+  [^ServerSocket s]
+  (.close s))
+
+(defn find-open-ports
+  [n]
+  (let [sockets (repeatedly n #(ServerSocket. 0))
+        ports   (mapv get-socket-port sockets)]
+    (->> sockets (map close-socket) dorun)
+    ports))
 
 (defonce api-port (atom nil))
-(defonce host-address (atom nil))
 (defonce consensus-port-1 (atom nil))
 (defonce consensus-port-2 (atom nil))
 (defonce consensus-port-3 (atom nil))
 
 (defn set-server-ports
   []
-  (swap! api-port find-open-port)
-  (swap! consensus-port-1 find-open-port)
-  (swap! consensus-port-2 find-open-port)
-  (swap! consensus-port-3 find-open-port))
+  (let [ports (find-open-ports 4)]
+    (reset! api-port (nth ports 0))
+    (reset! consensus-port-1 (nth ports 1))
+    (reset! consensus-port-2 (nth ports 2))
+    (reset! consensus-port-3 (nth ports 3))))
 
 (def default-context
   {"id"     "@id"
@@ -62,43 +61,68 @@
 (defn run-test-server
   [run-tests]
   (set-server-ports)
-  (let [config {::config/server     {}
-                ::config/connection {:storage-method :memory
-                                     :parallelism    1
-                                     :cache-max-mb   100}
-                ::config/consensus  {:protocol         :standalone
-                                     :max-pending-txns 16}
-                ::config/http       {:server          :jetty
-                                     :port            @api-port
-                                     :max-txn-wait-ms 45000}}
+  (let [config {"@context" {"@base"    "https://ns.flur.ee/dev/config/",
+                            "@vocab"   "https://ns.flur.ee/system#",
+                            "profiles" {"@container" ["@graph", "@id"]}}
+                "@id"      "testSystem"
+                "@graph"   [{"@id"   "memoryStorage"
+                             "@type" "Storage"}
+                            {"@id"              "testConnection"
+                             "@type"            "Connection"
+                             "parallelism"      1
+                             "cacheMaxMb"       100
+                             "commitStorage"    {"@id" "memoryStorage"}
+                             "indexStorage"     {"@id" "memoryStorage"}
+                             "primaryPublisher" {"@type"   "Publisher"
+                                                 "storage" {"@id" "memoryStorage"}}}
+                            {"@id"               "testConsensus"
+                             "@type"             "Consensus"
+                             "consensusProtocol" "standalone"
+                             "connection"        {"@id" "testConnection"}
+                             "maxPendingTxns"    16}
+                            {"@id"          "testApiServer"
+                             "@type"        "API"
+                             "httpPort"     @api-port
+                             "maxTxnWaitMs" 45000}]}
         server (system/start-config config)]
     (run-tests)
     (system/stop server)))
 
-(defn api-url [endpoint]
-  (str "http://localhost:" @api-port "/fluree/" (name endpoint)))
+(defn api-url
+  ([endpoint]
+   (api-url endpoint @api-port))
+  ([endpoint port]
+   (str "http://localhost:" port "/fluree/" (name endpoint))))
 
-(defn api-post [endpoint req]
-  (http/post (api-url endpoint) (assoc req :throw-exceptions false)))
+(defn api-post
+  ([endpoint req]
+   (api-post endpoint req @api-port))
+  ([endpoint req port]
+   (http/post (api-url endpoint port) (assoc req :throw-exceptions false))))
 
-(defn api-get [endpoint req]
-  (http/get (api-url endpoint) (assoc req :throw-exceptions false)))
+(defn api-get
+  ([endpoint req]
+   (api-get endpoint req @api-port))
+  ([endpoint req port]
+   (http/get (api-url endpoint port) (assoc req :throw-exceptions false))))
 
 (defn create-rand-ledger
-  [name-root]
-  (let [ledger-name (str name-root "-" (random-uuid))
-        req         {"ledger"   ledger-name
-                     "@context" ["https://ns.flur.ee"
-                                 default-context
-                                 {"foo" "http://foobar.com/"}]
-                     "insert"   [{"id"       "foo:create-test"
-                                  "type"     "foo:test"
-                                  "foo:name" "create-endpoint-test"}]}
-        res         (-> (api-post :create {:body (json/stringify req) :headers json-headers})
-                        (update :body json/parse))]
-    (if (= 201 (:status res))
-      (get-in res [:body :ledger])
-      (throw (ex-info "Error creating random ledger" res)))))
+  ([name-root]
+   (create-rand-ledger name-root @api-port))
+  ([name-root port]
+   (let [ledger-name (str name-root "-" (random-uuid))
+         req         {"ledger"   ledger-name
+                      "@context" ["https://ns.flur.ee"
+                                  default-context
+                                  {"foo" "http://foobar.com/"}]
+                      "insert"   [{"id"       "foo:create-test"
+                                   "type"     "foo:test"
+                                   "foo:name" "create-endpoint-test"}]}
+         res         (-> (api-post :create {:body (json/stringify req) :headers json-headers} port)
+                         (update :body json/parse))]
+     (if (= 201 (:status res))
+       (get-in res [:body :ledger])
+       (throw (ex-info "Error creating random ledger" res))))))
 
 (def auth
   {:id      "did:fluree:TfHgFTQQiJMHaK1r1qxVPZ3Ridj9pCozqnh"
@@ -108,17 +132,31 @@
 (defn run-closed-test-server
   [run-tests]
   (set-server-ports)
-  (let [config {::config/server     {}
-                ::config/connection {:storage-method :memory
-                                     :parallelism    1
-                                     :cache-max-mb   100}
-                ::config/consensus  {:protocol         :standalone
-                                     :max-pending-txns 16}
-                ::config/http       {:server          :jetty
-                                     :closed-mode     true
-                                     :root-identities [(:id auth)]
-                                     :port            @api-port
-                                     :max-txn-wait-ms 45000}}
-        server (system/start-config config)]
+  (let [config  {"@context" {"@base"    "https://ns.flur.ee/dev/config/",
+                             "@vocab"   "https://ns.flur.ee/system#",
+                             "profiles" {"@container" ["@graph", "@id"]}}
+                 "@id"      "testSystem"
+                 "@graph"   [{"@id"   "memoryStorage"
+                              "@type" "Storage"}
+                             {"@id"              "testConnection"
+                              "@type"            "Connection"
+                              "parallelism"      1
+                              "cacheMaxMb"       100
+                              "commitStorage"    {"@id" "memoryStorage"}
+                              "indexStorage"     {"@id" "memoryStorage"}
+                              "primaryPublisher" {"@type"   "Publisher"
+                                                  "storage" {"@id" "memoryStorage"}}}
+                             {"@id"               "testConsensus"
+                              "@type"             "Consensus"
+                              "consensusProtocol" "standalone"
+                              "connection"        {"@id" "testConnection"}
+                              "maxPendingTxns"    16}
+                             {"@id"          "testApiServer"
+                              "@type"        "API"
+                              "httpPort"     @api-port
+                              "closedMode"   true
+                              "rootIdentities" [(:id auth)]
+                              "maxTxnWaitMs" 45000}]}
+        server  (system/start-config config)]
     (run-tests)
     (system/stop server)))

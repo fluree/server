@@ -1,0 +1,50 @@
+{
+  "@context": {
+    "@base": "https://ns.flur.ee/dev/config/main/",
+    "@vocab": "https://ns.flur.ee/system#",
+    "profiles": {
+      "@container": [ "@graph", "@id" ]
+    }
+  },
+  "@id": "standaloneServer",
+  "@graph": [
+    {
+      "@id": "localDiskStorage",
+      "@type": "Storage",
+      "filePath": "/opt/fluree-server/data"
+    },
+    {
+      "@id": "connection",
+      "@type": "Connection",
+      "parallelism": 4,
+      "cacheMaxMb": 200,
+      "commitStorage": {
+        "@id": "localDiskStorage"
+      },
+      "indexStorage": {
+        "@id": "localDiskStorage"
+      },
+      "primaryPublisher": {
+        "@type": "Publisher",
+        "storage": {
+          "@id": "localDiskStorage"
+        }
+      }
+    },
+    {
+      "@id": "consensus",
+      "@type": "Consensus",
+      "consensusProtocol": "standalone",
+      "maxPendingTxns": 42,
+      "connection": {
+        "@id": "connection"
+      }
+    },
+    {
+      "@id": "http",
+      "@type": "API",
+      "httpPort": 8090,
+      "maxTxnWaitMs": 120000
+    }
+  ]
+}
