@@ -21,11 +21,19 @@
   {"Content-Type" "application/jwt"
    "Accept"       "application/json"})
 
+(defn get-socket-port
+  [^ServerSocket s]
+  (.getLocalPort s))
+
+(defn close-socket
+  [^ServerSocket s]
+  (.close s))
+
 (defn find-open-ports
   [n]
   (let [sockets (repeatedly n #(ServerSocket. 0))
-        ports   (mapv ServerSocket/.getLocalPort sockets)]
-    (->> sockets (map ServerSocket/.close) dorun)
+        ports   (mapv get-socket-port sockets)]
+    (->> sockets (map close-socket) dorun)
     ports))
 
 (defonce api-port (atom nil))
