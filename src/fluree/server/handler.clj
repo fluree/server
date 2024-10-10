@@ -71,9 +71,10 @@
               [:tx-id DID]
               [:commit  LedgerAddress]]]))
 
-(def FqlQuery (m/schema [:and
-                         [:map-of :keyword :any]
-                         (fql/query-schema [])]
+(def FqlQuery (m/schema (-> (fql/query-schema [])
+                            ;; hack to make query schema open instead of closed
+                            ;; TODO: remove once db is updated to open
+                            (update 3 (fn [schm] (assoc schm 1 {:closed false}))))
                         {:registry fql/registry}))
 
 (def SparqlQuery (m/schema :string))
@@ -111,7 +112,9 @@
 (def query-coercer
   (let [default-transfomers (:transformers rcm/default-options)
         json-transformer    (-> default-transfomers :body :formats (get "application/json"))
-        transformers        (assoc-in default-transfomers [:body :formats "application/jwt"] json-transformer)]
+        transformers        (-> default-transfomers
+                                (assoc-in [:body :formats "application/jwt"] json-transformer)
+                                (assoc-in [:body :formats "application/json"] fql/fql-transformer))]
     (rcm/create
      {:transformers transformers
       :strip-extra-keys false
