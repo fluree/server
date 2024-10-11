@@ -111,8 +111,8 @@
             resp (api-post :transact {:body (crypto/create-jws (json/write-value-as-string create-req)
                                                                (:private non-root-auth))
                                       :headers jwt-headers})]
-        (testing "is accepted"
-          (is (= 200 (:status resp))))))
+        (testing "is rejected"
+          (is (= 403 (:status resp))))))
     (testing "to query"
       (let [create-req {"from" "closed-test"
                         "@context" default-context
