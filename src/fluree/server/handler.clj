@@ -245,7 +245,7 @@
           policy          (when-let [p (get-in req [:headers "fluree-policy"])]
                             (try
                               (json/parse p false)
-                              (catch Exception e
+                              (catch Exception _
                                 (throw (ex-info "Invalid policy header, it must be parsable JSON."
                                                 {:status 400})))))
           policy-values   (when-let [pv (get-in req [:headers "fluree-policy-values"])]
@@ -255,7 +255,7 @@
                                   pv*
                                   (throw (ex-info "Invalid policy-values header, it must be a map of variables to values."
                                                   {:status 400}))))
-                              (catch Exception e
+                              (catch Exception _
                                 (throw (ex-info "Invalid policy-values header, it must be parsable JSON."
                                                 {:status 400})))))]
       (handler
