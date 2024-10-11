@@ -8,11 +8,11 @@
 (defn add-policy-enforcement-headers
   [override-opts {:keys [credential/did policy/identity policy/class policy/policy policy/values]}]
   (cond-> override-opts
-          identity (assoc :identity identity)
-          did (assoc :identity did) ;; a credential will always override the policy/identity header
-          class (assoc :policy-class class)
-          policy (assoc :policy policy)
-          values (assoc :policy-values values)))
+    identity (assoc :identity identity)
+    did (assoc :identity did) ;; a credential will always override the policy/identity header
+    class (assoc :policy-class class)
+    policy (assoc :policy policy)
+    values (assoc :policy-values values)))
 
 (defhandler query
   [{:keys [fluree/conn] {:keys [body]} :parameters :as req}]

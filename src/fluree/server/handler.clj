@@ -260,10 +260,10 @@
                                                 {:status 400})))))]
       (handler
        (cond-> req
-               policy-identity (assoc :policy/identity policy-identity)
-               policy-class (assoc :policy/class policy-class)
-               policy (assoc :policy/policy policy)
-               policy-values (assoc :policy/values policy-values))))))
+         policy-identity (assoc :policy/identity policy-identity)
+         policy-class (assoc :policy/class policy-class)
+         policy (assoc :policy/policy policy)
+         policy-values (assoc :policy/values policy-values))))))
 
 (defn sort-middleware-by-weight
   [weighted-middleware]

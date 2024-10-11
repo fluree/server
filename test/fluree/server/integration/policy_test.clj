@@ -314,8 +314,8 @@
                                         WHERE  {?s a ex:User;
                                                    schema:ssn ?ssn.}")
                          :headers (assoc sparql-headers
-                                    "Fluree-Policy-Class" "ex:EmployeePolicy"
-                                    "Fluree-Policy-Values" (json/write-value-as-string {"?$identity" alice-did}))}
+                                         "Fluree-Policy-Class" "ex:EmployeePolicy"
+                                         "Fluree-Policy-Values" (json/write-value-as-string {"?$identity" alice-did}))}
               query-res (api-post :query query-req)]
 
           (is (= [["ex:alice" "111-11-1111"]]
@@ -382,8 +382,8 @@
           query-req     {:body
                          (json/write-value-as-string
                           (assoc secret-query
-                            "opts" {"policy"       policy
-                                    "policyValues" policy-values}))
+                                 "opts" {"policy"       policy
+                                         "policyValues" policy-values}))
                          :headers json-headers}
           query-res     (api-post :query query-req)]
 
@@ -402,8 +402,8 @@
                                         WHERE  {?s a ex:User;
                                                    schema:ssn ?ssn.}")
                          :headers (assoc sparql-headers
-                                    "Fluree-Policy" (json/write-value-as-string policy)
-                                    "Fluree-Policy-Values" (json/write-value-as-string policy-values))}
+                                         "Fluree-Policy" (json/write-value-as-string policy)
+                                         "Fluree-Policy-Values" (json/write-value-as-string policy-values))}
               query-res (api-post :query query-req)]
 
           (is (= [["ex:alice" "111-11-1111"]]
