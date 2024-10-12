@@ -1,6 +1,5 @@
 (ns fluree.server.integration.remote-system-test
-  (:require [clojure.test :refer [are deftest is testing use-fixtures]]
-            [fluree.db.util.log :as log]
+  (:require [clojure.test :refer [are deftest testing use-fixtures]]
             [fluree.server.integration.test-system :as test-system
              :refer [api-post create-rand-ledger json-headers]]
             [fluree.server.system :as system]
