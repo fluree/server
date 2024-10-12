@@ -3,8 +3,8 @@
   (:require [camel-snake-kebab.core :refer [->kebab-case-keyword]]
             [clojure.java.io :as io]
             [fluree.db.util.json :as json]
-            [fluree.server.config.validation :as validation]
-            [fluree.server.config.env :as env]))
+            [fluree.server.config.env :as env]
+            [fluree.server.config.validation :as validation]))
 
 (set! *warn-on-reflection* true)
 

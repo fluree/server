@@ -2,8 +2,8 @@
   (:require [clojure.string :as str]
             [fluree.db.cache :as cache]
             [fluree.db.connection :as connection]
-            [fluree.db.json-ld.iri :as iri]
             [fluree.db.flake.index.storage :as index-storage]
+            [fluree.db.json-ld.iri :as iri]
             [fluree.db.nameservice.storage :as storage-nameservice]
             [fluree.db.remote-system :as remote-system]
             [fluree.db.serde.json :as json-serde]
@@ -329,7 +329,6 @@
           (recur r child-nodes* (conj flat-sequence ref-node)))
         (recur r child-nodes (conj flat-sequence child)))
       [flat-sequence child-nodes])))
-
 
 (defn flatten-node
   [node]

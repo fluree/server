@@ -1,9 +1,9 @@
 (ns fluree.server.integration.remote-system-test
   (:require [clojure.test :refer [are deftest is testing use-fixtures]]
             [fluree.db.util.log :as log]
-            [fluree.server.system :as system]
             [fluree.server.integration.test-system :as test-system
              :refer [api-post create-rand-ledger json-headers]]
+            [fluree.server.system :as system]
             [jsonista.core :as json]))
 
 (def all-ports (test-system/find-open-ports 3))
@@ -86,7 +86,6 @@
                                                     "storage" {"@id" "memoryStorage"}}
                                 "remoteSystems"    [{"@id" "authors:system"} {"@id" "movies:system"}]}
 
-
                                {"@id"               "testConsensus"
                                 "@type"             "Consensus"
                                 "consensusProtocol" "standalone"
@@ -128,7 +127,6 @@
                                                      "storage" {"@id" "memoryStorage"}}
                                  "remoteSystems"    [{"@id" "authors:system"} {"@id" "books:system"}]}
 
-
                                 {"@id"               "testConsensus"
                                  "@type"             "Consensus"
                                  "consensusProtocol" "standalone"
@@ -169,65 +167,65 @@
 
             authors-ledger      (create-rand-ledger "test/authors" authors-port)
             authors-insert-req  {:body    (json/write-value-as-string
-                                            {"@context" ["https://ns.flur.ee" context "https://schema.org"]
-                                             "ledger"   authors-ledger
-                                             "insert"   [{"@id"   "https://www.wikidata.org/wiki/Q42"
-                                                          "@type" "Person"
-                                                          "name"  "Douglas Adams"}
-                                                         {"@id"   "https://www.wikidata.org/wiki/Q173540"
-                                                          "@type" "Person"
-                                                          "name"  "Margaret Mitchell"}]})
+                                           {"@context" ["https://ns.flur.ee" context "https://schema.org"]
+                                            "ledger"   authors-ledger
+                                            "insert"   [{"@id"   "https://www.wikidata.org/wiki/Q42"
+                                                         "@type" "Person"
+                                                         "name"  "Douglas Adams"}
+                                                        {"@id"   "https://www.wikidata.org/wiki/Q173540"
+                                                         "@type" "Person"
+                                                         "name"  "Margaret Mitchell"}]})
                                  :headers json-headers}
             authors-insert-resp (api-post :transact authors-insert-req authors-port)
 
             books-ledger      (create-rand-ledger "test/books" books-port)
             books-insert-req  {:body    (json/write-value-as-string
-                                          {"@context" ["https://ns.flur.ee" context "https://schema.org"]
-                                           "ledger"   books-ledger
-                                           "insert"   [{"id"     "https://www.wikidata.org/wiki/Q3107329",
-                                                        "type"   ["Book"],
-                                                        "name"   "The Hitchhiker's Guide to the Galaxy",
-                                                        "isbn"   "0-330-25864-8",
-                                                        "author" {"@id" "https://www.wikidata.org/wiki/Q42"}}
-                                                       {"id"     "https://www.wikidata.org/wiki/Q2870",
-                                                        "type"   ["Book"],
-                                                        "name"   "Gone with the Wind",
-                                                        "isbn"   "0-582-41805-4",
-                                                        "author" {"@id" "https://www.wikidata.org/wiki/Q173540"}}]})
+                                         {"@context" ["https://ns.flur.ee" context "https://schema.org"]
+                                          "ledger"   books-ledger
+                                          "insert"   [{"id"     "https://www.wikidata.org/wiki/Q3107329",
+                                                       "type"   ["Book"],
+                                                       "name"   "The Hitchhiker's Guide to the Galaxy",
+                                                       "isbn"   "0-330-25864-8",
+                                                       "author" {"@id" "https://www.wikidata.org/wiki/Q42"}}
+                                                      {"id"     "https://www.wikidata.org/wiki/Q2870",
+                                                       "type"   ["Book"],
+                                                       "name"   "Gone with the Wind",
+                                                       "isbn"   "0-582-41805-4",
+                                                       "author" {"@id" "https://www.wikidata.org/wiki/Q173540"}}]})
                                :headers json-headers}
             books-insert-resp (api-post :transact books-insert-req books-port)
 
             movies-ledger      (create-rand-ledger "test/movies" movies-port)
             movies-insert-req  {:body    (json/write-value-as-string
-                                           {"@context" ["https://ns.flur.ee" context "https://schema.org"]
-                                            "ledger"   movies-ledger
-                                            "insert"   [{"id"                        "https://www.wikidata.org/wiki/Q836821",
-                                                         "type"                      ["Movie"],
-                                                         "name"                      "The Hitchhiker's Guide to the Galaxy",
-                                                         "disambiguatingDescription" "2005 British-American comic science fiction film directed by Garth Jennings",
-                                                         "titleEIDR"                 "10.5240/B752-5B47-DBBE-E5D4-5A3F-N",
-                                                         "isBasedOn"                 {"id" "https://www.wikidata.org/wiki/Q3107329"}}
-                                                        {"id"                        "https://www.wikidata.org/wiki/Q91540",
-                                                         "type"                      ["Movie"],
-                                                         "name"                      "Back to the Future",
-                                                         "disambiguatingDescription" "1985 film by Robert Zemeckis",
-                                                         "titleEIDR"                 "10.5240/09A3-1F6E-3538-DF46-5C6F-I",
-                                                         "followedBy"                {"id"         "https://www.wikidata.org/wiki/Q109331"
-                                                                                      "type"       "Movie"
-                                                                                      "name"       "Back to the Future Part II"
-                                                                                      "titleEIDR"  "10.5240/5DA5-C386-2911-7E2B-1782-L"
-                                                                                      "followedBy" {"id" "https://www.wikidata.org/wiki/Q230552"}}}
-                                                        {"id"                        "https://www.wikidata.org/wiki/Q230552"
-                                                         "type"                      ["Movie"]
-                                                         "name"                      "Back to the Future Part III"
-                                                         "disambiguatingDescription" "1990 film by Robert Zemeckis"
-                                                         "titleEIDR"                 "10.5240/15F9-F913-FF25-8041-E798-O"}
-                                                        {"id"                        "https://www.wikidata.org/wiki/Q2875",
-                                                         "type"                      ["Movie"],
-                                                         "name"                      "Gone with the Wind",
-                                                         "disambiguatingDescription" "1939 film by Victor Fleming",
-                                                         "titleEIDR"                 "10.5240/FB0D-0A93-CAD6-8E8D-80C2-4",
-                                                         "isBasedOn"                 {"id" "https://www.wikidata.org/wiki/Q2870"}}]})
+                                          {"@context" ["https://ns.flur.ee" context "https://schema.org"]
+                                           "ledger"   movies-ledger
+                                           "insert"   [{"id"                        "https://www.wikidata.org/wiki/Q836821",
+                                                        "type"                      ["Movie"],
+                                                        "name"                      "The Hitchhiker's Guide to the Galaxy",
+                                                        "disambiguatingDescription" "2005 British-American comic science fiction film directed by Garth Jennings",
+                                                        "titleEIDR"                 "10.5240/B752-5B47-DBBE-E5D4-5A3F-N",
+                                                        "isBasedOn"                 {"id" "https://www.wikidata.org/wiki/Q3107329"}}
+                                                       {"id"                        "https://www.wikidata.org/wiki/Q91540",
+                                                        "type"                      ["Movie"],
+                                                        "name"                      "Back to the Future",
+                                                        "disambiguatingDescription" "1985 film by Robert Zemeckis",
+                                                        "titleEIDR"                 "10.5240/09A3-1F6E-3538-DF46-5C6F-I",
+                                                        "followedBy"                {"id"         "https://www.wikidata.org/wiki/Q109331"
+                                                                                     "type"       "Movie"
+                                                                                     "name"       "Back to the Future Part II"
+                                                                                     "titleEIDR"  "10.5240/5DA5-C386-2911-7E2B-1782-L"
+                                                                                     "followedBy" {"id" "https://www.wikidata.org/wiki/Q230552"}}}
+                                                       {"id"                        "https://www.wikidata.org/wiki/Q230552"
+                                                        "type"                      ["Movie"]
+                                                        "name"                      "Back to the Future Part III"
+                                                        "disambiguatingDescription" "1990 film by Robert Zemeckis"
+                                                        "titleEIDR"                 "10.5240/15F9-F913-FF25-8041-E798-O"}
+                                                       {"id"                        "https://www.wikidata.org/wiki/Q2875",
+                                                        "type"                      ["Movie"],
+                                                        "name"                      "Gone with the Wind",
+                                                        "disambiguatingDescription" "1939 film by Victor Fleming",
+                                                        "titleEIDR"                 "10.5240/FB0D-0A93-CAD6-8E8D-80C2-4",
+                                                        "isBasedOn"                 {"id" "https://www.wikidata.org/wiki/Q2870"}}]})
                                 :headers json-headers}
             movies-insert-resp (api-post :transact movies-insert-req movies-port)]
 
@@ -237,13 +235,13 @@
 
         (testing "can be queried for their combined data set no matter which system the query originates"
           (let [query-req         {:body    (json/write-value-as-string
-                                              {"@context" "https://schema.org"
-                                               "from"     [authors-ledger books-ledger movies-ledger]
-                                               "select"   ["?movieName" "?bookIsbn" "?authorName"]
-                                               "where"    {"type"      "Movie"
-                                                           "name"      "?movieName"
-                                                           "isBasedOn" {"isbn"   "?bookIsbn"
-                                                                        "author" {"name" "?authorName"}}}})
+                                             {"@context" "https://schema.org"
+                                              "from"     [authors-ledger books-ledger movies-ledger]
+                                              "select"   ["?movieName" "?bookIsbn" "?authorName"]
+                                              "where"    {"type"      "Movie"
+                                                          "name"      "?movieName"
+                                                          "isBasedOn" {"isbn"   "?bookIsbn"
+                                                                       "author" {"name" "?authorName"}}}})
                                    :headers json-headers}
                 author-query-resp (api-post :query query-req authors-port)
                 book-query-resp   (api-post :query query-req books-port)
