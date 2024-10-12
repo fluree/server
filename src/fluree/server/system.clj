@@ -638,7 +638,7 @@
 
 (defn start-config
   [config]
-  (-> config json-ld/expand parse ig/expand ig/init))
+  (-> config json-ld/expand util/sequential parse ig/expand ig/init))
 
 (defn start-file
   ([path]
