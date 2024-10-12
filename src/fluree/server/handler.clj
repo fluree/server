@@ -5,6 +5,7 @@
    [fluree.db.query.fql.syntax :as fql]
    [fluree.db.query.history.parse :as fqh]
    [fluree.db.util.core :as util]
+   [fluree.db.util.json :as json]
    [fluree.db.util.log :as log]
    [fluree.db.validation :as v]
    [fluree.server.consensus.subscriptions :as subscriptions]
@@ -71,9 +72,10 @@
               [:tx-id DID]
               [:commit  LedgerAddress]]]))
 
-(def FqlQuery (m/schema [:and
-                         [:map-of :keyword :any]
-                         (fql/query-schema [])]
+(def FqlQuery (m/schema (-> (fql/query-schema [])
+                            ;; hack to make query schema open instead of closed
+                            ;; TODO: remove once db is updated to open
+                            (update 3 (fn [schm] (assoc schm 1 {:closed false}))))
                         {:registry fql/registry}))
 
 (def SparqlQuery (m/schema :string))
@@ -123,7 +125,9 @@
 (def query-coercer
   (let [default-transfomers (:transformers rcm/default-options)
         json-transformer    (-> default-transfomers :body :formats (get "application/json"))
-        transformers        (assoc-in default-transfomers [:body :formats "application/jwt"] json-transformer)]
+        transformers        (-> default-transfomers
+                                (assoc-in [:body :formats "application/jwt"] json-transformer)
+                                (assoc-in [:body :formats "application/json"] fql/fql-transformer))]
     (rcm/create
      {:transformers transformers
       :strip-extra-keys false
@@ -239,6 +243,39 @@
     (let [resp (handler req)
           fuel 1000] ; TODO: get this for real
       (assoc-in resp [:headers "x-fdb-fuel"] (str fuel)))))
+
+(defn wrap-policy-metadata
+  "Both Fluree-Policy-Class and Fluree-Policy-Identity can be optionally
+  set in the header for non-credentialed queries/transactions. The primary
+  motivation is enforcing policy with SPARQL which doesn't have an opts
+  map option, although if set, it will also override policyClass/Identity
+  that might have otherwise been set in FlureeQL/JSON."
+  [handler]
+  (fn [req]
+    (let [policy-identity (get-in req [:headers "fluree-policy-identity"])
+          policy-class    (get-in req [:headers "fluree-policy-class"])
+          policy          (when-let [p (get-in req [:headers "fluree-policy"])]
+                            (try
+                              (json/parse p false)
+                              (catch Exception _
+                                (throw (ex-info "Invalid Fluree-Policy header: must be JSON."
+                                                {:status 400})))))
+          policy-values   (when-let [pv (get-in req [:headers "fluree-policy-values"])]
+                            (try
+                              (let [pv* (json/parse pv false)]
+                                (if (map? pv*)
+                                  pv*
+                                  (throw (ex-info "Invalid Fluree-Policy-Values header, it must be a map of variables to values."
+                                                  {:status 400}))))
+                              (catch Exception _
+                                (throw (ex-info "Invalid Fluree-Policy-Values header: must be JSON."
+                                                {:status 400})))))]
+      (handler
+       (cond-> req
+         policy-identity (assoc :policy/identity policy-identity)
+         policy-class (assoc :policy/class policy-class)
+         policy (assoc :policy/policy policy)
+         policy-values (assoc :policy/values policy-values))))))
 
 (defn sort-middleware-by-weight
   [weighted-middleware]
@@ -381,6 +418,7 @@
                                    [200 coercion/coerce-exceptions-middleware]
                                    [300 coercion/coerce-response-middleware]
                                    [400 coercion/coerce-request-middleware]
+                                   [500 wrap-policy-metadata]
                                    [600 (wrap-closed-mode root-identities closed-mode)]
                                    [1000 exception-middleware]]
         fluree-middleware         (sort-middleware-by-weight default-fluree-middleware)]

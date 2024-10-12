@@ -25,7 +25,6 @@
 (deftest ^:integration credential-test
   (let [ledger-name "credential-test"]
     (testing "create"
-      ;; cannot transact without roles already defined
       (let [create-req {"ledger"   ledger-name
                         "@context" ["https://ns.flur.ee" default-context]
                         "insert"   {"@graph"
@@ -35,7 +34,7 @@
                                       "ex:name"       "Goose"}
                                      {"@id"      "ex:defaultAllowView"
                                       "@type"    ["f:AccessPolicy" "ex:RootPolicy"]
-                                      "f:action" {"@id" "f:view"}
+                                      "f:action" [{"@id" "f:view"} {"@id" "f:modify"}]
                                       "f:query"  {"@type"  "@json"
                                                   "@value" {}}}]}}
             create-res (api-post :create
