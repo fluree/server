@@ -1,7 +1,6 @@
 (ns fluree.server.config
   (:refer-clojure :exclude [load-file])
-  (:require [camel-snake-kebab.core :refer [->kebab-case-keyword]]
-            [clojure.java.io :as io]
+  (:require [clojure.java.io :as io]
             [fluree.db.util.json :as json]
             [fluree.server.config.env :as env]
             [fluree.server.config.validation :as validation]))
