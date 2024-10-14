@@ -21,8 +21,25 @@
   [["-p" "--profile PROFILE" "Run profile"
     :default  :prod
     :parse-fn profile-string->keyword]
-   ["-c" "--config FILE" "Configuration file path"]
+   ["-c" "--config FILE" "Load configuration at a file path"]
+   ["-s" "--string STRING" "Load stringified configuration"]
+   ["-r" "--resource NAME" "Load pre-defined configuration resource"]
    ["-h" "--help" "Print this usage summary and exit"]])
+
+(defn single-configuration?
+  [{:keys [config string resource]}]
+  (->> [config string resource] (remove nil?) count (>= 1)))
+
+(def multiple-configuration-error
+  (str "Only a single configuration option from"
+       "-c/--config, -s/--string, and -r/--resource"
+       "is allowed."))
+
+(defn validate-opts
+  [{:keys [options] :as parsed-opts}]
+  (if (single-configuration? options)
+    parsed-opts
+    (update parsed-opts :errors conj multiple-configuration-error)))
 
 (defn usage
   [summary]
@@ -51,7 +68,9 @@
 
 (defn -main
   [& args]
-  (let [{:keys [options errors summary]} (cli/parse-opts args cli-options)]
+  (let [{:keys [options errors summary]} (-> args
+                                             (cli/parse-opts cli-options)
+                                             validate-opts)]
     (cond (seq errors)
           (let [msg (error-message errors)]
             (exit 1 msg))
