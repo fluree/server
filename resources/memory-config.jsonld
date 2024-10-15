@@ -1,0 +1,61 @@
+{
+  "@context": {
+    "@base": "https://ns.flur.ee/config/memory/",
+    "@vocab": "https://ns.flur.ee/system#",
+    "profiles": {
+      "@container": [ "@graph", "@index" ]
+    }
+  },
+  "@id": "standaloneServer",
+  "@graph": [
+    {
+      "@id": "memoryStorage",
+      "@type": "Storage"
+    },
+    {
+      "@id": "connection",
+      "@type": "Connection",
+      "parallelism": 4,
+      "cacheMaxMb": 1000,
+      "commitStorage": {
+        "@id": "memoryStorage"
+      },
+      "indexStorage": {
+        "@id": "memoryStorage"
+      },
+      "primaryPublisher": {
+        "@type": "Publisher",
+        "storage": {
+          "@id": "memoryStorage"
+        }
+      }
+    },
+    {
+      "@id": "consensus",
+      "@type": "Consensus",
+      "consensusProtocol": "standalone",
+      "maxPendingTxns": 512,
+      "connection": {
+        "@id": "connection"
+      }
+    },
+    {
+      "@id": "http",
+      "@type": "API",
+      "httpPort": 8090,
+      "maxTxnWaitMs": 120000
+    }
+  ],
+  "profiles": {
+    "dev": [
+      {
+        "@id": "connection",
+        "cacheMaxMb": 200
+      },
+      {
+        "@id": "consensus",
+        "maxPendingTxns": 16
+      }
+    ]
+  }
+}
