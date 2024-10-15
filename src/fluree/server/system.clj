@@ -3,6 +3,7 @@
             [fluree.db.cache :as cache]
             [fluree.db.connection :as connection]
             [fluree.db.flake.index.storage :as index-storage]
+            [fluree.server.config.vocab :as vocab]
             [fluree.db.json-ld.iri :as iri]
             [fluree.db.nameservice.storage :as storage-nameservice]
             [fluree.db.remote-system :as remote-system]
@@ -57,169 +58,36 @@
 
 (derive :fluree.server.http/jetty :fluree.server/http)
 
-(def system-ns
-  "https://ns.flur.ee/system#")
-
-(defn system-iri
-  [s]
-  (str system-ns s))
-
-(def connection-type
-  (system-iri "Connection"))
-
-(def consensus-type
-  (system-iri "Consensus"))
-
-(def storage-type
-  (system-iri "Storage"))
-
-(def publisher-type
-  (system-iri "Publisher"))
-
-(def system-type
-  (system-iri "System"))
-
-(def api-type
-  (system-iri "API"))
-
-(def address-identifier-iri
-  (system-iri "addressIdentifier"))
-
-(def address-identifiers-iri
-  (system-iri "addressIdentifiers"))
-
-(def file-path-iri
-  (system-iri "filePath"))
-
-(def s3-bucket-iri
-  (system-iri "s3Bucket"))
-
-(def s3-prefix-iri
-  (system-iri "s3Prefix"))
-
-(def s3-endpoint-iri
-  (system-iri "s3Endpoint"))
-
-(def storage-iri
-  (system-iri "storage"))
-
-(def ipfs-endpoint-iri
-  (system-iri "ipfsEndpoint"))
-
-(def ipns-profile-iri
-  (system-iri "ipnsProfile"))
-
-(def consensus-protocol-iri
-  (system-iri "consensusProtocol"))
-
-(def http-port-iri
-  (system-iri "httpPort"))
-
-(def max-txn-wait-ms-iri
-  (system-iri "maxTxnWaitMs"))
-
-(def closed-mode-iri
-  (system-iri "closedMode"))
-
-(def root-identities-iri
-  (system-iri "rootIdentities"))
-
-(def parallelism-iri
-  (system-iri "parallelism"))
-
-(def cache-max-mb-iri
-  (system-iri "cachMaxMb"))
-
-(def commit-storage-iri
-  (system-iri "commitStorage"))
-
-(def index-storage-iri
-  (system-iri "indexStorage"))
-
-(def primary-publisher-iri
-  (system-iri "primaryPublisher"))
-
-(def secondary-publishers-iri
-  (system-iri "secondaryPublishers"))
-
-(def remote-systems-iri
-  (system-iri "remoteSystems"))
-
-(def raft-servers-iri
-  (system-iri "raftServers"))
-
-(def server-urls-iri
-  (system-iri "serverUrls"))
-
-(def ledger-defaults-iri
-  (system-iri "ledgerDefaults"))
-
-(def index-options-iri
-  (system-iri "indexOptions"))
-
-(def reindex-min-bytes-iri
-  (system-iri "reindexMinBytes"))
-
-(def reindex-max-bytes-iri
-  (system-iri "reindexMaxBytes"))
-
-(def max-old-indexes-iri
-  (system-iri "maxOldIndexes"))
-
-(def ledger-directory-iri
-  (system-iri "ledgerDirectory"))
-
-(def log-directory-iri
-  (system-iri "logDirectory"))
-
-(def log-history-iri
-  (system-iri "logHistory"))
-
-(def entries-max-iri
-  (system-iri "entriesMax"))
-
-(def catch-up-rounds-iri
-  (system-iri "catchUpRounds"))
-
-(def this-server-iri
-  (system-iri "thisServer"))
-
-(def max-pending-txns-iri
-  (system-iri "maxPendingTxns"))
-
-(def connection-iri
-  (system-iri "connection"))
-
 (defn type?
   [node kind]
   (-> node (get-first :type) (= kind)))
 
 (defn connection?
   [node]
-  (type? node connection-type))
+  (type? node vocab/connection-type))
 
 (defn system?
   [node]
-  (type? node system-type))
+  (type? node vocab/system-type))
 
 (defn consensus?
   [node]
-  (type? node consensus-type))
+  (type? node vocab/consensus-type))
 
 (defn raft-consensus?
   [node]
   (and (consensus? node)
-       (-> node (get-first-value consensus-protocol-iri) (= "raft"))))
+       (-> node (get-first-value vocab/consensus-protocol) (= "raft"))))
 
 (defn standalone-consensus?
   [node]
   (and (consensus? node)
-       (-> node (get-first-value consensus-protocol-iri) (= "standalone"))))
+       (-> node (get-first-value vocab/consensus-protocol) (= "standalone"))))
 
 (defn http-api?
   [node]
-  (and (type? node api-type)
-       (contains? node http-port-iri)))
+  (and (type? node vocab/api-type)
+       (contains? node vocab/http-port)))
 
 (defn jetty-api?
   [node]
@@ -227,44 +95,44 @@
 
 (defn publisher?
   [node]
-  (type? node publisher-type))
+  (type? node vocab/publisher-type))
 
 (defn storage-nameservice?
   [node]
   (and (publisher? node)
-       (contains? node storage-iri)))
+       (contains? node vocab/storage)))
 
 (defn ipns-nameservice?
   [node]
   (and (publisher? node)
-       (contains? node ipfs-endpoint-iri)
-       (contains? node ipns-profile-iri)))
+       (contains? node vocab/ipfs-endpoint)
+       (contains? node vocab/ipns-profile)))
 
 (defn storage?
   [node]
-  (type? node storage-type))
+  (type? node vocab/storage-type))
 
 (defn memory-storage?
   [node]
   (and (storage? node)
        (-> node
-           (dissoc :idx :id :type address-identifier-iri)
+           (dissoc :idx :id :type vocab/address-identifier)
            empty?)))
 
 (defn file-storage?
   [node]
   (and (storage? node)
-       (contains? node file-path-iri)))
+       (contains? node vocab/file-path)))
 
 (defn s3-storage?
   [node]
   (and (storage? node)
-       (contains? node s3-bucket-iri)))
+       (contains? node vocab/s3-bucket)))
 
 (defn ipfs-storage?
   [node]
   (and (storage? node)
-       (contains? node ipfs-endpoint-iri)))
+       (contains? node vocab/ipfs-endpoint)))
 
 (defn get-id
   [node]
@@ -436,17 +304,18 @@
 
 (defmethod ig/expand-key :fluree.server/connection
   [k config]
-  (let [cache-max-mb   (get-first-value config cache-max-mb-iri)
-        commit-storage (get-first config commit-storage-iri)
-        index-storage  (get-first config index-storage-iri)
-        remote-systems (get config remote-systems-iri)
+  (let [cache-max-mb   (get-first-value config vocab/cache-max-mb)
+        commit-storage (get-first config vocab/commit-storage)
+        index-storage  (get-first config vocab/index-storage)
+        remote-systems (get config vocab/remote-systems)
         serializer     (json-serde/json-serde)
         config*        (-> config
                            (assoc :cache (ig/ref :fluree.server/cache)
                                   :commit-catalog (ig/ref :fluree.server/commit-catalog)
                                   :index-catalog (ig/ref :fluree.server/index-catalog)
                                   :serializer serializer)
-                           (dissoc cache-max-mb-iri commit-storage-iri index-storage-iri))]
+                           (dissoc vocab/cache-max-mb vocab/commit-storage
+                                   vocab/index-storage))]
     {:fluree.server/cache          cache-max-mb
      :fluree.server/commit-catalog {:content-stores     [commit-storage]
                                     :read-only-archives remote-systems}
@@ -458,13 +327,13 @@
 
 (defmethod ig/expand-key :fluree.server/http
   [k config]
-  (let [max-txn-wait-ms (get-first-value config max-txn-wait-ms-iri)
-        closed-mode     (get-first-value config closed-mode-iri)
-        root-identities (set (get-values config root-identities-iri))
+  (let [max-txn-wait-ms (get-first-value config vocab/max-txn-wait-ms)
+        closed-mode     (get-first-value config vocab/closed-mode)
+        root-identities (set (get-values config vocab/root-identities))
         config*         (-> config
                             (assoc :handler (ig/ref :fluree.server.api/handler))
-                            (dissoc max-txn-wait-ms-iri closed-mode-iri
-                                    root-identities-iri))]
+                            (dissoc vocab/max-txn-wait-ms vocab/closed-mode
+                                    vocab/root-identities))]
     {k                          config*
      :fluree.server/watcher     {:max-txn-wait-ms max-txn-wait-ms}
      :fluree.server.api/handler {:root-identities root-identities
@@ -482,38 +351,38 @@
 
 (defmethod ig/init-key :fluree.server.storage/memory
   [_ config]
-  (let [identifier (get-first-value config address-identifier-iri)]
+  (let [identifier (get-first-value config vocab/address-identifier)]
     (memory-storage/open identifier)))
 
 (defmethod ig/init-key :fluree.server.storage/file
   [_ config]
-  (let [identifier (get-first-value config address-identifier-iri)
-        root-path  (get-first-value config file-path-iri)]
+  (let [identifier (get-first-value config vocab/address-identifier)
+        root-path  (get-first-value config vocab/file-path)]
     (file-storage/open identifier root-path)))
 
 (defmethod ig/init-key :fluree.server.storage/s3
   [_ config]
-  (let [identifier  (get-first-value config address-identifier-iri)
-        s3-bucket   (get-first-value config s3-bucket-iri)
-        s3-prefix   (get-first-value config s3-prefix-iri)
-        s3-endpoint (get-first-value config s3-endpoint-iri)]
+  (let [identifier  (get-first-value config vocab/address-identifier)
+        s3-bucket   (get-first-value config vocab/s3-bucket)
+        s3-prefix   (get-first-value config vocab/s3-prefix)
+        s3-endpoint (get-first-value config vocab/s3-endpoint)]
     (s3-storage/open identifier s3-bucket s3-prefix s3-endpoint)))
 
 (defmethod ig/init-key :fluree.server.storage/ipfs
   [_ config]
-  (let [identifier    (get-first-value config address-identifier-iri)
-        ipfs-endpoint (get-first-value config ipfs-endpoint-iri)]
+  (let [identifier    (get-first-value config vocab/address-identifier)
+        ipfs-endpoint (get-first-value config vocab/ipfs-endpoint)]
     (ipfs-storage/open identifier ipfs-endpoint)))
 
 (defmethod ig/init-key :fluree.server.nameservice/storage
   [_ config]
-  (let [storage (get-first config storage-iri)]
+  (let [storage (get-first config vocab/storage)]
     (storage-nameservice/start storage)))
 
 (defmethod ig/init-key :fluree.server/remote-system
   [_ config]
-  (let [urls        (get-values config server-urls-iri)
-        identifiers (get-values config address-identifiers-iri)]
+  (let [urls        (get-values config vocab/server-urls)
+        identifiers (get-values config vocab/address-identifiers)]
     (remote-system/connect urls identifiers)))
 
 (defmethod ig/init-key :fluree.server/commit-catalog
@@ -531,15 +400,15 @@
 
 (defmethod ig/init-key :fluree.server/connection
   [_ {:keys [cache commit-catalog index-catalog serializer] :as config}]
-  (let [parallelism          (get-first-value config parallelism-iri)
-        primary-publisher    (get-first config primary-publisher-iri)
-        secondary-publishers (get config secondary-publishers-iri)
-        remote-systems       (get config remote-systems-iri)
-        ledger-defaults      (get-first config ledger-defaults-iri)
-        index-options        (get-first ledger-defaults index-options-iri)
-        reindex-min-bytes    (get-first index-options reindex-min-bytes-iri)
-        reindex-max-bytes    (get-first index-options reindex-max-bytes-iri)
-        max-old-indexes      (get-first index-options max-old-indexes-iri)
+  (let [parallelism          (get-first-value config vocab/parallelism)
+        primary-publisher    (get-first config vocab/primary-publisher)
+        secondary-publishers (get config vocab/secondary-publishers)
+        remote-systems       (get config vocab/remote-systems)
+        ledger-defaults      (get-first config vocab/ledger-defaults)
+        index-options        (get-first ledger-defaults vocab/index-options)
+        reindex-min-bytes    (get-first index-options vocab/reindex-min-bytes)
+        reindex-max-bytes    (get-first index-options vocab/reindex-max-bytes)
+        max-old-indexes      (get-first index-options vocab/max-old-indexes)
         ledger-defaults*     {:index-options {:reindex-min-bytes reindex-min-bytes
                                               :reindex-max-bytes reindex-max-bytes
                                               :max-old-indexes   max-old-indexes}}]
@@ -571,13 +440,13 @@
 
 (defmethod ig/init-key :fluree.server.consensus/raft
   [_ config]
-  (let [log-history      (get-first-value config log-history-iri)
-        entries-max      (get-first-value config entries-max-iri)
-        catch-up-rounds  (get-first-value config catch-up-rounds-iri)
-        servers          (get-values config raft-servers-iri)
-        this-server      (get-first-value config this-server-iri)
-        log-directory    (get-first-value config log-directory-iri)
-        ledger-directory (get-first-value config ledger-directory-iri)]
+  (let [log-history      (get-first-value config vocab/log-history)
+        entries-max      (get-first-value config vocab/entries-max)
+        catch-up-rounds  (get-first-value config vocab/catch-up-rounds)
+        servers          (get-values config vocab/raft-servers)
+        this-server      (get-first-value config vocab/this-server)
+        log-directory    (get-first-value config vocab/log-directory)
+        ledger-directory (get-first-value config vocab/ledger-directory)]
     (raft/start {:log-history      log-history
                  :entries-max      entries-max
                  :catch-up-rounds  catch-up-rounds
@@ -592,8 +461,8 @@
 
 (defmethod ig/init-key :fluree.server.consensus/standalone
   [_ {:keys [subscriptions watcher] :as config}]
-  (let [max-pending-txns (get-first-value config max-pending-txns-iri)
-        conn             (get-first config connection-iri)]
+  (let [max-pending-txns (get-first-value config vocab/max-pending-txns)
+        conn             (get-first config vocab/connection)]
     (standalone/start conn subscriptions watcher max-pending-txns)))
 
 (defmethod ig/halt-key! :fluree.server.consensus/standalone
@@ -606,7 +475,7 @@
 
 (defmethod ig/init-key :fluree.server.http/jetty
   [_ {:keys [handler] :as config}]
-  (let [port (get-first-value config http-port-iri)]
+  (let [port (get-first-value config vocab/http-port)]
     (jetty/run-jetty handler {:port port, :join? false})))
 
 (defmethod ig/halt-key! :fluree.server.http/jetty
