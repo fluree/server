@@ -640,10 +640,7 @@
   ([config]
    (start-config config nil))
   ([config _profile]
-   (let [config* (if (string? config)
-                   (json/parse config false)
-                   config)]
-     (-> config* json-ld/expand util/sequential parse ig/expand ig/init))))
+   (-> config json-ld/expand util/sequential parse ig/expand ig/init)))
 
 (defn start-file
   ([path]
