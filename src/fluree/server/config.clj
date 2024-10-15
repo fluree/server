@@ -1,5 +1,4 @@
 (ns fluree.server.config
-  (:refer-clojure :exclude [load-file])
   (:require [clojure.java.io :as io]
             [fluree.db.util.json :as json]
             [fluree.server.config.env :as env]
@@ -53,22 +52,9 @@
       slurp
       parse-config))
 
-(defn load-resource
-  ([resource-name]
-   (load-resource resource-name nil))
-
-  ([resource-name profile]
-   (read-resource resource-name)))
-
 (defn read-file
   [path]
   (-> path
       io/file
       slurp
       parse-config))
-
-(defn load-file
-  ([path]
-   (load-file path nil))
-  ([path profile]
-   (read-file path)))

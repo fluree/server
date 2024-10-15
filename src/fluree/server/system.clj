@@ -13,6 +13,7 @@
             [fluree.db.storage.memory :as memory-storage]
             [fluree.db.storage.s3 :as s3-storage]
             [fluree.db.util.core :as util :refer [get-first get-first-value get-values]]
+            [fluree.db.util.json :as json]
             [fluree.json-ld :as json-ld]
             [fluree.server.config :as config]
             [fluree.server.consensus.raft :as raft]
@@ -636,24 +637,29 @@
        (into base-config)))
 
 (defn start-config
-  [config]
-  (-> config json-ld/expand util/sequential parse ig/expand ig/init))
+  ([config]
+   (start-config config nil))
+  ([config _profile]
+   (let [config* (if (string? config)
+                   (json/parse config false)
+                   config)]
+     (-> config* json-ld/expand util/sequential parse ig/expand ig/init))))
 
 (defn start-file
   ([path]
    (start-file path :prod))
   ([path profile]
    (-> path
-       (config/load-file profile)
-       start-config)))
+       config/read-file
+       (start-config profile))))
 
 (defn start-resource
   ([resource-name]
    (start-resource resource-name :prod))
   ([resource-name profile]
    (-> resource-name
-       (config/load-resource profile)
-       start-config)))
+       config/read-resource
+       (start-config profile))))
 
 (def start
   (partial start-resource default-resource-name))
