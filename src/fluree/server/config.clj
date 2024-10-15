@@ -24,22 +24,11 @@
         (dissoc :profiles)
         (deep-merge profile-overrides env-overrides))))
 
-(defn with-config-ns
-  [k]
-  (keyword "fluree.server.config" (name k)))
-
-(defn with-namespaced-keys
-  [cfg]
-  (reduce-kv (fn [m k v]
-               (assoc m (with-config-ns k) v))
-             {} cfg))
-
 (defn finalize
   [config profile]
   (-> config
       (apply-overrides profile)
-      validation/coerce
-      with-namespaced-keys))
+      validation/coerce))
 
 (defn parse-config
   [cfg]
