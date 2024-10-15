@@ -621,7 +621,7 @@
   [_ config]
   config)
 
-(def default-resource-name "config.jsonld")
+(def default-resource-name "file-config.jsonld")
 
 (def base-config
   {:fluree.server/subscriptions {}})
