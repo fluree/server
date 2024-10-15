@@ -1,0 +1,75 @@
+{
+  "@context": {
+    "@base": "https://ns.flur.ee/dev/config/raft/",
+    "@vocab": "https://ns.flur.ee/system#"
+  },
+  "@id": "raftClusterConfig",
+  "@graph": [
+    {
+      "@id": "localDiskStorage",
+      "@type": "Storage",
+      "filePath": "/opt/fluree-server/data"
+    },
+    {
+      "@id": "connection",
+      "@type": "Connection",
+      "parallelism": 4,
+      "cacheMaxMb": 200,
+      "commitStorage": {
+        "@id": "localDiskStorage"
+      },
+      "indexStorage": {
+        "@id": "localDiskStorage"
+      },
+      "primaryPublisher": {
+        "@type": "Publisher",
+        "storage": {
+          "@id": "localDiskStorage"
+        }
+      },
+      "secondaryPublishers": [
+        {
+          "@type": "Publisher",
+          "ipnsServer": "localhost",
+          "ipnsProfile": "my-profile"
+        },
+        {
+          "@type": "Publisher",
+          "storage": {
+            "@id": "awsS3Storage"
+          }
+        }
+      ],
+      "ledgerDefaults": {
+        "indexOptions": {
+          "reindexMinBytes": 100000,
+          "reindexMaxBytes": 10000000,
+          "maxOldIndexes": 3
+        }
+      }
+    },
+    {
+      "@id": "consensus",
+      "@type": "Consensus",
+      "consensusProtocol": "raft",
+      "raftLogHistory": 10,
+      "raftEntriesMax": 200,
+      "raftCatchUpRounds": 10,
+      "raftServers": [
+        "/ip4/127.0.0.1/tcp/62071",
+        "/ip4/127.0.0.1/tcp/62072",
+        "/ip4/127.0.0.1/tcp/62073"
+      ],
+      "raftThisServer": "/ip4/127.0.0.1/tcp/62071",
+      "storage": {
+        "@id": "localDiskStorage"
+      }
+    },
+    {
+      "@id": "http",
+      "@type": "API",
+      "httpPort": 8090,
+      "maxTxnWaitMs": 120000
+    }
+  ]
+}

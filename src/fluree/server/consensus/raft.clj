@@ -240,7 +240,7 @@
   client-id should be an approved client-id from the initial
   client negotiation process, can be used to validate incoming
   messages are labeled as coming from the correct client."
-  [raft _key-storage-read-fn conn message]
+  [raft conn message]
   (try
     (let [message'  (nippy/thaw message)
           [header data] message'
@@ -391,7 +391,7 @@
 
 (defn launch-network-connections
   "Fires up network and provides it the handler for new events/commands"
-  [{:keys [this-server-config server-configs join? storage-ledger-read] :as _raft-config} raft-instance]
+  [{:keys [this-server-config server-configs join?] :as _raft-config} raft-instance]
   ;; TODO - Need slightly more complicated handling. If a server joins, close, and tries to restart with join = false, will fail
   (let [all-other-servers (filter #(not= (:multi-addr this-server-config) (:multi-addr %)) server-configs)
         connect-servers   (if join?
@@ -403,7 +403,7 @@
                                      " server-configs: " server-configs
                                      " all-other-servers: " all-other-servers
                                      " connect-servers: " connect-servers)
-        handler-fn        (partial message-consume raft-instance storage-ledger-read)]
+        handler-fn        (partial message-consume raft-instance)]
     (doseq [connect-to connect-servers]
       (log/debug "Raft: attempting connection to server: " connect-to)
       (ftcp/launch-client-connection this-server-config connect-to handler-fn))))
@@ -568,7 +568,7 @@
                                    (add-snapshot-config))
         _                      (log/debug "Starting Raft with config:" raft-config*)
         raft                   (raft/start raft-config*)
-        client-message-handler (partial message-consume raft (:storage-ledger-read raft-config*))
+        client-message-handler (partial message-consume raft)
         new-client-handler     (fn [client]
                                  (ftcp/monitor-remote-connection (:this-server raft-config*) client client-message-handler nil))
         ;; start TCP server, returns the close function

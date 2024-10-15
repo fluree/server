@@ -1,6 +1,6 @@
 (ns fluree.server.consensus.raft.handlers.new-commit
   (:require [clojure.core.async :as async]
-            [fluree.db.nameservice.core :as nameservice]
+            [fluree.db.connection :as connection]
             [fluree.db.storage :as storage]
             [fluree.db.storage.file :as file-storage]
             [fluree.db.util.async :refer [<? go-try]]
@@ -28,7 +28,7 @@
   (let [commit-json (-> (json/parse json false)
                         ;; address is not yet written into the commit file, add it
                         (assoc "address" address))]
-    (nameservice/push! conn commit-json)))
+    (connection/publish-commit conn commit-json)))
 
 (defn store-ledger-files
   "Persist both the data-file and commit-file to disk only if redundant

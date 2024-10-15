@@ -1,6 +1,20 @@
 (ns fluree.server.system
-  (:require [fluree.db.api :as fluree]
-            [fluree.db.conn.cache :as conn-cache]
+  (:require [clojure.string :as str]
+            [fluree.db.cache :as cache]
+            [fluree.db.connection :as connection]
+            [fluree.db.flake.index.storage :as index-storage]
+            [fluree.db.json-ld.iri :as iri]
+            [fluree.db.nameservice.storage :as storage-nameservice]
+            [fluree.db.remote-system :as remote-system]
+            [fluree.db.serde.json :as json-serde]
+            [fluree.db.storage :as storage]
+            [fluree.db.storage.file :as file-storage]
+            [fluree.db.storage.ipfs :as ipfs-storage]
+            [fluree.db.storage.memory :as memory-storage]
+            [fluree.db.storage.s3 :as s3-storage]
+            [fluree.db.util.core :as util :refer [get-first get-first-value get-values]]
+            [fluree.db.util.json :as json]
+            [fluree.json-ld :as json-ld]
             [fluree.server.config :as config]
             [fluree.server.consensus.raft :as raft]
             [fluree.server.consensus.standalone :as standalone]
@@ -13,145 +27,639 @@
 
 (set! *warn-on-reflection* true)
 
-(def default-resource-name "config.json")
+(derive :fluree.server.consensus/raft :fluree.server/consensus)
+(derive :fluree.server.consensus/standalone :fluree.server/consensus)
 
-(derive :fluree/raft :fluree/consensus)
-(derive :fluree/standalone :fluree/consensus)
-(derive :http/jetty :http/server)
+(derive :fluree.server.storage/file :fluree.server/content-storage)
+(derive :fluree.server.storage/file :fluree.server/byte-storage)
+(derive :fluree.server.storage/file :fluree.server/json-archive)
 
-(defmethod ig/expand-key ::config/connection
+(derive :fluree.server.storage/memory :fluree.server/content-storage)
+(derive :fluree.server.storage/memory :fluree.server/byte-storage)
+(derive :fluree.server.storage/memory :fluree.server/json-archive)
+
+(derive :fluree.server.storage/s3 :fluree.server/content-storage)
+(derive :fluree.server.storage/s3 :fluree.server/byte-storage)
+(derive :fluree.server.storage/s3 :fluree.server/json-archive)
+
+(derive :fluree.server.storage/ipfs :fluree.server/content-storage)
+(derive :fluree.server.storage/ipfs :fluree.server/json-archive)
+
+(derive :fluree.server/remote-system :fluree.server/json-archive)
+(derive :fluree.server/remote-system :fluree.server/nameservice)
+(derive :fluree.server/remote-system :fluree.server/publication)
+
+(derive :fluree.server.nameservice/storage :fluree.server/publisher)
+(derive :fluree.server.nameservice/storage :fluree.server/nameservice)
+
+(derive :fluree.server.nameservice/ipns :fluree.server/nameservice)
+(derive :fluree.server.nameservice/ipns :fluree.server/publisher)
+
+(derive :fluree.server.http/jetty :fluree.server/http)
+
+(def system-ns
+  "https://ns.flur.ee/system#")
+
+(defn system-iri
+  [s]
+  (str system-ns s))
+
+(def connection-type
+  (system-iri "Connection"))
+
+(def consensus-type
+  (system-iri "Consensus"))
+
+(def storage-type
+  (system-iri "Storage"))
+
+(def publisher-type
+  (system-iri "Publisher"))
+
+(def system-type
+  (system-iri "System"))
+
+(def api-type
+  (system-iri "API"))
+
+(def address-identifier-iri
+  (system-iri "addressIdentifier"))
+
+(def address-identifiers-iri
+  (system-iri "addressIdentifiers"))
+
+(def file-path-iri
+  (system-iri "filePath"))
+
+(def s3-bucket-iri
+  (system-iri "s3Bucket"))
+
+(def s3-prefix-iri
+  (system-iri "s3Prefix"))
+
+(def s3-endpoint-iri
+  (system-iri "s3Endpoint"))
+
+(def storage-iri
+  (system-iri "storage"))
+
+(def ipfs-endpoint-iri
+  (system-iri "ipfsEndpoint"))
+
+(def ipns-profile-iri
+  (system-iri "ipnsProfile"))
+
+(def consensus-protocol-iri
+  (system-iri "consensusProtocol"))
+
+(def http-port-iri
+  (system-iri "httpPort"))
+
+(def max-txn-wait-ms-iri
+  (system-iri "maxTxnWaitMs"))
+
+(def closed-mode-iri
+  (system-iri "closedMode"))
+
+(def root-identities-iri
+  (system-iri "rootIdentities"))
+
+(def parallelism-iri
+  (system-iri "parallelism"))
+
+(def cache-max-mb-iri
+  (system-iri "cachMaxMb"))
+
+(def commit-storage-iri
+  (system-iri "commitStorage"))
+
+(def index-storage-iri
+  (system-iri "indexStorage"))
+
+(def primary-publisher-iri
+  (system-iri "primaryPublisher"))
+
+(def secondary-publishers-iri
+  (system-iri "secondaryPublishers"))
+
+(def remote-systems-iri
+  (system-iri "remoteSystems"))
+
+(def raft-servers-iri
+  (system-iri "raftServers"))
+
+(def server-urls-iri
+  (system-iri "serverUrls"))
+
+(def ledger-defaults-iri
+  (system-iri "ledgerDefaults"))
+
+(def index-options-iri
+  (system-iri "indexOptions"))
+
+(def reindex-min-bytes-iri
+  (system-iri "reindexMinBytes"))
+
+(def reindex-max-bytes-iri
+  (system-iri "reindexMaxBytes"))
+
+(def max-old-indexes-iri
+  (system-iri "maxOldIndexes"))
+
+(def ledger-directory-iri
+  (system-iri "ledgerDirectory"))
+
+(def log-directory-iri
+  (system-iri "logDirectory"))
+
+(def log-history-iri
+  (system-iri "logHistory"))
+
+(def entries-max-iri
+  (system-iri "entriesMax"))
+
+(def catch-up-rounds-iri
+  (system-iri "catchUpRounds"))
+
+(def this-server-iri
+  (system-iri "thisServer"))
+
+(def max-pending-txns-iri
+  (system-iri "maxPendingTxns"))
+
+(def connection-iri
+  (system-iri "connection"))
+
+(defn type?
+  [node kind]
+  (-> node (get-first :type) (= kind)))
+
+(defn connection?
+  [node]
+  (type? node connection-type))
+
+(defn system?
+  [node]
+  (type? node system-type))
+
+(defn consensus?
+  [node]
+  (type? node consensus-type))
+
+(defn raft-consensus?
+  [node]
+  (and (consensus? node)
+       (-> node (get-first-value consensus-protocol-iri) (= "raft"))))
+
+(defn standalone-consensus?
+  [node]
+  (and (consensus? node)
+       (-> node (get-first-value consensus-protocol-iri) (= "standalone"))))
+
+(defn http-api?
+  [node]
+  (and (type? node api-type)
+       (contains? node http-port-iri)))
+
+(defn jetty-api?
+  [node]
+  (http-api? node))
+
+(defn publisher?
+  [node]
+  (type? node publisher-type))
+
+(defn storage-nameservice?
+  [node]
+  (and (publisher? node)
+       (contains? node storage-iri)))
+
+(defn ipns-nameservice?
+  [node]
+  (and (publisher? node)
+       (contains? node ipfs-endpoint-iri)
+       (contains? node ipns-profile-iri)))
+
+(defn storage?
+  [node]
+  (type? node storage-type))
+
+(defn memory-storage?
+  [node]
+  (and (storage? node)
+       (-> node
+           (dissoc :idx :id :type address-identifier-iri)
+           empty?)))
+
+(defn file-storage?
+  [node]
+  (and (storage? node)
+       (contains? node file-path-iri)))
+
+(defn s3-storage?
+  [node]
+  (and (storage? node)
+       (contains? node s3-bucket-iri)))
+
+(defn ipfs-storage?
+  [node]
+  (and (storage? node)
+       (contains? node ipfs-endpoint-iri)))
+
+(defn get-id
+  [node]
+  (get node :id))
+
+(defn derive-node-id
+  [node]
+  (let [id (get-id node)]
+    (cond
+      (connection? node)           (derive id :fluree.server/connection)
+      (system? node)               (derive id :fluree.server/remote-system)
+      (raft-consensus? node)       (derive id :fluree.server.consensus/raft)
+      (standalone-consensus? node) (derive id :fluree.server.consensus/standalone)
+      (jetty-api? node)            (derive id :fluree.server.http/jetty) ; TODO: Enable other http servers
+      (memory-storage? node)       (derive id :fluree.server.storage/memory)
+      (file-storage? node)         (derive id :fluree.server.storage/file)
+      (s3-storage? node)           (derive id :fluree.server.storage/s3)
+      (ipfs-storage? node)         (derive id :fluree.server.storage/ipfs)
+      (ipns-nameservice? node)     (derive id :fluree.server.nameservice/ipns)
+      (storage-nameservice? node)  (derive id :fluree.server.nameservice/storage))
+    node))
+
+(defn subject-node?
+  [x]
+  (and (map? x)
+       (not (contains? x :value))))
+
+(defn blank-node?
+  [x]
+  (and (subject-node? x)
+       (not (contains? x :id))))
+
+(defn ref-node?
+  [x]
+  (and (subject-node? x)
+       (not (blank-node? x))
+       (-> x
+           (dissoc :idx)
+           count
+           (= 1))))
+
+(defn split-subject-node
+  [node]
+  (let [node* (cond-> node
+                (blank-node? node) (assoc :id (iri/new-blank-node-id))
+                true               (dissoc :idx))]
+    (if (ref-node? node*)
+      [node*]
+      (let [ref-node (select-keys node* [:id])]
+        [ref-node node*]))))
+
+(defn flatten-sequence
+  [coll]
+  (loop [[child & r]   coll
+         child-nodes   []
+         flat-sequence []]
+    (if child
+      (if (subject-node? child)
+        (let [[ref-node child-node] (split-subject-node child)
+              child-nodes*          (if child-node
+                                      (conj child-nodes child-node)
+                                      child-nodes)]
+          (recur r child-nodes* (conj flat-sequence ref-node)))
+        (recur r child-nodes (conj flat-sequence child)))
+      [flat-sequence child-nodes])))
+
+(defn flatten-node
+  [node]
+  (loop [[[k v] & r] (dissoc node :idx)
+         children    []
+         flat-node   {}]
+    (if k
+      (if (sequential? v)
+        (let [[flat-sequence child-nodes] (flatten-sequence v)]
+          (recur r
+                 (into children child-nodes)
+                 (assoc flat-node k flat-sequence)))
+        (if (and (subject-node? v)
+                 (not (ref-node? v)))
+          (let [[ref-node child-node] (split-subject-node v)]
+            (recur r (conj children child-node) (assoc flat-node k ref-node)))
+          (recur r children (assoc flat-node k v))))
+      [flat-node children])))
+
+(defn flatten-nodes
+  [nodes]
+  (loop [remaining nodes
+         flattened []]
+    (if-let [node (peek remaining)]
+      (let [[flat-node children] (flatten-node node)
+            remaining*           (-> remaining
+                                     pop
+                                     (into children))
+            flattened*           (conj flattened flat-node)]
+        (recur remaining* flattened*))
+      flattened)))
+
+(defn encode-illegal-char
+  [c]
+  (case c
+    "&" "<am>"
+    "@" "<at>"
+    "]" "<cb>"
+    ")" "<cp>"
+    ":" "<cl>"
+    "," "<cm>"
+    "$" "<dl>"
+    "." "<do>"
+    "%" "<pe>"
+    "#" "<po>"
+    "(" "<op>"
+    "[" "<ob>"
+    ";" "<sc>"
+    "/" "<sl>"))
+
+(defn kw-encode
+  [s]
+  (str/replace s #"[:#@$&%.,;~/\(\)\[\]]" encode-illegal-char))
+
+(defn iri->kw
+  [iri]
+  (let [iri* (or iri (iri/new-blank-node-id))]
+    (->> (iri/decompose iri*)
+         (map kw-encode)
+         (apply keyword))))
+
+(defn keywordize-node-id
+  [node]
+  (if (subject-node? node)
+    (update node :id iri->kw)
+    node))
+
+(defn keywordize-child-ids
+  [node]
+  (into {}
+        (map (fn [[k v]]
+               (let [v* (if (coll? v)
+                          (map keywordize-node-id v)
+                          (keywordize-node-id v))]
+                 [k v*])))
+        node))
+
+(defn keywordize-node-ids
+  [node]
+  (-> node keywordize-node-id keywordize-child-ids))
+
+(defn reference?
+  [node]
+  (and (map? node)
+       (contains? node :id)
+       (-> node (dissoc :idx :id) empty?)))
+
+(defn convert-reference
+  [node]
+  (if (reference? node)
+    (let [id (get-id node)]
+      (ig/ref id))
+    node))
+
+(defn convert-references
+  [node]
+  (into {}
+        (map (fn [[k v]]
+               (let [v* (if (coll? v)
+                          (mapv convert-reference v)
+                          (convert-reference v))]
+                 [k v*])))
+        node))
+
+(defmethod ig/expand-key :fluree.server/connection
+  [k config]
+  (let [cache-max-mb   (get-first-value config cache-max-mb-iri)
+        commit-storage (get-first config commit-storage-iri)
+        index-storage  (get-first config index-storage-iri)
+        remote-systems (get config remote-systems-iri)
+        serializer     (json-serde/json-serde)
+        config*        (-> config
+                           (assoc :cache (ig/ref :fluree.server/cache)
+                                  :commit-catalog (ig/ref :fluree.server/commit-catalog)
+                                  :index-catalog (ig/ref :fluree.server/index-catalog)
+                                  :serializer serializer)
+                           (dissoc cache-max-mb-iri commit-storage-iri index-storage-iri))]
+    {:fluree.server/cache          cache-max-mb
+     :fluree.server/commit-catalog {:content-stores     [commit-storage]
+                                    :read-only-archives remote-systems}
+     :fluree.server/index-catalog  {:content-stores     [index-storage]
+                                    :read-only-archives remote-systems
+                                    :cache              (ig/ref :fluree.server/cache)
+                                    :serializer         serializer}
+     k                             config*}))
+
+(defmethod ig/expand-key :fluree.server/http
+  [k config]
+  (let [max-txn-wait-ms (get-first-value config max-txn-wait-ms-iri)
+        closed-mode     (get-first-value config closed-mode-iri)
+        root-identities (set (get-values config root-identities-iri))
+        config*         (-> config
+                            (assoc :handler (ig/ref :fluree.server.api/handler))
+                            (dissoc max-txn-wait-ms-iri closed-mode-iri
+                                    root-identities-iri))]
+    {k                          config*
+     :fluree.server/watcher     {:max-txn-wait-ms max-txn-wait-ms}
+     :fluree.server.api/handler {:root-identities root-identities
+                                 :closed-mode     closed-mode
+                                 :connection      (ig/ref :fluree.server/connection)
+                                 :consensus       (ig/ref :fluree.server/consensus)
+                                 :watcher         (ig/ref :fluree.server/watcher)
+                                 :subscriptions   (ig/ref :fluree.server/subscriptions)}}))
+
+(defmethod ig/expand-key :fluree.server.consensus/standalone
+  [k config]
+  {k (assoc config
+            :subscriptions (ig/ref :fluree.server/subscriptions)
+            :watcher (ig/ref :fluree.server/watcher))})
+
+(defmethod ig/init-key :fluree.server.storage/memory
   [_ config]
-  (let [config* (assoc config
-                       :server (ig/ref :fluree/server)
-                       :cache (ig/ref :fluree/cache))]
-    {:fluree/connection config*}))
+  (let [identifier (get-first-value config address-identifier-iri)]
+    (memory-storage/open identifier)))
 
-(defmethod ig/expand-key ::config/server
-  [_ {:keys [cache-max-mb] :as config}]
-  {:fluree/cache  cache-max-mb
-   :fluree/server (dissoc config :cache-max-mb)})
-
-(defmethod ig/expand-key ::config/consensus
+(defmethod ig/init-key :fluree.server.storage/file
   [_ config]
-  (let [consensus-key    (keyword "fluree" (-> config :protocol name))
-        consensus-config (-> config
-                             (dissoc :protocol)
-                             (assoc :server (ig/ref :fluree/server)
-                                    :conn (ig/ref :fluree/connection)
-                                    :watcher (ig/ref :fluree/watcher)
-                                    :subscriptions (ig/ref :fluree/subscriptions)))]
-    {consensus-key         consensus-config
-     :fluree/subscriptions {}}))
+  (let [identifier (get-first-value config address-identifier-iri)
+        root-path  (get-first-value config file-path-iri)]
+    (file-storage/open identifier root-path)))
 
-(defmethod ig/expand-key ::config/http
-  [_ {:keys [server max-txn-wait-ms root-identities closed-mode] :as config :or {server :jetty}}]
-  (let [http-key    (keyword "http" (name server))
-        http-config (-> config
-                        (dissoc :server :max-txn-wait-ms :root-identities :closed-mode)
-                        (assoc :handler (ig/ref :fluree/handler)))]
-    {http-key        http-config
-     :fluree/watcher {:max-txn-wait-ms max-txn-wait-ms}
-     :fluree/handler {:root-identities (set root-identities)
-                      :closed-mode     closed-mode
-                      :conn            (ig/ref :fluree/connection)
-                      :consensus       (ig/ref :fluree/consensus)
-                      :watcher         (ig/ref :fluree/watcher)
-                      :subscriptions   (ig/ref :fluree/subscriptions)}}))
-
-(defmethod ig/expand-key ::config/sid-migration
+(defmethod ig/init-key :fluree.server.storage/s3
   [_ config]
-  {:fluree/sid-migration (assoc config :conn (ig/ref :fluree/connection))})
+  (let [identifier  (get-first-value config address-identifier-iri)
+        s3-bucket   (get-first-value config s3-bucket-iri)
+        s3-prefix   (get-first-value config s3-prefix-iri)
+        s3-endpoint (get-first-value config s3-endpoint-iri)]
+    (s3-storage/open identifier s3-bucket s3-prefix s3-endpoint)))
 
-(defmethod ig/init-key :fluree/connection
-  [_ {:keys [storage-method server cache] :as config}]
-  (let [config* (-> config
-                    (assoc :method storage-method
-                           :storage-path (:storage-path server)
-                           :lru-cache-atom cache)
-                    (dissoc :storage-method))]
-    @(fluree/connect config*)))
-
-(defmethod ig/init-key :fluree/cache
-  [_ cache-max-mb]
-  (let [cache-size (or cache-max-mb 1000)]
-    (atom (conn-cache/create-lru-cache cache-size))))
-
-(defmethod ig/halt-key! :fluree/cache
-  [_ cache-atom]
-  (swap! cache-atom empty))
-
-(defmethod ig/init-key :fluree/server
+(defmethod ig/init-key :fluree.server.storage/ipfs
   [_ config]
-  config)
+  (let [identifier    (get-first-value config address-identifier-iri)
+        ipfs-endpoint (get-first-value config ipfs-endpoint-iri)]
+    (ipfs-storage/open identifier ipfs-endpoint)))
 
-(defmethod ig/init-key :fluree/subscriptions
+(defmethod ig/init-key :fluree.server.nameservice/storage
+  [_ config]
+  (let [storage (get-first config storage-iri)]
+    (storage-nameservice/start storage)))
+
+(defmethod ig/init-key :fluree.server/remote-system
+  [_ config]
+  (let [urls        (get-values config server-urls-iri)
+        identifiers (get-values config address-identifiers-iri)]
+    (remote-system/connect urls identifiers)))
+
+(defmethod ig/init-key :fluree.server/commit-catalog
+  [_ {:keys [content-stores read-only-archives]}]
+  (storage/catalog content-stores read-only-archives))
+
+(defmethod ig/init-key :fluree.server/index-catalog
+  [_ {:keys [content-stores read-only-archives serializer cache]}]
+  (let [catalog (storage/catalog content-stores read-only-archives)]
+    (index-storage/index-catalog catalog serializer cache)))
+
+(defmethod ig/init-key :fluree.server/cache
+  [_ max-mb]
+  (-> max-mb cache/memory->cache-size cache/create-lru-cache atom))
+
+(defmethod ig/init-key :fluree.server/connection
+  [_ {:keys [cache commit-catalog index-catalog serializer] :as config}]
+  (let [parallelism          (get-first-value config parallelism-iri)
+        primary-publisher    (get-first config primary-publisher-iri)
+        secondary-publishers (get config secondary-publishers-iri)
+        remote-systems       (get config remote-systems-iri)
+        ledger-defaults      (get-first config ledger-defaults-iri)
+        index-options        (get-first ledger-defaults index-options-iri)
+        reindex-min-bytes    (get-first index-options reindex-min-bytes-iri)
+        reindex-max-bytes    (get-first index-options reindex-max-bytes-iri)
+        max-old-indexes      (get-first index-options max-old-indexes-iri)
+        ledger-defaults*     {:index-options {:reindex-min-bytes reindex-min-bytes
+                                              :reindex-max-bytes reindex-max-bytes
+                                              :max-old-indexes   max-old-indexes}}]
+    (connection/connect {:parallelism          parallelism
+                         :cache                cache
+                         :commit-catalog       commit-catalog
+                         :index-catalog        index-catalog
+                         :primary-publisher    primary-publisher
+                         :secondary-publishers secondary-publishers
+                         :remote-systems       remote-systems
+                         :serializer           serializer
+                         :defaults             ledger-defaults*})))
+
+(defmethod ig/init-key :fluree.server/subscriptions
   [_ _]
   (subscriptions/listen))
 
-(defmethod ig/halt-key! :fluree/subscriptions
-  [_ subs]
-  (subscriptions/close subs))
+(defmethod ig/halt-key! :fluree.server/subscriptions
+  [_ subsc]
+  (subscriptions/close subsc))
 
-(defmethod ig/init-key :fluree/watcher
+(defmethod ig/init-key :fluree.server/watcher
   [_ {:keys [max-txn-wait-ms]}]
   (watcher/watch max-txn-wait-ms))
 
-(defmethod ig/halt-key! :fluree/watcher
+(defmethod ig/halt-key! :fluree.server/watcher
   [_ watcher]
   (watcher/close watcher))
 
-(defmethod ig/init-key :fluree/raft
-  [_ {:keys [server] :as config}]
-  (let [config* (assoc config :ledger-directory (:storage-path server))]
-    (raft/start config*)))
+(defmethod ig/init-key :fluree.server.consensus/raft
+  [_ config]
+  (let [log-history      (get-first-value config log-history-iri)
+        entries-max      (get-first-value config entries-max-iri)
+        catch-up-rounds  (get-first-value config catch-up-rounds-iri)
+        servers          (get-values config raft-servers-iri)
+        this-server      (get-first-value config this-server-iri)
+        log-directory    (get-first-value config log-directory-iri)
+        ledger-directory (get-first-value config ledger-directory-iri)]
+    (raft/start {:log-history      log-history
+                 :entries-max      entries-max
+                 :catch-up-rounds  catch-up-rounds
+                 :servers          servers
+                 :this-server      this-server
+                 :log-directory    log-directory
+                 :ledger-directory ledger-directory})))
 
-(defmethod ig/halt-key! :fluree/raft
+(defmethod ig/halt-key! :fluree.server.consensus/raft
   [_ {:keys [close] :as _raft-group}]
   (close))
 
-(defmethod ig/init-key :fluree/standalone
-  [_ {:keys [conn subscriptions watcher max-pending-txns]}]
-  (standalone/start conn subscriptions watcher max-pending-txns))
+(defmethod ig/init-key :fluree.server.consensus/standalone
+  [_ {:keys [subscriptions watcher] :as config}]
+  (let [max-pending-txns (get-first-value config max-pending-txns-iri)
+        conn             (get-first config connection-iri)]
+    (standalone/start conn subscriptions watcher max-pending-txns)))
 
-(defmethod ig/halt-key! :fluree/standalone
+(defmethod ig/halt-key! :fluree.server.consensus/standalone
   [_ transactor]
   (standalone/stop transactor))
 
-(defmethod ig/init-key :fluree/handler
-  [_ {:keys [conn consensus watcher subscriptions root-identities closed-mode]}]
-  (handler/app conn consensus watcher subscriptions root-identities closed-mode))
+(defmethod ig/init-key :fluree.server.api/handler
+  [_ {:keys [connection consensus watcher subscriptions root-identities closed-mode]}]
+  (handler/app connection consensus watcher subscriptions root-identities closed-mode))
 
-(defmethod ig/init-key :http/jetty
-  [_ {:keys [handler port join?]}]
-  (jetty/run-jetty handler {:port port, :join? join?}))
+(defmethod ig/init-key :fluree.server.http/jetty
+  [_ {:keys [handler] :as config}]
+  (let [port (get-first-value config http-port-iri)]
+    (jetty/run-jetty handler {:port port, :join? false})))
 
-(defmethod ig/halt-key! :http/jetty
+(defmethod ig/halt-key! :fluree.server.http/jetty
   [_ http-server]
   (jetty/stop-server http-server))
 
-(defmethod ig/init-key :fluree/sid-migration
+(defmethod ig/init-key :fluree.server/sid-migration
   [_ {:keys [conn ledgers force]}]
   (task.migrate-sid/migrate conn ledgers force))
 
-(defn start-config
+(defmethod ig/init-key :default
+  [_ config]
+  config)
+
+(def default-resource-name "config.jsonld")
+
+(def base-config
+  {:fluree.server/subscriptions {}})
+
+(defn parse
   [config]
-  (-> config ig/expand ig/init))
+  (->> config
+       flatten-nodes
+       (map keywordize-node-ids)
+       (map derive-node-id)
+       (map convert-references)
+       (map (juxt get-id identity))
+       (into base-config)))
+
+(defn start-config
+  ([config]
+   (start-config config nil))
+  ([config _profile]
+   (let [config* (if (string? config)
+                   (json/parse config false)
+                   config)]
+     (-> config* json-ld/expand util/sequential parse ig/expand ig/init))))
 
 (defn start-file
   ([path]
    (start-file path :prod))
   ([path profile]
    (-> path
-       (config/load-file profile)
-       start-config)))
+       config/read-file
+       (start-config profile))))
 
 (defn start-resource
   ([resource-name]
    (start-resource resource-name :prod))
   ([resource-name profile]
    (-> resource-name
-       (config/load-resource profile)
-       start-config)))
+       config/read-resource
+       (start-config profile))))
 
 (def start
   (partial start-resource default-resource-name))

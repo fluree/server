@@ -36,11 +36,11 @@
 (def LedgerAddress
   (m/schema [:string {:min 1}]))
 
+(def Address
+  (m/schema [:string {:min 1}]))
+
 (def TransactOpts
   (m/schema [:map-of :keyword :any]))
-
-(def Context
-  (m/schema ::fql/context {:registry fql/registry}))
 
 (def CreateRequestBody
   (m/schema [:map-of [:orn [:string :string] [:keyword :keyword]] :any]))
@@ -101,11 +101,23 @@
 (def HistoryQueryResponse
   (m/schema [:sequential map?]))
 
-(def DefaultResourceRequestBody
+(def LatestCommitRequestBody
   (m/schema [:and
              [:map-of :keyword :any]
              [:map
-              [:resource LedgerAlias]]]))
+              [:resource LedgerAddress]]]))
+
+(def AddressRequestBody
+  (m/schema [:and
+             [:map-of :keyword :any]
+             [:map
+              [:resource Address]]]))
+
+(def AliasRequestBody
+  (m/schema [:and
+             [:map-of :keyword :any]
+             [:map
+              [:ledger LedgerAlias]]]))
 
 (def ErrorResponse
   [:or :string map?])
@@ -437,10 +449,19 @@
         ["/history"
          {:get  history-endpoint
           :post history-endpoint}]
-        ["/remoteResource"
-         {:post {:summary "Remote connection resource read"
-                 :parameters {:body DefaultResourceRequestBody}
-                 :handler #'remote/read-handler}}]]]
+        ["/remote"
+         ["/latestCommit"
+          {:post {:summary "Read latest commit for a ledger"
+                  :parameters {:body LatestCommitRequestBody}
+                  :handler #'remote/latest-commit}}]
+         ["/resource"
+          {:post {:summary "Read resource from address"
+                  :parameters {:body AddressRequestBody}
+                  :handler #'remote/read-resource-address}}]
+         ["/addresses"
+          {:post {:summary "Retrieve ledger address from alias"
+                  :parameters {:body AliasRequestBody}
+                  :handler #'remote/published-ledger-addresses}}]]]]
       {:data {:coercion   (reitit.coercion.malli/create
                            {:strip-extra-keys false})
               :muuntaja   (muuntaja/create
