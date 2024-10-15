@@ -1,5 +1,7 @@
 (ns fluree.server.config.vocab)
 
+(set! *warn-on-reflection* true)
+
 (def system-ns
   "https://ns.flur.ee/system#")
 
