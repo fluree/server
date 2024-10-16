@@ -1,4 +1,5 @@
 (ns fluree.server.config
+  (:refer-clojure :exclude [load-file])
   (:require [clojure.string :as str]
             [clojure.java.io :as io]
             [fluree.db.json-ld.iri :as iri]
@@ -252,12 +253,6 @@
       (apply-overrides profile)
       validation/coerce))
 
-(defn parse-config
-  [cfg]
-  (if (string? cfg)
-    (json/parse cfg false)
-    cfg))
-
 (def base-config
   {:fluree.server/subscriptions {}})
 
@@ -275,16 +270,16 @@
          (map (juxt get-id identity))
          (into base-config))))
 
-(defn read-resource
+(defn load-resource
   [resource-name]
   (-> resource-name
       io/resource
       slurp
-      parse-config))
+      parse))
 
-(defn read-file
+(defn load-file
   [path]
   (-> path
       io/file
       slurp
-      parse-config))
+      parse))

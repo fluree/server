@@ -12,7 +12,6 @@
             [fluree.db.storage.memory :as memory-storage]
             [fluree.db.storage.s3 :as s3-storage]
             [fluree.db.util.core :as util :refer [get-id get-first get-first-value get-values]]
-            [fluree.json-ld :as json-ld]
             [fluree.server.config :as config]
             [fluree.server.consensus.raft :as raft]
             [fluree.server.consensus.standalone :as standalone]
@@ -284,7 +283,7 @@
    (start-file path :prod))
   ([path profile]
    (-> path
-       config/read-file
+       config/load-file
        (start-config profile))))
 
 (defn start-resource
@@ -292,7 +291,7 @@
    (start-resource resource-name :prod))
   ([resource-name profile]
    (-> resource-name
-       config/read-resource
+       config/load-resource
        (start-config profile))))
 
 (def start
