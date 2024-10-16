@@ -2,8 +2,9 @@
   (:refer-clojure :exclude [load-file])
   (:require [clojure.string :as str]
             [clojure.java.io :as io]
+            [fluree.db.connection.vocab :as conn-vocab]
             [fluree.db.json-ld.iri :as iri]
-            [fluree.db.util.core :as util :refer [get-id get-first get-first-value get-values]]
+            [fluree.db.util.core :as util :refer [get-id  get-first-value]]
             [fluree.db.util.json :as json]
             [fluree.json-ld :as json-ld]
             [fluree.server.config.env :as env]
@@ -30,21 +31,9 @@
         (dissoc :profiles)
         (deep-merge profile-overrides env-overrides))))
 
-(defn type?
-  [node kind]
-  (-> node (get-first :type) (= kind)))
-
-(defn connection?
-  [node]
-  (type? node vocab/connection-type))
-
-(defn system?
-  [node]
-  (type? node vocab/system-type))
-
 (defn consensus?
   [node]
-  (type? node vocab/consensus-type))
+  (conn-vocab/type? node vocab/consensus-type))
 
 (defn raft-consensus?
   [node]
@@ -58,69 +47,21 @@
 
 (defn http-api?
   [node]
-  (and (type? node vocab/api-type)
+  (and (conn-vocab/type? node vocab/api-type)
        (contains? node vocab/http-port)))
 
 (defn jetty-api?
   [node]
   (http-api? node))
 
-(defn publisher?
-  [node]
-  (type? node vocab/publisher-type))
-
-(defn storage-nameservice?
-  [node]
-  (and (publisher? node)
-       (contains? node vocab/storage)))
-
-(defn ipns-nameservice?
-  [node]
-  (and (publisher? node)
-       (contains? node vocab/ipfs-endpoint)
-       (contains? node vocab/ipns-profile)))
-
-(defn storage?
-  [node]
-  (type? node vocab/storage-type))
-
-(defn memory-storage?
-  [node]
-  (and (storage? node)
-       (-> node
-           (dissoc :idx :id :type vocab/address-identifier)
-           empty?)))
-
-(defn file-storage?
-  [node]
-  (and (storage? node)
-       (contains? node vocab/file-path)))
-
-(defn s3-storage?
-  [node]
-  (and (storage? node)
-       (contains? node vocab/s3-bucket)))
-
-(defn ipfs-storage?
-  [node]
-  (and (storage? node)
-       (contains? node vocab/ipfs-endpoint)))
-
 (defn derive-node-id
   [node]
   (let [id (get-id node)]
     (cond
-      (connection? node)           (derive id :fluree.server/connection)
-      (system? node)               (derive id :fluree.server/remote-system)
       (raft-consensus? node)       (derive id :fluree.server.consensus/raft)
       (standalone-consensus? node) (derive id :fluree.server.consensus/standalone)
       (jetty-api? node)            (derive id :fluree.server.http/jetty) ; TODO: Enable other http servers
-      (memory-storage? node)       (derive id :fluree.server.storage/memory)
-      (file-storage? node)         (derive id :fluree.server.storage/file)
-      (s3-storage? node)           (derive id :fluree.server.storage/s3)
-      (ipfs-storage? node)         (derive id :fluree.server.storage/ipfs)
-      (ipns-nameservice? node)     (derive id :fluree.server.nameservice/ipns)
-      (storage-nameservice? node)  (derive id :fluree.server.nameservice/storage))
+      :else                        (conn-vocab/derive-node-id node))
     node))
 
 (defn subject-node?

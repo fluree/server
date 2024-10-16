@@ -1,136 +1,49 @@
-(ns fluree.server.config.vocab)
+(ns fluree.server.config.vocab
+  (:require [fluree.db.connection.vocab :as conn-vocab]))
 
 (set! *warn-on-reflection* true)
 
-(def system-ns
-  "https://ns.flur.ee/system#")
-
-(defn system-iri
-  [s]
-  (str system-ns s))
-
-(def connection-type
-  (system-iri "Connection"))
+(def api-type
+  (conn-vocab/system-iri "API"))
 
 (def consensus-type
-  (system-iri "Consensus"))
-
-(def storage-type
-  (system-iri "Storage"))
-
-(def publisher-type
-  (system-iri "Publisher"))
-
-(def system-type
-  (system-iri "System"))
-
-(def api-type
-  (system-iri "API"))
-
-(def address-identifier
-  (system-iri "addressIdentifier"))
-
-(def address-identifiers
-  (system-iri "addressIdentifiers"))
-
-(def file-path
-  (system-iri "filePath"))
-
-(def s3-bucket
-  (system-iri "s3Bucket"))
-
-(def s3-prefix
-  (system-iri "s3Prefix"))
-
-(def s3-endpoint
-  (system-iri "s3Endpoint"))
-
-(def storage
-  (system-iri "storage"))
-
-(def ipfs-endpoint
-  (system-iri "ipfsEndpoint"))
-
-(def ipns-profile
-  (system-iri "ipnsProfile"))
+  (conn-vocab/system-iri "Consensus"))
 
 (def consensus-protocol
-  (system-iri "consensusProtocol"))
+  (conn-vocab/system-iri "consensusProtocol"))
 
 (def http-port
-  (system-iri "httpPort"))
+  (conn-vocab/system-iri "httpPort"))
 
 (def max-txn-wait-ms
-  (system-iri "maxTxnWaitMs"))
+  (conn-vocab/system-iri "maxTxnWaitMs"))
 
 (def closed-mode
-  (system-iri "closedMode"))
+  (conn-vocab/system-iri "closedMode"))
 
 (def root-identities
-  (system-iri "rootIdentities"))
-
-(def parallelism
-  (system-iri "parallelism"))
-
-(def cache-max-mb
-  (system-iri "cachMaxMb"))
-
-(def commit-storage
-  (system-iri "commitStorage"))
-
-(def index-storage
-  (system-iri "indexStorage"))
-
-(def primary-publisher
-  (system-iri "primaryPublisher"))
-
-(def secondary-publishers
-  (system-iri "secondaryPublishers"))
-
-(def remote-systems
-  (system-iri "remoteSystems"))
+  (conn-vocab/system-iri "rootIdentities"))
 
 (def raft-servers
-  (system-iri "raftServers"))
-
-(def server-urls
-  (system-iri "serverUrls"))
-
-(def ledger-defaults
-  (system-iri "ledgerDefaults"))
-
-(def index-options
-  (system-iri "indexOptions"))
-
-(def reindex-min-bytes
-  (system-iri "reindexMinBytes"))
-
-(def reindex-max-bytes
-  (system-iri "reindexMaxBytes"))
-
-(def max-old-indexes
-  (system-iri "maxOldIndexes"))
+  (conn-vocab/system-iri "raftServers"))
 
 (def ledger-directory
-  (system-iri "ledgerDirectory"))
+  (conn-vocab/system-iri "ledgerDirectory"))
 
 (def log-directory
-  (system-iri "logDirectory"))
+  (conn-vocab/system-iri "logDirectory"))
 
 (def log-history
-  (system-iri "logHistory"))
+  (conn-vocab/system-iri "logHistory"))
 
 (def entries-max
-  (system-iri "entriesMax"))
+  (conn-vocab/system-iri "entriesMax"))
 
 (def catch-up-rounds
-  (system-iri "catchUpRounds"))
+  (conn-vocab/system-iri "catchUpRounds"))
 
 (def this-server
-  (system-iri "thisServer"))
+  (conn-vocab/system-iri "thisServer"))
 
 (def max-pending-txns
-  (system-iri "maxPendingTxns"))
-
-(def connection
-  (system-iri "connection"))
+  (conn-vocab/system-iri "maxPendingTxns"))
