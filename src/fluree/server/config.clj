@@ -1,12 +1,8 @@
 (ns fluree.server.config
   (:refer-clojure :exclude [load-file])
-  (:require [clojure.string :as str]
-            [clojure.java.io :as io]
-            [fluree.db.connection.vocab :as conn-vocab]
-            [fluree.db.json-ld.iri :as iri]
+  (:require [clojure.java.io :as io]
+            [fluree.db.connection.config :as conn-config]
             [fluree.db.util.core :as util :refer [get-id  get-first-value]]
-            [fluree.db.util.json :as json]
-            [fluree.json-ld :as json-ld]
             [fluree.server.config.env :as env]
             [fluree.server.config.validation :as validation]
             [fluree.server.config.vocab :as vocab]))
@@ -33,7 +29,7 @@
 
 (defn consensus?
   [node]
-  (conn-vocab/type? node vocab/consensus-type))
+  (conn-config/type? node vocab/consensus-type))
 
 (defn raft-consensus?
   [node]
@@ -47,7 +43,7 @@
 
 (defn http-api?
   [node]
-  (and (conn-vocab/type? node vocab/api-type)
+  (and (conn-config/type? node vocab/api-type)
        (contains? node vocab/http-port)))
 
 (defn jetty-api?
@@ -61,132 +57,8 @@
       (raft-consensus? node)       (derive id :fluree.server.consensus/raft)
       (standalone-consensus? node) (derive id :fluree.server.consensus/standalone)
       (jetty-api? node)            (derive id :fluree.server.http/jetty) ; TODO: Enable other http servers
-      :else                        (conn-vocab/derive-node-id node))
+      :else                        (conn-config/derive-node-id node))
     node))
-
-(defn subject-node?
-  [x]
-  (and (map? x)
-       (not (contains? x :value))))
-
-(defn blank-node?
-  [x]
-  (and (subject-node? x)
-       (not (contains? x :id))))
-
-(defn ref-node?
-  [x]
-  (and (subject-node? x)
-       (not (blank-node? x))
-       (-> x
-           (dissoc :idx)
-           count
-           (= 1))))
-
-(defn split-subject-node
-  [node]
-  (let [node* (cond-> node
-                (blank-node? node) (assoc :id (iri/new-blank-node-id))
-                true               (dissoc :idx))]
-    (if (ref-node? node*)
-      [node*]
-      (let [ref-node (select-keys node* [:id])]
-        [ref-node node*]))))
-
-(defn flatten-sequence
-  [coll]
-  (loop [[child & r]   coll
-         child-nodes   []
-         flat-sequence []]
-    (if child
-      (if (subject-node? child)
-        (let [[ref-node child-node] (split-subject-node child)
-              child-nodes*          (if child-node
-                                      (conj child-nodes child-node)
-                                      child-nodes)]
-          (recur r child-nodes* (conj flat-sequence ref-node)))
-        (recur r child-nodes (conj flat-sequence child)))
-      [flat-sequence child-nodes])))
-
-(defn flatten-node
-  [node]
-  (loop [[[k v] & r] (dissoc node :idx)
-         children    []
-         flat-node   {}]
-    (if k
-      (if (sequential? v)
-        (let [[flat-sequence child-nodes] (flatten-sequence v)]
-          (recur r
-                 (into children child-nodes)
-                 (assoc flat-node k flat-sequence)))
-        (if (and (subject-node? v)
-                 (not (ref-node? v)))
-          (let [[ref-node child-node] (split-subject-node v)]
-            (recur r (conj children child-node) (assoc flat-node k ref-node)))
-          (recur r children (assoc flat-node k v))))
-      [flat-node children])))
-
-(defn flatten-nodes
-  [nodes]
-  (loop [remaining nodes
-         flattened []]
-    (if-let [node (peek remaining)]
-      (let [[flat-node children] (flatten-node node)
-            remaining*           (-> remaining
-                                     pop
-                                     (into children))
-            flattened*           (conj flattened flat-node)]
-        (recur remaining* flattened*))
-      flattened)))
-
-(defn encode-illegal-char
-  [c]
-  (case c
-    "&" "<am>"
-    "@" "<at>"
-    "]" "<cb>"
-    ")" "<cp>"
-    ":" "<cl>"
-    "," "<cm>"
-    "$" "<dl>"
-    "." "<do>"
-    "%" "<pe>"
-    "#" "<po>"
-    "(" "<op>"
-    "[" "<ob>"
-    ";" "<sc>"
-    "/" "<sl>"))
-
-(defn kw-encode
-  [s]
-  (str/replace s #"[:#@$&%.,;~/\(\)\[\]]" encode-illegal-char))
-
-(defn iri->kw
-  [iri]
-  (let [iri* (or iri (iri/new-blank-node-id))]
-    (->> (iri/decompose iri*)
-         (map kw-encode)
-         (apply keyword))))
-
-(defn keywordize-node-id
-  [node]
-  (if (subject-node? node)
-    (update node :id iri->kw)
-    node))
-
-(defn keywordize-child-ids
-  [node]
-  (into {}
-        (map (fn [[k v]]
-               (let [v* (if (coll? v)
-                          (map keywordize-node-id v)
-                          (keywordize-node-id v))]
-                 [k v*])))
-        node))
-
-(defn keywordize-node-ids
-  [node]
-  (-> node keywordize-node-id keywordize-child-ids))
 
 (defn finalize
   [config profile]
@@ -194,33 +66,16 @@
       (apply-overrides profile)
       validation/coerce))
 
-(def base-config
-  {:fluree.server/subscriptions {}})
-
 (defn parse
   [cfg]
-  (let [cfg* (if (string? cfg)
-               (json/parse cfg false)
-               cfg)]
-    (->> cfg*
-         json-ld/expand
-         util/sequential
-         flatten-nodes
-         (map keywordize-node-ids)
-         (map derive-node-id)
-         (map (juxt get-id identity))
-         (into base-config))))
+  (-> cfg
+      (conn-config/parse (map derive-node-id))
+      (assoc :fluree.server/subscriptions {})))
 
 (defn load-resource
   [resource-name]
-  (-> resource-name
-      io/resource
-      slurp
-      parse))
+  (-> resource-name io/resource slurp parse))
 
 (defn load-file
   [path]
-  (-> path
-      io/file
-      slurp
-      parse))
+  (-> path io/file slurp parse))
