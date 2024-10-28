@@ -1,7 +1,9 @@
 (ns fluree.server.system
-  (:require [fluree.db.connection.vocab :as conn-vocab]
+  (:require [clojure.java.io :as io]
+            [fluree.db.connection.system :as conn-system]
+            [fluree.db.connection.vocab :as conn-vocab]
             [fluree.server.config.vocab :as server-vocab]
-            [fluree.db.util.core :as util :refer [get-id get-first get-first-value get-values]]
+            [fluree.db.util.core :as util :refer [get-first get-first-value get-values]]
             [fluree.server.config :as config]
             [fluree.server.consensus.raft :as raft]
             [fluree.server.consensus.standalone :as standalone]
@@ -18,34 +20,6 @@
 (derive :fluree.server.consensus/standalone :fluree.server/consensus)
 
 (derive :fluree.server.http/jetty :fluree.server/http)
-
-(defn reference?
-  [node]
-  (and (map? node)
-       (contains? node :id)
-       (-> node (dissoc :idx :id) empty?)))
-
-(defn convert-reference
-  [node]
-  (if (reference? node)
-    (let [id (get-id node)]
-      (ig/ref id))
-    node))
-
-(defn convert-node-references
-  [node]
-  (reduce-kv (fn [m k v]
-               (let [v* (if (coll? v)
-                          (mapv convert-reference v)
-                          (convert-reference v))]
-                 (assoc m k v*)))
-             {} node))
-
-(defn convert-references
-  [cfg]
-  (reduce-kv (fn [m id node]
-               (assoc m id (convert-node-references node)))
-             {} cfg))
 
 (defmethod ig/expand-key :fluree.server/http
   [k config]
@@ -145,14 +119,15 @@
   ([config]
    (start-config config nil))
   ([config _profile]
-   (-> config config/parse convert-references ig/expand ig/init)))
+   (-> config config/parse conn-system/initialize)))
 
 (defn start-file
   ([path]
    (start-file path :prod))
   ([path profile]
    (-> path
-       config/load-file
+       io/file
+       slurp
        (start-config profile))))
 
 (defn start-resource
@@ -160,7 +135,8 @@
    (start-resource resource-name :prod))
   ([resource-name profile]
    (-> resource-name
-       config/load-resource
+       io/resource
+       slurp
        (start-config profile))))
 
 (def start

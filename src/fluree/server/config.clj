@@ -71,11 +71,3 @@
   (-> cfg
       (conn-config/parse (map derive-node-id))
       (assoc :fluree.server/subscriptions {})))
-
-(defn load-resource
-  [resource-name]
-  (-> resource-name io/resource slurp parse))
-
-(defn load-file
-  [path]
-  (-> path io/file slurp parse))
