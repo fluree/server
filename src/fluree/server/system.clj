@@ -1,9 +1,9 @@
 (ns fluree.server.system
   (:require [clojure.java.io :as io]
+            [fluree.db.connection.config :as conn-config]
             [fluree.db.connection.system :as conn-system]
             [fluree.db.connection.vocab :as conn-vocab]
             [fluree.db.util.core :as util :refer [get-first]]
-            [fluree.db.connection.config :as conn-config]
             [fluree.server.config :as config]
             [fluree.server.config.vocab :as server-vocab]
             [fluree.server.consensus.raft :as raft]
