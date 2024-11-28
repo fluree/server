@@ -1,9 +1,6 @@
 (ns fluree.server.config
-  (:refer-clojure :exclude [load-file])
-  (:require [clojure.java.io :as io]
-            [fluree.db.connection.config :as conn-config]
+  (:require [fluree.db.connection.config :as conn-config]
             [fluree.db.util.core :as util :refer [get-id  get-first-value]]
-            [fluree.server.config.env :as env]
             [fluree.server.config.validation :as validation]
             [fluree.server.config.vocab :as vocab]))
 
@@ -21,11 +18,10 @@
 
 (defn apply-overrides
   [config profile]
-  (let [profile-overrides (get-in config [:profiles profile])
-        env-overrides     (env/config)]
+  (let [profile-overrides (get-in config [:profiles profile])]
     (-> config
         (dissoc :profiles)
-        (deep-merge profile-overrides env-overrides))))
+        (deep-merge profile-overrides))))
 
 (defn consensus?
   [node]
