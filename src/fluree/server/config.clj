@@ -50,7 +50,7 @@
   [node]
   (http-api? node))
 
-(defn derive-node-id
+(defn derive-server-node-id
   [node]
   (let [id (get-id node)]
     (cond
@@ -69,5 +69,5 @@
 (defn parse
   [cfg]
   (-> cfg
-      (conn-config/parse (map derive-node-id))
+      (conn-config/parse (map derive-server-node-id))
       (assoc :fluree.server/subscriptions {})))
