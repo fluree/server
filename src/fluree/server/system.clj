@@ -2,7 +2,8 @@
   (:require [clojure.java.io :as io]
             [fluree.db.connection.system :as conn-system]
             [fluree.db.connection.vocab :as conn-vocab]
-            [fluree.db.util.core :as util :refer [get-first get-first-value get-values]]
+            [fluree.db.util.core :as util :refer [get-first]]
+            [fluree.db.connection.config :as conn-config]
             [fluree.server.config :as config]
             [fluree.server.config.vocab :as server-vocab]
             [fluree.server.consensus.raft :as raft]
@@ -23,9 +24,9 @@
 
 (defmethod ig/expand-key :fluree.server/http
   [k config]
-  (let [max-txn-wait-ms (get-first-value config server-vocab/max-txn-wait-ms)
-        closed-mode     (get-first-value config server-vocab/closed-mode)
-        root-identities (set (get-values config server-vocab/root-identities))
+  (let [max-txn-wait-ms (conn-config/get-first-integer config server-vocab/max-txn-wait-ms)
+        closed-mode     (conn-config/get-first-boolean config server-vocab/closed-mode)
+        root-identities (set (conn-config/get-strings config server-vocab/root-identities))
         config*         (-> config
                             (assoc :handler (ig/ref :fluree.server.api/handler))
                             (dissoc server-vocab/max-txn-wait-ms server-vocab/closed-mode
@@ -63,13 +64,13 @@
 
 (defmethod ig/init-key :fluree.server.consensus/raft
   [_ config]
-  (let [log-history      (get-first-value config server-vocab/log-history)
-        entries-max      (get-first-value config server-vocab/entries-max)
-        catch-up-rounds  (get-first-value config server-vocab/catch-up-rounds)
-        servers          (get-values config server-vocab/raft-servers)
-        this-server      (get-first-value config server-vocab/this-server)
-        log-directory    (get-first-value config server-vocab/log-directory)
-        ledger-directory (get-first-value config server-vocab/ledger-directory)]
+  (let [log-history      (conn-config/get-first-integer config server-vocab/log-history)
+        entries-max      (conn-config/get-first-integer config server-vocab/entries-max)
+        catch-up-rounds  (conn-config/get-first-integer config server-vocab/catch-up-rounds)
+        servers          (conn-config/get-strings config server-vocab/raft-servers)
+        this-server      (conn-config/get-first-string config server-vocab/this-server)
+        log-directory    (conn-config/get-first-string config server-vocab/log-directory)
+        ledger-directory (conn-config/get-first-string config server-vocab/ledger-directory)]
     (raft/start {:log-history      log-history
                  :entries-max      entries-max
                  :catch-up-rounds  catch-up-rounds
@@ -84,7 +85,7 @@
 
 (defmethod ig/init-key :fluree.server.consensus/standalone
   [_ {:keys [subscriptions watcher] :as config}]
-  (let [max-pending-txns (get-first-value config server-vocab/max-pending-txns)
+  (let [max-pending-txns (conn-config/get-first-integer config server-vocab/max-pending-txns)
         conn             (get-first config conn-vocab/connection)]
     (standalone/start conn subscriptions watcher max-pending-txns)))
 
@@ -98,7 +99,7 @@
 
 (defmethod ig/init-key :fluree.server.http/jetty
   [_ {:keys [handler] :as config}]
-  (let [port (get-first-value config server-vocab/http-port)]
+  (let [port (conn-config/get-first-integer config server-vocab/http-port)]
     (jetty/run-jetty handler {:port port, :join? false})))
 
 (defmethod ig/halt-key! :fluree.server.http/jetty
