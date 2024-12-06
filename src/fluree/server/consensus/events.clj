@@ -2,6 +2,14 @@
   "Common namespace for defining consensus event messages shared across consensus
   protocols")
 
+(defn command-type
+  [command]
+  (nth command 0))
+
+(defn command-data
+  [command]
+  (nth command 1))
+
 (defn create-ledger-command
   "Upon receiving a request to create a new ledger, an event
   message must be queued into the consensus state machine.
