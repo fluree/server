@@ -2,7 +2,7 @@
   "Common namespace for defining consensus event messages shared across consensus
   protocols")
 
-(defn create-ledger
+(defn create-ledger-command
   "Upon receiving a request to create a new ledger, an event
   message must be queued into the consensus state machine.
 
@@ -15,7 +15,7 @@
                    :opts      opts
                    :instant   (System/currentTimeMillis)}])
 
-(defn commit-transaction
+(defn commit-transaction-command
   "Upon receiving a request to create a new ledger, an event
   message must be queued into the consensus state machine.
 
