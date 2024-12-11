@@ -10,13 +10,7 @@
             [fluree.server.consensus.events :as events]
             [fluree.server.handlers.shared :refer [deref!]]))
 
-(defrecord StandaloneTransactor [tx-queue]
-  consensus/Transactor
-  (-queue-new-ledger [_ ledger-msg]
-    (go (async/offer! tx-queue ledger-msg)))
-
-  (-queue-new-transaction [_ txn-msg]
-    (go (async/offer! tx-queue txn-msg))))
+(set! *warn-on-reflection* true)
 
 (defn parse-opts
   "Extract the opts from the transaction and keywordify the top level keys."
@@ -103,10 +97,18 @@
             (recur i*)))))
     tx-queue))
 
+(defrecord BufferedTransactor [tx-queue]
+  consensus/Transactor
+  (-queue-new-ledger [_ ledger-msg]
+    (go (async/offer! tx-queue ledger-msg)))
+
+  (-queue-new-transaction [_ txn-msg]
+    (go (async/offer! tx-queue txn-msg))))
+
 (defn start
   [conn subscriptions watcher max-pending-txns]
   (let [tx-queue (new-tx-queue conn subscriptions watcher max-pending-txns)]
-    (->StandaloneTransactor tx-queue)))
+    (->BufferedTransactor tx-queue)))
 
 (defn stop
   [{:keys [tx-queue] :as _transactor}]
