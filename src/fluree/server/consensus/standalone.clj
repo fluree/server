@@ -59,11 +59,11 @@
   [conn subscriptions watcher event]
   (go
     (try
-      (let [[event-type event-msg] event
-
-            result (<! (case event-type
-                         :ledger-create (create-ledger! conn subscriptions watcher event-msg)
-                         :tx-queue      (transact! conn subscriptions watcher event-msg)))]
+      (let [event-type (events/event-type event)
+            event-msg  (events/event-data event)
+            result     (<! (case event-type
+                             :ledger-create (create-ledger! conn subscriptions watcher event-msg)
+                             :tx-queue      (transact! conn subscriptions watcher event-msg)))]
         (if (exception? result)
           (let [error-msg (events/error event-msg result)]
             (broadcast/announce-error! watcher error-msg))
