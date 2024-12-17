@@ -1,5 +1,5 @@
 (ns fluree.server.consensus.standalone
-  (:require [clojure.core.async :as async :refer [<! go go-loop]]
+  (:require [clojure.core.async :as async :refer [<! >! go go-loop]]
             [fluree.db.api :as fluree]
             [fluree.db.constants :as const]
             [fluree.db.util.async :refer [go-try]]
@@ -8,7 +8,8 @@
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.broadcast :as broadcast]
             [fluree.server.consensus.events :as events]
-            [fluree.server.handlers.shared :refer [deref!]]))
+            [fluree.server.handlers.shared :refer [deref!]]
+            [fluree.server.consensus.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
 
@@ -72,43 +73,94 @@
         (log/error "Unexpected event message - expected two-tuple of [event-type event-data], "
                    "and of a supported event type. Received:" event e)))))
 
-(defn new-tx-queue
-  [conn subscriptions watcher max-pending-txns]
-  (let [tx-queue (async/chan max-pending-txns)]
-    (go-loop [i 0]
-      (let [timeout-ch (async/timeout 5000)
-            [event ch] (async/alts! [tx-queue timeout-ch])]
-        (cond
-          (= timeout-ch ch)
-          (do
-            (log/trace "No new transactions in 5 seconds."
-                       "Processed" i "total transactions.")
-            (recur i))
 
-          (nil? event)
-          (do
-            (log/warn "Local transaction queue was closed. No new transactions will be processed.")
-            ::closed)
+(defn new-transaction-queue
+  ([conn subscriptions watcher]
+   (new-transaction-queue conn subscriptions watcher nil))
+  ([conn subscriptions watcher max-pending-txns]
+   (let [tx-queue (if (pos-int? max-pending-txns)
+                    (async/chan max-pending-txns)
+                    (async/chan))]
+     (go-loop [i 0]
+       (let [timeout-ch (async/timeout 5000)
+             [input ch] (async/alts! [tx-queue timeout-ch])]
+         (cond
+           (= timeout-ch ch)
+           (do
+             (log/trace "No new transactions in 5 seconds."
+                        "Processed" i "total transactions.")
+             (recur i))
 
-          :else
-          (let [result (<! (process-event conn subscriptions watcher event))
-                i*     (inc i)]
-            (log/trace "Processed transaction #" i* ". Result:" result)
-            (recur i*)))))
-    tx-queue))
+           (nil? input)
+           (do
+             (log/warn "Local synchronized transaction queue was closed."
+                       "No new transactions will be processed.")
+             ::closed)
+
+           :else
+           (let [[event out-ch] input
+                 result         (<! (process-event conn subscriptions watcher event))
+                 i*             (inc i)]
+             (log/trace "Processed transaction #" i* ". Result:" result)
+             (async/put! out-ch result (fn [closed?]
+                                         (when-not closed?
+                                           (async/close! out-ch))))
+             (recur i*)))))
+     tx-queue)))
+
+(defn put-and-close!
+  [ch x]
+  (doto ch
+    (async/put! x)
+    async/close!))
+
+(def overloaded-error
+  (ex-info "Too many pending transactions. Please try again later."
+           {:status 503, :error :db/pending-transaction-limit}))
 
 (defrecord BufferedTransactor [tx-queue]
   consensus/Transactor
-  (-queue-new-ledger [_ ledger-msg]
-    (go (async/offer! tx-queue ledger-msg)))
+  (-queue-new-ledger [_ new-ledger-event]
+    (let [out-ch (async/chan)]
+      (go (or (async/offer! tx-queue [new-ledger-event out-ch])
+              (put-and-close! out-ch overloaded-error)))
+      out-ch))
 
-  (-queue-new-transaction [_ txn-msg]
-    (go (async/offer! tx-queue txn-msg))))
+  (-queue-new-transaction [_ new-txn-event]
+    (let [out-ch (async/chan)]
+      (go (or (async/offer! tx-queue [new-txn-event out-ch])
+              (put-and-close! out-ch overloaded-error)))
+      out-ch)))
+
+(defn start-buffered
+  [conn subscriptions watcher max-pending-txns]
+  (let [tx-queue (new-transaction-queue conn subscriptions watcher max-pending-txns)]
+    (->BufferedTransactor tx-queue)))
+
+(defrecord SynchronizedTransactor [tx-queue]
+  consensus/Transactor
+  (-queue-new-ledger [_ new-ledger-event]
+    (let [out-ch (async/chan)]
+      (go (>! tx-queue [new-ledger-event out-ch]))
+      out-ch))
+
+  (-queue-new-transaction [_ new-txn-event]
+    (let [out-ch (async/chan)]
+      (go (>! tx-queue [new-txn-event out-ch]))
+      out-ch)))
+
+(defn start-synchronized
+  [conn subscriptions watcher]
+  (let [tx-queue (new-transaction-queue conn subscriptions watcher)]
+    (->SynchronizedTransactor tx-queue)))
 
 (defn start
-  [conn subscriptions watcher max-pending-txns]
-  (let [tx-queue (new-tx-queue conn subscriptions watcher max-pending-txns)]
-    (->BufferedTransactor tx-queue)))
+  ([conn subscriptions watcher]
+   (start-synchronized conn subscriptions watcher))
+  ([conn subscriptions watcher max-pending-txns]
+   (if max-pending-txns
+     (start-buffered conn subscriptions watcher max-pending-txns)
+     (start-synchronized conn subscriptions watcher))))
 
 (defn stop
   [{:keys [tx-queue] :as _transactor}]
