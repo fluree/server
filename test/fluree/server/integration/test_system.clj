@@ -61,29 +61,29 @@
 (defn run-test-server
   [run-tests]
   (set-server-ports)
-  (let [config {"@context" {"@base"    "https://ns.flur.ee/dev/config/",
-                            "@vocab"   "https://ns.flur.ee/system#",
-                            "profiles" {"@container" ["@graph", "@id"]}}
-                "@id"      "testSystem"
-                "@graph"   [{"@id"   "memoryStorage"
-                             "@type" "Storage"}
-                            {"@id"              "testConnection"
-                             "@type"            "Connection"
-                             "parallelism"      1
-                             "cacheMaxMb"       100
-                             "commitStorage"    {"@id" "memoryStorage"}
-                             "indexStorage"     {"@id" "memoryStorage"}
-                             "primaryPublisher" {"@type"   "Publisher"
-                                                 "storage" {"@id" "memoryStorage"}}}
-                            {"@id"               "testConsensus"
-                             "@type"             "Consensus"
-                             "consensusProtocol" "standalone"
-                             "connection"        {"@id" "testConnection"}
-                             "maxPendingTxns"    16}
-                            {"@id"          "testApiServer"
-                             "@type"        "API"
-                             "httpPort"     @api-port
-                             "maxTxnWaitMs" 45000}]}
+  (let [config  {"@context" {"@base"    "https://ns.flur.ee/dev/config/",
+                             "@vocab"   "https://ns.flur.ee/system#",
+                             "profiles" {"@container" ["@graph", "@id"]}}
+                 "@id"      "testSystem"
+                 "@graph"   [{"@id"   "memoryStorage"
+                              "@type" "Storage"}
+                             {"@id"              "testConnection"
+                              "@type"            "Connection"
+                              "parallelism"      1
+                              "cacheMaxMb"       100
+                              "commitStorage"    {"@id" "memoryStorage"}
+                              "indexStorage"     {"@id" "memoryStorage"}
+                              "primaryPublisher" {"@type"   "Publisher"
+                                                  "storage" {"@id" "memoryStorage"}}}
+                             {"@id"               "testConsensus"
+                              "@type"             "Consensus"
+                              "consensusProtocol" "standalone"
+                              "connection"        {"@id" "testConnection"}
+                              "maxPendingTxns"    16}
+                             {"@id"          "testApiServer"
+                              "@type"        "API"
+                              "httpPort"     @api-port
+                              "maxTxnWaitMs" 45000}]}
         server (system/start-config config)]
     (run-tests)
     (system/stop server)))

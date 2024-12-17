@@ -2,7 +2,6 @@
   (:require [clojure.string :as str]
             [clojure.tools.cli :as cli]
             [fluree.db.util.log :as log]
-            [fluree.server.config :as config]
             [fluree.server.system :as system])
   (:gen-class))
 
@@ -60,17 +59,17 @@
 
 (defn start-server
   [{:keys [profile] :as options}]
-  (if-let [config-path (:config options)]
-    (do (log/info "Starting Fluree server configuration at path:" config-path
-                  "with profile:" profile)
-        (-> config-path config/read-file (system/start-config profile)))
-    (if-let [config-resource (:resource options)]
-      (do (log/info "Starting Fluree server configuration resource:" config-resource)
-          (-> config-resource config/read-resource (system/start-config profile)))
-      (if-let [config-string (:string options)]
-        (do (log/info "Starting Fluree server command line configuration with profile:"
-                      profile)
-            (-> config-string config/parse-config (system/start-config profile)))
+  (if-let [config-string (:string options)]
+    (do (log/info "Starting Fluree server from command line configuration with profile:"
+                  profile)
+        (system/start-config config-string profile))
+    (if-let [config-path (:config options)]
+      (do (log/info "Starting Fluree server configuration at path:" config-path
+                    "with profile:" profile)
+          (system/start-file config-path profile))
+      (if-let [config-resource (:resource options)]
+        (do (log/info "Starting Fluree server configuration from resource:" config-resource)
+            (system/start-resource config-resource profile))
         (do (log/info "Starting Fluree server with profile:" profile)
             (system/start profile))))))
 
