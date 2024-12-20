@@ -56,11 +56,11 @@
 
 (defmethod ig/init-key :fluree.server/watcher
   [_ {:keys [max-txn-wait-ms]}]
-  (watcher/watch max-txn-wait-ms))
+  (watcher/start max-txn-wait-ms))
 
 (defmethod ig/halt-key! :fluree.server/watcher
   [_ watcher]
-  (watcher/close watcher))
+  (watcher/stop watcher))
 
 (defmethod ig/init-key :fluree.server.consensus/raft
   [_ config]

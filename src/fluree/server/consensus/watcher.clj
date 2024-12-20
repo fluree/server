@@ -48,14 +48,14 @@
     (async/put! resp-chan response)
     (async/close! resp-chan)))
 
-(defn watch
+(defn start
   ([max-txn-wait-ms]
-   (watch max-txn-wait-ms (new-watcher-atom)))
+   (start max-txn-wait-ms (new-watcher-atom)))
   ([max-txn-wait-ms watcher-atom]
    {:max-txn-wait-ms max-txn-wait-ms
     :watcher-atom   watcher-atom}))
 
-(defn close
+(defn stop
   [watcher]
   (let [watcher-atom (:watcher-atom watcher)
         watches      (vals @watcher-atom)]
