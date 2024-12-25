@@ -6,6 +6,10 @@
   (:import (java.io IOException)
            (java.nio.channels ClosedChannelException)))
 
+(defprotocol Publicizer
+  (publicize-commit [t ledger-id commit-addr])
+  (publicize-new-ledger [t ledger-id commit-addr]))
+
 ;; structure of subscriptions atom:
 ;{:subs    {"id" {:chan   port ;; <- core.async channel
 ;                 :ledgers {"some/ledger" {}} ;; <- map where each key is a ledger-id subscribed to
