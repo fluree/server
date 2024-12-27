@@ -47,7 +47,7 @@
     ;; below is metadata for quickly validating into the state machine, not retained
     :t                (:t db) ;; for quickly validating this is the next 'block'
     :tx-id            tx-id ;; for quickly removing from the queue
-    })
+    :commit-address   (:address commit-file-meta)})
   ([processing-server event-params commit-result]
    (-> (transaction-committed event-params commit-result)
        (assoc :server processing-server))))
