@@ -4,7 +4,7 @@
             [fluree.db.api :as fluree]
             [fluree.db.constants :as const]
             [fluree.db.util.context :as ctx-util]
-            [fluree.db.util.core :as util]
+            [fluree.db.util.core :as util :refer [get-first-value]]
             [fluree.db.util.log :as log]
             [fluree.json-ld :as json-ld]
             [fluree.json-ld.processor.api :as jld-processor]
@@ -35,7 +35,7 @@
 
 (defn transact!
   [p consensus watcher expanded-txn opts]
-  (let [ledger-id     (-> expanded-txn (get const/iri-ledger) (get 0) (get "@value"))
+  (let [ledger-id     (get-first-value expanded-txn const/iri-ledger)
         tx-id         (derive-tx-id (:raw-txn opts))
         final-resp-ch (watcher/create-watch watcher tx-id)]
 
