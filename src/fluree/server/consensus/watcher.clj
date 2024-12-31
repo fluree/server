@@ -13,7 +13,8 @@
 (defprotocol Watcher
   (create-watch [w id])
   (remove-watch [w id])
-  (deliver-watch [w id response]))
+  (deliver-commit [w id t ledger-id commit-address])
+  (deliver-error [w id error]))
 
 (defn new-watcher-atom
   "This atom maps a request's unique id (e.g. tx-id) to a promise that will be
@@ -46,13 +47,26 @@
     ;; return promise ch, will end up with result or closed at end of wait-ms
     promise-ch))
 
-(defn deliver-watch-state
-  [watcher-atom id response]
+(defn deliver-commit-state
+  [watcher-atom id ledger-id t commit-address]
+  ;; note: this can have a race condition, but given it is a promise chan, the
+  ;; second put! will be ignored
+  (when-let [resp-chan (get @watcher-atom id)]
+    (let [response {:tx-id          id
+                    :ledger-id      ledger-id
+                    :t              t
+                    :commit-address commit-address}]
+      (remove-watch-state watcher-atom id)
+      (async/put! resp-chan response)
+      (async/close! resp-chan))))
+
+(defn deliver-error-state
+  [watcher-atom id error]
   ;; note: this can have a race condition, but given it is a promise chan, the
   ;; second put! will be ignored
   (when-let [resp-chan (get @watcher-atom id)]
     (remove-watch-state watcher-atom id)
-    (async/put! resp-chan response)
+    (async/put! resp-chan error)
     (async/close! resp-chan)))
 
 (defrecord LocalWatcher [state max-txn-wait-ms]
@@ -61,8 +75,10 @@
     (create-watch-state state max-txn-wait-ms id))
   (remove-watch [_ id]
     (remove-watch-state state id))
-  (deliver-watch [_ id response]
-    (deliver-watch-state state id response)))
+  (deliver-commit [_ id t ledger-id commit-address]
+    (deliver-commit-state state id t ledger-id commit-address))
+  (deliver-error [_ id error]
+    (deliver-error-state state id error)))
 
 (defn start
   ([max-txn-wait-ms]

@@ -31,7 +31,7 @@
         ;; check for exception trying to put txn in consensus, if so we must deliver the
         ;; watch here, but if successful the consensus process will deliver the watch downstream
         (when (util/exception? persist-resp)
-          (watcher/deliver-watch watcher tx-id persist-resp))))))
+          (watcher/deliver-error watcher tx-id persist-resp))))))
 
 (defn transact!
   [p consensus watcher expanded-txn opts]
@@ -64,11 +64,11 @@
           (deliver p final-resp)
 
           :else
-          (let [{:keys [ledger-id commit-file-meta t tx-id]} final-resp]
+          (let [{:keys [ledger-id commit-address t tx-id]} final-resp]
             (log/info "Transaction completed for:" ledger-id "tx-id:" tx-id
-                      "commit head:" (:address commit-file-meta))
+                      "commit head:" commit-address)
             (deliver p {:ledger ledger-id
-                        :commit (:address commit-file-meta)
+                        :commit commit-address
                         :t      t
                         :tx-id  tx-id})))))))
 
