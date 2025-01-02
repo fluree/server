@@ -394,6 +394,16 @@
            (log/debug name "got response:" resp*))
          resp)))))
 
+(defn subscription-request-handler
+  [conn subscriptions]
+  (ring/ring-handler
+   (ring/router
+    [["/fluree/subscribe" {:get (fn [req]
+                                  (if (http/ws-upgrade-request? req)
+                                    (http/ws-upgrade-response (websocket-handler conn subscriptions))
+                                    {:status 400
+                                     :body   "Invalid websocket upgrade request"}))}]])))
+
 (defn app
   [conn consensus watcher subscriptions root-identities closed-mode]
   (log/debug "HTTP server running with Fluree connection:" conn)
@@ -421,7 +431,16 @@
                                    [500 wrap-policy-metadata]
                                    [600 (wrap-closed-mode root-identities closed-mode)]
                                    [1000 exception-middleware]]
-        fluree-middleware         (sort-middleware-by-weight default-fluree-middleware)]
+        fluree-middleware         (sort-middleware-by-weight default-fluree-middleware)
+
+        subscription-handler (subscription-request-handler conn subscriptions)
+        swagger-ui-handler   (swagger-ui/create-swagger-ui-handler
+                              {:path   "/"
+                               :config {:validatorUrl     nil
+                                        :operationsSorter "alpha"}})
+        default-handler      (ring/routes subscription-handler
+                                          swagger-ui-handler
+                                          (ring/create-default-handler))]
     (ring/ring-handler
      (ring/router
       [["/swagger.json"
@@ -451,17 +470,17 @@
           :post history-endpoint}]
         ["/remote"
          ["/latestCommit"
-          {:post {:summary "Read latest commit for a ledger"
+          {:post {:summary    "Read latest commit for a ledger"
                   :parameters {:body LatestCommitRequestBody}
-                  :handler #'remote/latest-commit}}]
+                  :handler    #'remote/latest-commit}}]
          ["/resource"
-          {:post {:summary "Read resource from address"
+          {:post {:summary    "Read resource from address"
                   :parameters {:body AddressRequestBody}
-                  :handler #'remote/read-resource-address}}]
+                  :handler    #'remote/read-resource-address}}]
          ["/addresses"
-          {:post {:summary "Retrieve ledger address from alias"
+          {:post {:summary    "Retrieve ledger address from alias"
                   :parameters {:body AliasRequestBody}
-                  :handler #'remote/published-ledger-addresses}}]]]]
+                  :handler    #'remote/published-ledger-addresses}}]]]]
       {:data {:coercion   (reitit.coercion.malli/create
                            {:strip-extra-keys false})
               :muuntaja   (muuntaja/create
@@ -473,16 +492,4 @@
                            muuntaja-mw/format-negotiate-middleware
                            muuntaja-mw/format-response-middleware
                            muuntaja-mw/format-request-middleware]}})
-     (ring/routes
-      (ring/ring-handler
-       (ring/router
-        [["/fluree/subscribe" {:get (fn [req]
-                                      (if (http/ws-upgrade-request? req)
-                                        (http/ws-upgrade-response (websocket-handler conn subscriptions))
-                                        {:status 400
-                                         :body   "Invalid websocket upgrade request"}))}]]))
-      (swagger-ui/create-swagger-ui-handler
-       {:path   "/"
-        :config {:validatorUrl     nil
-                 :operationsSorter "alpha"}})
-      (ring/create-default-handler)))))
+     default-handler)))
