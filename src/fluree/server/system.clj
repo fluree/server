@@ -51,8 +51,8 @@
   (subscriptions/listen))
 
 (defmethod ig/halt-key! :fluree.server/subscriptions
-  [_ subsc]
-  (subscriptions/close subsc))
+  [_ subs]
+  (subscriptions/close subs))
 
 (defmethod ig/init-key :fluree.server/watcher
   [_ {:keys [max-txn-wait-ms]}]

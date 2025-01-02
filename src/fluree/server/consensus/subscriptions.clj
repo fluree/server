@@ -3,18 +3,12 @@
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [ring.adapter.jetty9.websocket :as ws])
-  (:import (java.io IOException)
+  (:import (java.io Closeable IOException)
            (java.nio.channels ClosedChannelException)))
 
 (defprotocol Publicizer
-  (publicize-commit [t ledger-id commit-addr])
-  (publicize-new-ledger [t ledger-id commit-addr]))
-
-;; structure of subscriptions atom:
-;{:subs    {"id" {:chan   port ;; <- core.async channel
-;                 :ledgers {"some/ledger" {}} ;; <- map where each key is a ledger-id subscribed to
-;                 :did     nil}}
-; :closed? false}
+  (publicize-commit [p ledger-id commit-addr])
+  (publicize-new-ledger [p ledger-id commit-addr]))
 
 (defn close-chan
   [chan message]
@@ -26,20 +20,16 @@
 (defn all-chans
   [sub-state]
   (->> sub-state
-       :subs
        vals
        (map :chan)))
 
 (defn all-sub-ids
   [sub-state]
-  (->> sub-state
-       :subs
-       keys))
+  (keys sub-state))
 
 (defn all-sockets
   [sub-state]
   (->> sub-state
-       :subs
        vals
        (map :ws)))
 
@@ -60,40 +50,36 @@
                (ws/close! ws))))
   sub-state)
 
-(defn mark-closed
-  "Mark all subscriptions as closing to prevent any new ones from registering
-  while shutting down."
-  [sub-atom]
-  (swap! sub-atom assoc :closed? true))
+(defn replace-existing
+  [{:keys [chan ws] :as sub} sub-chan websocket]
+  (when chan
+    (close-chan chan "Duplicate subscription"))
+  (when ws
+    (ws/close! ws))
+  (assoc sub :chan sub-chan, :ws websocket))
 
 (defn establish-subscription
   "Establish a new communication subscription with a client using async chan
   to send messages"
-  [{:keys [sub-atom] :as _subscriptions} websocket sub-id sub-chan opts]
+  [sub-atom websocket sub-id sub-chan opts]
   (log/debug "Establishing new subscription id:" sub-id "with opts" opts)
-  (swap! sub-atom update-in [:subs sub-id]
-         (fn [{:keys [chan ws] :as existing-sub}]
-           (when chan
-             (close-chan chan "Duplicate subscription"))
-           (when ws
-             (ws/close! ws))
-           (assoc existing-sub :chan sub-chan :ws websocket))))
+  (swap! sub-atom update sub-id replace-existing sub-chan websocket))
 
 (defn close-subscription
-  [{:keys [sub-atom] :as subscriptions} sub-id status-code reason]
+  [sub-atom sub-id status-code reason]
   (log/debug "Closing websocket subscription for sub-id:" sub-id
              "with status code:" status-code "and reason:" reason)
-  (let [{:keys [chan ws]} (get-in @sub-atom [:subs sub-id])]
+  (let [{:keys [chan ws]} (get @sub-atom sub-id)]
     (close-chan chan nil)
     (try (ws/close! ws)
          (catch Exception _ :ignore))
-    (swap! subscriptions update :subs dissoc sub-id)))
+    (swap! sub-atom dissoc sub-id)))
 
 (defn subscribe-ledger
   "Subscribe to ledger"
-  [{:keys [sub-atom] :as _subscriptions} sub-id {:keys [ledger serialization] :as request}]
+  [sub-atom sub-id {:keys [ledger serialization] :as request}]
   (log/debug "Subscribe websocket request by sub-id" sub-id "request:" request)
-  (swap! sub-atom update-in [:subs sub-id]
+  (swap! sub-atom update sub-id
          (fn [existing-sub]
            (if existing-sub
              (assoc-in existing-sub [:ledgers ledger] {:serialization serialization})
@@ -101,9 +87,9 @@
 
 (defn unsubscribe-ledger
   "Unsubscribe from ledger"
-  [{:keys [sub-atom] :as _subscriptions} sub-id {:keys [ledger] :as request}]
+  [sub-atom sub-id {:keys [ledger] :as request}]
   (log/debug "Unsubscribe websocket request by sub-id:" sub-id "request:" request)
-  (swap! sub-atom update-in [:subs sub-id :ledgers]
+  (swap! sub-atom update-in [sub-id :ledgers]
          (fn [ledger-subs]
            (if ledger-subs
              (dissoc ledger-subs ledger)
@@ -112,36 +98,23 @@
 (defn send-message
   "Sends a message to an individual socket. If an exception occurs,
   closes the socket and removes it from the subscription map."
-  [{:keys [sub-atom] :as subscriptions} sub-id message]
-  (let [ws (get-in @sub-atom [:subs sub-id :ws])]
+  [sub-atom sub-id message]
+  (let [ws (get-in @sub-atom [sub-id :ws])]
     (try
       (ws/send! ws message)
       (catch IOException _
         (log/info "Websocket channel closed (java.io.IOException) for sub-id:" sub-id))
       (catch ClosedChannelException _
         (log/info "Websocket channel closed for sub-id: " sub-id)
-        (close-subscription subscriptions sub-id nil nil))
+        (close-subscription sub-atom sub-id nil nil))
       (catch Exception e
         (log/error e "Error sending message to websocket subscriber:" sub-id)
-        (close-subscription subscriptions sub-id nil nil)))))
-
-(defn send-ledger-message
-  "Sends a message only to subscriptions that subscribed to a ledger.
-  Note the message format should be a JSON-stringified map in the form of:
-  {action: commit, ledger: myledger, data: {...}}"
-  [{:keys [sub-atom] :as subscriptions} ledger-id message]
-  (log/debug "Sending ledger message for:" ledger-id "with message:" message)
-  (let [{:keys [closed? subs]} @sub-atom]
-    (when-not closed?
-      (doseq [[sub-id {:keys [ledgers]}] subs]
-        (when (contains? ledgers ledger-id)
-          ;; TODO - use ledger subscription opts to filter out messages, permission
-          (send-message subscriptions sub-id message))))))
+        (close-subscription sub-atom sub-id nil nil)))))
 
 (defn send-message-to-all
   "Sends a message to all subscriptions. Message sent as JSON stringified map
   in the form: {action: commit, ledger: my/ledger, data: {...}}"
-  [{:keys [sub-atom] :as subscriptions} action ledger-alias data]
+  [sub-atom action ledger-alias data]
   (let [data*   (if (string? data)
                   (json/parse data false)
                   data)
@@ -149,21 +122,30 @@
                                  "ledger" ledger-alias
                                  "data"   data*})
         sub-ids (all-sub-ids @sub-atom)]
-    (run! #(send-message subscriptions % message) sub-ids)))
+    (run! #(send-message sub-atom % message) sub-ids)))
+
+(defrecord Subscriptions [state]
+  Publicizer
+  (publicize-new-ledger [_ ledger-id commit-addr]
+    (send-message-to-all state "ledger-created" ledger-id {:commit-address commit-addr}))
+  (publicize-commit [_ ledger-id commit-addr]
+    (send-message-to-all state "new-commit" ledger-id {:commit-address commit-addr}))
+
+  Closeable
+  (close [_]
+    (log/info "Closing all subscriptions.")
+    (-> @state close-all-chans close-all-sockets)))
+
+(def new-state
+  {})
 
 (defn listen
   []
-  {:sub-atom (atom {:subs    {}
-                    :closed? false})})
+  (-> new-state atom ->Subscriptions))
 
 (defn close
-  [{:keys [sub-atom] :as _subscriptions}]
-  (log/info "Closing all websocket subscriptions.")
-  (-> sub-atom
-      mark-closed
-      close-all-chans
-      close-all-sockets)
-  (reset! sub-atom {:closed? true}))
+  [^Subscriptions subs]
+  (.close subs))
 
 (defmulti client-message :msg-type)
 
