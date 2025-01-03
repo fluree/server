@@ -1,31 +1,30 @@
 (ns fluree.server.handler
-  (:require
-   [clojure.core.async :as async :refer [<!!]]
-   [fluree.db.json-ld.credential :as cred]
-   [fluree.db.query.fql.syntax :as fql]
-   [fluree.db.query.history.parse :as fqh]
-   [fluree.db.util.core :as util]
-   [fluree.db.util.json :as json]
-   [fluree.db.util.log :as log]
-   [fluree.db.validation :as v]
-   [fluree.server.consensus.subscriptions :as subscriptions]
-   [fluree.server.handlers.create :as create]
-   [fluree.server.handlers.ledger :as ledger]
-   [fluree.server.handlers.remote-resource :as remote]
-   [fluree.server.handlers.transact :as srv-tx]
-   [malli.core :as m]
-   [muuntaja.core :as muuntaja]
-   [muuntaja.format.core :as mf]
-   [muuntaja.format.json :as mfj]
-   [reitit.coercion.malli :as rcm]
-   [reitit.ring :as ring]
-   [reitit.ring.coercion :as coercion]
-   [reitit.ring.middleware.exception :as exception]
-   [reitit.ring.middleware.muuntaja :as muuntaja-mw]
-   [reitit.swagger :as swagger]
-   [reitit.swagger-ui :as swagger-ui]
-   [ring.adapter.jetty9 :as http]
-   [ring.middleware.cors :as rmc])
+  (:require [clojure.core.async :as async :refer [<!!]]
+            [fluree.db.json-ld.credential :as cred]
+            [fluree.db.query.fql.syntax :as fql]
+            [fluree.db.query.history.parse :as fqh]
+            [fluree.db.util.core :as util]
+            [fluree.db.util.json :as json]
+            [fluree.db.util.log :as log]
+            [fluree.db.validation :as v]
+            [fluree.server.consensus.subscriptions :as subscriptions]
+            [fluree.server.handlers.create :as create]
+            [fluree.server.handlers.ledger :as ledger]
+            [fluree.server.handlers.remote-resource :as remote]
+            [fluree.server.handlers.transact :as srv-tx]
+            [malli.core :as m]
+            [muuntaja.core :as muuntaja]
+            [muuntaja.format.core :as mf]
+            [muuntaja.format.json :as mfj]
+            [reitit.coercion.malli :as rcm]
+            [reitit.ring :as ring]
+            [reitit.ring.coercion :as coercion]
+            [reitit.ring.middleware.exception :as exception]
+            [reitit.ring.middleware.muuntaja :as muuntaja-mw]
+            [reitit.swagger :as swagger]
+            [reitit.swagger-ui :as swagger-ui]
+            [ring.adapter.jetty9 :as http]
+            [ring.middleware.cors :as rmc])
   (:import (java.io InputStream)))
 
 (set! *warn-on-reflection* true)
@@ -404,92 +403,116 @@
                                     {:status 400
                                      :body   "Invalid websocket upgrade request"}))}]])))
 
+(defn compose-fluree-middleware
+  [conn consensus watcher root-identities closed-mode]
+  (let [exception-middleware (exception/create-exception-middleware
+                              (merge
+                               exception/default-handlers
+                               {::exception/default
+                                (partial exception/wrap-log-to-console
+                                         exception/http-response-handler)}))]
+    ;; Exception middleware should always be first AND last.
+    ;; The last (highest sort order) one ensures that middleware that comes
+    ;; after it will not be skipped on response if handler code throws an
+    ;; exception b/c this it catches them and turns them into responses.
+    ;; The first (lowest sort order) one ensures that exceptions thrown by
+    ;; other middleware are caught and turned into appropriate responses.
+    ;; Seems kind of clunky. Maybe there's a better way? - WSM 2023-04-28
+    (sort-middleware-by-weight [[1 exception-middleware]
+                                [10 wrap-cors]
+                                [10 (partial wrap-assoc-system conn consensus watcher)]
+                                [50 unwrap-credential]
+                                [100 wrap-set-fuel-header]
+                                [200 coercion/coerce-exceptions-middleware]
+                                [300 coercion/coerce-response-middleware]
+                                [400 coercion/coerce-request-middleware]
+                                [500 wrap-policy-metadata]
+                                [600 (wrap-closed-mode root-identities closed-mode)]
+                                [1000 exception-middleware]])))
+
+(def fluree-create-routes
+  ["/create"
+   {:post {:summary    "Endpoint for creating new ledgers"
+           :parameters {:body CreateRequestBody}
+           :responses  {201 {:body CreateResponseBody}
+                        400 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+           :handler    #'create/default}}])
+
+(def fluree-transact-routes
+  ["/transact"
+   {:post {:summary    "Endpoint for submitting transactions"
+           :parameters {:body TransactRequestBody}
+           :responses  {200 {:body TransactResponseBody}
+                        400 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+           :handler    #'srv-tx/default}}])
+
+(def fluree-query-routes
+  ["/query"
+   {:get  query-endpoint
+    :post query-endpoint}])
+
+(def fluree-history-routes
+  ["/history"
+   {:get  history-endpoint
+    :post history-endpoint}])
+
+(def default-fluree-routes
+  [fluree-create-routes
+   fluree-transact-routes
+   fluree-query-routes
+   fluree-history-routes])
+
+(def fluree-remote-routes
+  ["/remote"
+    ["/latestCommit"
+     {:post {:summary    "Read latest commit for a ledger"
+             :parameters {:body LatestCommitRequestBody}
+             :handler    #'remote/latest-commit}}]
+    ["/resource"
+     {:post {:summary    "Read resource from address"
+             :parameters {:body AddressRequestBody}
+             :handler    #'remote/read-resource-address}}]
+    ["/addresses"
+     {:post {:summary    "Retrieve ledger address from alias"
+             :parameters {:body AliasRequestBody}
+             :handler    #'remote/published-ledger-addresses}}]])
+
+(def swagger-ui-handler
+  (swagger-ui/create-swagger-ui-handler {:path   "/"
+                                         :config {:validatorUrl     nil
+                                                  :operationsSorter "alpha"}}))
+
+(defn router
+  [& routes]
+  (ring/router routes
+               {:data {:coercion   (reitit.coercion.malli/create
+                                    {:strip-extra-keys false})
+                       :muuntaja   (muuntaja/create
+                                    (-> muuntaja/default-options
+                                        (assoc-in [:formats "application/json"] json-format)
+                                        (assoc-in [:formats "application/sparql-query"] sparql-format)
+                                        (assoc-in [:formats "application/jwt"] jwt-format)))
+                       :middleware [swagger/swagger-feature
+                                    muuntaja-mw/format-negotiate-middleware
+                                    muuntaja-mw/format-response-middleware
+                                    muuntaja-mw/format-request-middleware]}}))
+
 (defn app
   [conn consensus watcher subscriptions root-identities closed-mode]
   (log/debug "HTTP server running with Fluree connection:" conn)
-  (let [exception-middleware      (exception/create-exception-middleware
-                                   (merge
-                                    exception/default-handlers
-                                    {::exception/default
-                                     (partial exception/wrap-log-to-console
-                                              exception/http-response-handler)}))
-        ;; Exception middleware should always be first AND last.
-        ;; The last (highest sort order) one ensures that middleware that comes
-        ;; after it will not be skipped on response if handler code throws an
-        ;; exception b/c this it catches them and turns them into responses.
-        ;; The first (lowest sort order) one ensures that exceptions thrown by
-        ;; other middleware are caught and turned into appropriate responses.
-        ;; Seems kind of clunky. Maybe there's a better way? - WSM 2023-04-28
-        default-fluree-middleware [[1 exception-middleware]
-                                   [10 wrap-cors]
-                                   [10 (partial wrap-assoc-system conn consensus watcher)]
-                                   [50 unwrap-credential]
-                                   [100 wrap-set-fuel-header]
-                                   [200 coercion/coerce-exceptions-middleware]
-                                   [300 coercion/coerce-response-middleware]
-                                   [400 coercion/coerce-request-middleware]
-                                   [500 wrap-policy-metadata]
-                                   [600 (wrap-closed-mode root-identities closed-mode)]
-                                   [1000 exception-middleware]]
-        fluree-middleware         (sort-middleware-by-weight default-fluree-middleware)
-
+  (let [swagger-routes       ["/swagger.json"
+                              {:get {:no-doc  true
+                                     :swagger {:info {:title "Fluree HTTP API"}}
+                                     :handler (swagger/create-swagger-handler)}}]
         subscription-handler (subscription-request-handler conn subscriptions)
-        swagger-ui-handler   (swagger-ui/create-swagger-ui-handler
-                              {:path   "/"
-                               :config {:validatorUrl     nil
-                                        :operationsSorter "alpha"}})
         default-handler      (ring/routes subscription-handler
                                           swagger-ui-handler
-                                          (ring/create-default-handler))]
-    (ring/ring-handler
-     (ring/router
-      [["/swagger.json"
-        {:get {:no-doc  true
-               :swagger {:info {:title "Fluree HTTP API"}}
-               :handler (swagger/create-swagger-handler)}}]
-       ["/fluree" {:middleware fluree-middleware}
-        ["/create"
-         {:post {:summary    "Endpoint for creating new ledgers"
-                 :parameters {:body CreateRequestBody}
-                 :responses  {201 {:body CreateResponseBody}
-                              400 {:body ErrorResponse}
-                              500 {:body ErrorResponse}}
-                 :handler    #'create/default}}]
-        ["/transact"
-         {:post {:summary    "Endpoint for submitting transactions"
-                 :parameters {:body TransactRequestBody}
-                 :responses  {200 {:body TransactResponseBody}
-                              400 {:body ErrorResponse}
-                              500 {:body ErrorResponse}}
-                 :handler    #'srv-tx/default}}]
-        ["/query"
-         {:get  query-endpoint
-          :post query-endpoint}]
-        ["/history"
-         {:get  history-endpoint
-          :post history-endpoint}]
-        ["/remote"
-         ["/latestCommit"
-          {:post {:summary    "Read latest commit for a ledger"
-                  :parameters {:body LatestCommitRequestBody}
-                  :handler    #'remote/latest-commit}}]
-         ["/resource"
-          {:post {:summary    "Read resource from address"
-                  :parameters {:body AddressRequestBody}
-                  :handler    #'remote/read-resource-address}}]
-         ["/addresses"
-          {:post {:summary    "Retrieve ledger address from alias"
-                  :parameters {:body AliasRequestBody}
-                  :handler    #'remote/published-ledger-addresses}}]]]]
-      {:data {:coercion   (reitit.coercion.malli/create
-                           {:strip-extra-keys false})
-              :muuntaja   (muuntaja/create
-                           (-> muuntaja/default-options
-                               (assoc-in [:formats "application/json"] json-format)
-                               (assoc-in [:formats "application/sparql-query"] sparql-format)
-                               (assoc-in [:formats "application/jwt"] jwt-format)))
-              :middleware [swagger/swagger-feature
-                           muuntaja-mw/format-negotiate-middleware
-                           muuntaja-mw/format-response-middleware
-                           muuntaja-mw/format-request-middleware]}})
-     default-handler)))
+                                          (ring/create-default-handler))
+        fluree-middleware    (compose-fluree-middleware conn consensus watcher
+                                                        root-identities closed-mode)
+        fluree-routes        (into ["/fluree" {:middleware fluree-middleware}]
+                                   (conj default-fluree-routes fluree-remote-routes))
+        app-router           (router swagger-routes fluree-routes)]
+    (ring/ring-handler app-router default-handler)))
