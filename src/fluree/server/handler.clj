@@ -168,12 +168,13 @@
    :handler    #'ledger/history})
 
 (defn wrap-assoc-system
-  [conn consensus watcher handler]
+  [conn consensus watcher subscriptions handler]
   (fn [req]
     (-> req
         (assoc :fluree/conn conn
                :fluree/consensus consensus
-               :fluree/watcher watcher)
+               :fluree/watcher watcher
+               :fluree/subscriptions subscriptions)
         handler)))
 
 (defn wrap-cors
@@ -404,7 +405,7 @@
                                      :body   "Invalid websocket upgrade request"}))}]])))
 
 (defn compose-fluree-middleware
-  [conn consensus watcher root-identities closed-mode]
+  [conn consensus watcher subscriptions root-identities closed-mode]
   (let [exception-middleware (exception/create-exception-middleware
                               (merge
                                exception/default-handlers
@@ -420,7 +421,8 @@
     ;; Seems kind of clunky. Maybe there's a better way? - WSM 2023-04-28
     (sort-middleware-by-weight [[1 exception-middleware]
                                 [10 wrap-cors]
-                                [10 (partial wrap-assoc-system conn consensus watcher)]
+                                [10 (partial wrap-assoc-system conn consensus watcher
+                                             subscriptions)]
                                 [50 unwrap-credential]
                                 [100 wrap-set-fuel-header]
                                 [200 coercion/coerce-exceptions-middleware]
@@ -510,7 +512,7 @@
         default-handler      (ring/routes subscription-handler
                                           swagger-ui-handler
                                           (ring/create-default-handler))
-        fluree-middleware    (compose-fluree-middleware conn consensus watcher
+        fluree-middleware    (compose-fluree-middleware conn consensus watcher subscriptions
                                                         root-identities closed-mode)
         fluree-routes        (into ["/fluree" {:middleware fluree-middleware}]
                                    (conj default-fluree-routes fluree-remote-routes))
