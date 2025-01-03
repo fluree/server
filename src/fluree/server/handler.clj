@@ -394,16 +394,6 @@
            (log/debug name "got response:" resp*))
          resp)))))
 
-(defn subscription-request-handler
-  [conn subscriptions]
-  (ring/ring-handler
-   (ring/router
-    [["/fluree/subscribe" {:get (fn [req]
-                                  (if (http/ws-upgrade-request? req)
-                                    (http/ws-upgrade-response (websocket-handler conn subscriptions))
-                                    {:status 400
-                                     :body   "Invalid websocket upgrade request"}))}]])))
-
 (defn compose-fluree-middleware
   [conn consensus watcher subscriptions root-identities closed-mode]
   (let [exception-middleware (exception/create-exception-middleware
@@ -481,6 +471,14 @@
              :parameters {:body AliasRequestBody}
              :handler    #'remote/published-ledger-addresses}}]])
 
+(def fluree-subscription-routes
+  [["/subscribe"
+    {:get (fn [{:fluree/keys [conn subscriptions] :as req}]
+            (if (http/ws-upgrade-request? req)
+              (http/ws-upgrade-response (websocket-handler conn subscriptions))
+              {:status 400
+               :body   "Invalid websocket upgrade request"}))}]])
+
 (def swagger-ui-handler
   (swagger-ui/create-swagger-ui-handler {:path   "/"
                                          :config {:validatorUrl     nil
@@ -508,13 +506,13 @@
                               {:get {:no-doc  true
                                      :swagger {:info {:title "Fluree HTTP API"}}
                                      :handler (swagger/create-swagger-handler)}}]
-        subscription-handler (subscription-request-handler conn subscriptions)
-        default-handler      (ring/routes subscription-handler
-                                          swagger-ui-handler
+        default-handler      (ring/routes swagger-ui-handler
                                           (ring/create-default-handler))
         fluree-middleware    (compose-fluree-middleware conn consensus watcher subscriptions
                                                         root-identities closed-mode)
         fluree-routes        (into ["/fluree" {:middleware fluree-middleware}]
-                                   (conj default-fluree-routes fluree-remote-routes))
+                                   (conj default-fluree-routes
+                                         fluree-remote-routes
+                                         fluree-subscription-routes))
         app-router           (router swagger-routes fluree-routes)]
     (ring/ring-handler app-router default-handler)))
