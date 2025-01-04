@@ -475,12 +475,12 @@
               :body   "Invalid websocket upgrade request"}))}])
 
 (def default-fluree-routes
-  [fluree-create-routes
-   fluree-transact-routes
-   fluree-query-routes
-   fluree-history-routes
-   fluree-remote-routes
-   fluree-subscription-routes])
+  #{fluree-create-routes
+    fluree-transact-routes
+    fluree-query-routes
+    fluree-history-routes
+    fluree-remote-routes
+    fluree-subscription-routes})
 
 (defn combine-fluree-routes
   [mw-config fluree-route-list]
@@ -508,12 +508,9 @@
         coercer    (reitit.coercion.malli/create {:strip-extra-keys false})
         formatter  (muuntaja/create
                     (-> muuntaja/default-options
-                        (assoc-in [:formats "application/json"]
-                                  json-format)
-                        (assoc-in [:formats "application/sparql-query"]
-                                  sparql-format)
-                        (assoc-in [:formats "application/jwt"]
-                                  jwt-format)))
+                        (assoc-in [:formats "application/json"] json-format)
+                        (assoc-in [:formats "application/sparql-query"] sparql-format)
+                        (assoc-in [:formats "application/jwt"] jwt-format)))
         middleware [swagger/swagger-feature
                     muuntaja-mw/format-negotiate-middleware
                     muuntaja-mw/format-response-middleware
