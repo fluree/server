@@ -451,12 +451,6 @@
    {:get  history-endpoint
     :post history-endpoint}])
 
-(def default-fluree-routes
-  [fluree-create-routes
-   fluree-transact-routes
-   fluree-query-routes
-   fluree-history-routes])
-
 (def fluree-remote-routes
   ["/remote"
     ["/latestCommit"
@@ -473,50 +467,65 @@
              :handler    #'remote/published-ledger-addresses}}]])
 
 (def fluree-subscription-routes
-  [["/subscribe"
-    {:get (fn [{:fluree/keys [conn subscriptions] :as req}]
-            (if (http/ws-upgrade-request? req)
-              (http/ws-upgrade-response (websocket-handler conn subscriptions))
-              {:status 400
-               :body   "Invalid websocket upgrade request"}))}]])
+  ["/subscribe"
+   {:get (fn [{:fluree/keys [conn subscriptions] :as req}]
+           (if (http/ws-upgrade-request? req)
+             (http/ws-upgrade-response (websocket-handler conn subscriptions))
+             {:status 400
+              :body   "Invalid websocket upgrade request"}))}])
+
+(def default-fluree-routes
+  [fluree-create-routes
+   fluree-transact-routes
+   fluree-query-routes
+   fluree-history-routes
+   fluree-remote-routes
+   fluree-subscription-routes])
 
 (defn combine-fluree-routes
-  [mw-config & fluree-routes]
+  [mw-config fluree-route-list]
   (let [fluree-middleware (compose-fluree-middleware mw-config)]
     (into ["/fluree" {:middleware fluree-middleware}]
-          fluree-routes)))
+          fluree-route-list)))
 
-(def swagger-ui-handler
-  (swagger-ui/create-swagger-ui-handler {:path   "/"
-                                         :config {:validatorUrl     nil
-                                                  :operationsSorter "alpha"}}))
+(def fallback-handler
+  (let [swagger-ui-handler (swagger-ui/create-swagger-ui-handler
+                            {:path   "/"
+                             :config {:validatorUrl     nil
+                                      :operationsSorter "alpha"}})
+        default-handler    (ring/create-default-handler)]
+    (ring/routes swagger-ui-handler default-handler)))
 
-(defn router
+(def swagger-routes
+  ["/swagger.json"
+   {:get {:no-doc  true
+          :swagger {:info {:title "Fluree HTTP API"}}
+          :handler (swagger/create-swagger-handler)}}])
+
+(defn app-router
   [& routes]
-  (ring/router routes
-               {:data {:coercion   (reitit.coercion.malli/create
-                                    {:strip-extra-keys false})
-                       :muuntaja   (muuntaja/create
-                                    (-> muuntaja/default-options
-                                        (assoc-in [:formats "application/json"] json-format)
-                                        (assoc-in [:formats "application/sparql-query"] sparql-format)
-                                        (assoc-in [:formats "application/jwt"] jwt-format)))
-                       :middleware [swagger/swagger-feature
-                                    muuntaja-mw/format-negotiate-middleware
-                                    muuntaja-mw/format-response-middleware
-                                    muuntaja-mw/format-request-middleware]}}))
+  (let [all-routes (into [swagger-routes] routes)
+        coercer    (reitit.coercion.malli/create {:strip-extra-keys false})
+        formatter  (muuntaja/create
+                    (-> muuntaja/default-options
+                        (assoc-in [:formats "application/json"]
+                                  json-format)
+                        (assoc-in [:formats "application/sparql-query"]
+                                  sparql-format)
+                        (assoc-in [:formats "application/jwt"]
+                                  jwt-format)))
+        middleware [swagger/swagger-feature
+                    muuntaja-mw/format-negotiate-middleware
+                    muuntaja-mw/format-response-middleware
+                    muuntaja-mw/format-request-middleware]]
+    (ring/router all-routes {:data {:coercion   coercer
+                                    :muuntaja   formatter
+                                    :middleware middleware}})))
 
 (defn app
-  [config]
-  (let [swagger-routes  ["/swagger.json"
-                         {:get {:no-doc  true
-                                :swagger {:info {:title "Fluree HTTP API"}}
-                                :handler (swagger/create-swagger-handler)}}]
-        default-handler (ring/routes swagger-ui-handler
-                                     (ring/create-default-handler))
-        fluree-routes   (combine-fluree-routes config
-                                               default-fluree-routes
-                                               fluree-remote-routes
-                                               fluree-subscription-routes)
-        app-router      (router swagger-routes fluree-routes)]
-    (ring/ring-handler app-router default-handler)))
+  ([config]
+   (app config default-fluree-routes))
+  ([config fluree-route-list]
+   (let [fluree-routes (combine-fluree-routes config fluree-route-list)
+         router        (app-router fluree-routes)]
+     (ring/ring-handler router fallback-handler))))
