@@ -395,7 +395,8 @@
          resp)))))
 
 (defn compose-fluree-middleware
-  [conn consensus watcher subscriptions root-identities closed-mode]
+  [{:keys [connection consensus watcher subscriptions root-identities closed-mode]
+    :as _config}]
   (let [exception-middleware (exception/create-exception-middleware
                               (merge
                                exception/default-handlers
@@ -411,8 +412,8 @@
     ;; Seems kind of clunky. Maybe there's a better way? - WSM 2023-04-28
     (sort-middleware-by-weight [[1 exception-middleware]
                                 [10 wrap-cors]
-                                [10 (partial wrap-assoc-system conn consensus watcher
-                                             subscriptions)]
+                                [10 (partial wrap-assoc-system connection consensus
+                                             watcher subscriptions)]
                                 [50 unwrap-credential]
                                 [100 wrap-set-fuel-header]
                                 [200 coercion/coerce-exceptions-middleware]
@@ -479,6 +480,12 @@
               {:status 400
                :body   "Invalid websocket upgrade request"}))}]])
 
+(defn combine-fluree-routes
+  [mw-config & fluree-routes]
+  (let [fluree-middleware (compose-fluree-middleware mw-config)]
+    (into ["/fluree" {:middleware fluree-middleware}]
+          fluree-routes)))
+
 (def swagger-ui-handler
   (swagger-ui/create-swagger-ui-handler {:path   "/"
                                          :config {:validatorUrl     nil
@@ -500,19 +507,16 @@
                                     muuntaja-mw/format-request-middleware]}}))
 
 (defn app
-  [conn consensus watcher subscriptions root-identities closed-mode]
-  (log/debug "HTTP server running with Fluree connection:" conn)
-  (let [swagger-routes       ["/swagger.json"
-                              {:get {:no-doc  true
-                                     :swagger {:info {:title "Fluree HTTP API"}}
-                                     :handler (swagger/create-swagger-handler)}}]
-        default-handler      (ring/routes swagger-ui-handler
-                                          (ring/create-default-handler))
-        fluree-middleware    (compose-fluree-middleware conn consensus watcher subscriptions
-                                                        root-identities closed-mode)
-        fluree-routes        (into ["/fluree" {:middleware fluree-middleware}]
-                                   (conj default-fluree-routes
-                                         fluree-remote-routes
-                                         fluree-subscription-routes))
-        app-router           (router swagger-routes fluree-routes)]
+  [config]
+  (let [swagger-routes  ["/swagger.json"
+                         {:get {:no-doc  true
+                                :swagger {:info {:title "Fluree HTTP API"}}
+                                :handler (swagger/create-swagger-handler)}}]
+        default-handler (ring/routes swagger-ui-handler
+                                     (ring/create-default-handler))
+        fluree-routes   (combine-fluree-routes config
+                                               default-fluree-routes
+                                               fluree-remote-routes
+                                               fluree-subscription-routes)
+        app-router      (router swagger-routes fluree-routes)]
     (ring/ring-handler app-router default-handler)))

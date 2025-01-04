@@ -94,8 +94,11 @@
   (standalone/stop transactor))
 
 (defmethod ig/init-key :fluree.server.api/handler
-  [_ {:keys [connection consensus watcher subscriptions root-identities closed-mode]}]
-  (handler/app connection consensus watcher subscriptions root-identities closed-mode))
+  [_ config]
+  (-> config
+      (select-keys [:connection :consensus :watcher :subscriptions :root-identities
+                    :closed-mode])
+      handler/app))
 
 (defmethod ig/init-key :fluree.server.http/jetty
   [_ {:keys [handler] :as config}]
