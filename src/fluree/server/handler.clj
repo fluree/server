@@ -7,11 +7,11 @@
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [fluree.db.validation :as v]
-            [fluree.server.consensus.subscriptions :as subscriptions]
             [fluree.server.handlers.create :as create]
             [fluree.server.handlers.ledger :as ledger]
             [fluree.server.handlers.remote-resource :as remote]
             [fluree.server.handlers.transact :as srv-tx]
+            [fluree.server.handlers.subscription :as subscription]
             [malli.core :as m]
             [muuntaja.core :as muuntaja]
             [muuntaja.format.core :as mf]
@@ -58,6 +58,10 @@
               [:t TValue]
               [:tx-id DID]
               [:commit LedgerAddress]]]))
+
+(def SubscriptionRequestBody
+  (m/schema [:fn {:error/message {:en "Invalid websocket upgrade request"}}
+             http/ws-upgrade-request?]))
 
 (def TransactRequestBody
   (m/schema [:map-of :any :any]))
@@ -310,75 +314,6 @@
                     (String. (.readAllBytes ^InputStream data)
                              ^String charset))))]}))
 
-(defn websocket-handler
-  [conn subscriptions]
-  ;; Mostly copy-pasta from
-  ;; https://github.com/sunng87/ring-jetty9-adapter/blob/master/examples/rj9a/websocket.clj
-  (fn [upgrade-request]
-    (let [provided-subprotocols (:websocket-subprotocols upgrade-request)
-          provided-extensions   (:websocket-extensions upgrade-request)
-          subscription-id       (str (random-uuid))
-          subscription-chan     (async/chan)]
-      {;; provide websocket callbacks
-       :on-connect  (fn on-connect [ws]
-                      (subscriptions/client-message
-                       {:msg-type             :on-connect
-                        :http/ws              ws
-                        :http/sub-id          subscription-id
-                        :http/sub-chan        subscription-chan
-                        :fluree/subscriptions subscriptions
-                        :fluree/connection    conn}))
-       :on-text     (fn on-text [ws text-message]
-                      (subscriptions/client-message
-                       {:msg-type             :on-text
-                        :payload              text-message
-                        :http/ws              ws
-                        :http/sub-id          subscription-id
-                        :http/sub-chan        subscription-chan
-                        :fluree/subscriptions subscriptions
-                        :fluree/connection    conn}))
-       :on-bytes    (fn on-bytes [ws payload offset len]
-                      (subscriptions/client-message
-                       {:msg-type             :on-bytes
-                        :payload              payload
-                        :offset               offset
-                        :len                  len
-                        :http/ws              ws
-                        :http/sub-id          subscription-id
-                        :http/sub-chan        subscription-chan
-                        :fluree/subscriptions subscriptions
-                        :fluree/connection    conn}))
-       :on-close    (fn on-close [ws status-code reason]
-                      (subscriptions/client-message
-                       {:msg-type             :on-close
-                        :status-code          status-code
-                        :reason               reason
-                        :http/ws              ws
-                        :http/sub-id          subscription-id
-                        :http/sub-chan        subscription-chan
-                        :fluree/subscriptions subscriptions
-                        :fluree/connection    conn}))
-       :on-ping     (fn on-ping [ws payload]
-                      (subscriptions/client-message
-                       {:msg-type             :on-ping
-                        :payload              payload
-                        :http/ws              ws
-                        :http/sub-id          subscription-id
-                        :http/sub-chan        subscription-chan
-                        :fluree/subscriptions subscriptions
-                        :fluree/connection    conn}))
-       :on-error    (fn on-error [ws e]
-                      (subscriptions/client-message
-                       {:msg-type             :on-error
-                        :error                e
-                        :http/ws              ws
-                        :http/sub-id          subscription-id
-                        :http/sub-chan        subscription-chan
-                        :fluree/subscriptions subscriptions
-                        :fluree/connection    conn}))
-       :subprotocol (first provided-subprotocols)
-       :extensions  provided-extensions})))
-
 (defn debug-middleware
   "Put this in anywhere in your middleware chain to get some insight into what's
   happening there. Logs the request and response at DEBUG level, prefixed with
@@ -468,11 +403,9 @@
 
 (def fluree-subscription-routes
   ["/subscribe"
-   {:get (fn [{:fluree/keys [conn subscriptions] :as req}]
-           (if (http/ws-upgrade-request? req)
-             (http/ws-upgrade-response (websocket-handler conn subscriptions))
-             {:status 400
-              :body   "Invalid websocket upgrade request"}))}])
+   {:get {:summary    "Subscribe to ledger updates"
+          :parameters {:body SubscriptionRequestBody}
+          :handler    #'subscription/default}}])
 
 (def default-fluree-routes
   #{fluree-create-routes
