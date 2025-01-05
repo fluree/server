@@ -72,7 +72,6 @@
         (log/error "Unexpected event message - expected two-tuple of [event-type event-data], "
                    "and of a supported event type. Received:" event e)))))
 
-
 (defn new-transaction-queue
   ([conn subscriptions watcher]
    (new-transaction-queue conn subscriptions watcher nil))

@@ -50,79 +50,34 @@
                (ws/close! ws))))
   sub-state)
 
-(defn replace-existing
-  [{:keys [chan ws] :as sub} sub-chan websocket]
-  (when chan
-    (close-chan chan "Duplicate subscription"))
-  (when ws
-    (ws/close! ws))
-  (assoc sub :chan sub-chan, :ws websocket))
-
-(defn establish-subscription
-  "Establish a new communication subscription with a client using async chan
-  to send messages"
-  [sub-atom websocket sub-id sub-chan opts]
-  (log/debug "Establishing new subscription id:" sub-id "with opts" opts)
-  (swap! sub-atom update sub-id replace-existing sub-chan websocket))
-
-(defn close-subscription
-  [sub-atom sub-id status-code reason]
-  (log/debug "Closing websocket subscription for sub-id:" sub-id
-             "with status code:" status-code "and reason:" reason)
-  (let [{:keys [chan ws]} (get @sub-atom sub-id)]
-    (close-chan chan nil)
-    (try (ws/close! ws)
-         (catch Exception _ :ignore))
-    (swap! sub-atom dissoc sub-id)))
-
-(defn subscribe-ledger
-  "Subscribe to ledger"
-  [sub-atom sub-id {:keys [ledger serialization] :as request}]
-  (log/debug "Subscribe websocket request by sub-id" sub-id "request:" request)
-  (swap! sub-atom update sub-id
-         (fn [existing-sub]
-           (if existing-sub
-             (assoc-in existing-sub [:ledgers ledger] {:serialization serialization})
-             (log/info "Existing subscription for sub-id: " sub-id "cannot be found, assume just closed.")))))
-
-(defn unsubscribe-ledger
-  "Unsubscribe from ledger"
-  [sub-atom sub-id {:keys [ledger] :as request}]
-  (log/debug "Unsubscribe websocket request by sub-id:" sub-id "request:" request)
-  (swap! sub-atom update-in [sub-id :ledgers]
-         (fn [ledger-subs]
-           (if ledger-subs
-             (dissoc ledger-subs ledger)
-             (log/info "Existing subscription for sub-id:" sub-id "cannot be found, assume just closed.")))))
-
 (defn send-message
   "Sends a message to an individual socket. If an exception occurs,
   closes the socket and removes it from the subscription map."
-  [sub-atom sub-id message]
-  (let [ws (get-in @sub-atom [sub-id :ws])]
+  [sub-state sub-id message]
+  (let [ws (get-in @sub-state [sub-id :ws])]
     (try
       (ws/send! ws message)
       (catch IOException _
         (log/info "Websocket channel closed (java.io.IOException) for sub-id:" sub-id))
       (catch ClosedChannelException _
         (log/info "Websocket channel closed for sub-id: " sub-id)
-        (close-subscription sub-atom sub-id nil nil))
+        (close-subscription sub-state sub-id nil nil))
       (catch Exception e
         (log/error e "Error sending message to websocket subscriber:" sub-id)
-        (close-subscription sub-atom sub-id nil nil)))))
+        (close-subscription sub-state sub-id nil nil)))))
 
 (defn send-message-to-all
   "Sends a message to all subscriptions. Message sent as JSON stringified map
   in the form: {action: commit, ledger: my/ledger, data: {...}}"
-  [sub-atom action ledger-alias data]
+  [sub-state action ledger-alias data]
   (let [data*   (if (string? data)
                   (json/parse data false)
                   data)
         message (json/stringify {"action" action
                                  "ledger" ledger-alias
                                  "data"   data*})
-        sub-ids (all-sub-ids @sub-atom)]
-    (run! #(send-message sub-atom % message) sub-ids)))
+        sub-ids (all-sub-ids @sub-state)]
+    (run! #(send-message sub-state % message) sub-ids)))
 
 (defrecord Subscriptions [state]
   Publicizer
@@ -146,3 +101,48 @@
 (defn close
   [^Subscriptions subs]
   (.close subs))
+
+(defn replace-existing
+  [{:keys [chan ws] :as sub} sub-chan websocket]
+  (when chan
+    (close-chan chan "Duplicate subscription"))
+  (when ws
+    (ws/close! ws))
+  (assoc sub :chan sub-chan, :ws websocket))
+
+(defn establish-subscription
+  "Establish a new communication subscription with a client using async chan
+  to send messages"
+  [{:keys [state] :as _subscriptions} websocket sub-id sub-chan opts]
+  (log/debug "Establishing new subscription id:" sub-id "with opts" opts)
+  (swap! state update sub-id replace-existing sub-chan websocket))
+
+(defn close-subscription
+  [{:keys [state] :as _subscriptions} sub-id status-code reason]
+  (log/debug "Closing websocket subscription for sub-id:" sub-id
+             "with status code:" status-code "and reason:" reason)
+  (let [{:keys [chan ws]} (get @state sub-id)]
+    (close-chan chan nil)
+    (try (ws/close! ws)
+         (catch Exception _ :ignore))
+    (swap! state dissoc sub-id)))
+
+(defn subscribe-ledger
+  "Subscribe to ledger"
+  [{:keys [state] :as _subscriptions} sub-id {:keys [ledger serialization] :as request}]
+  (log/debug "Subscribe websocket request by sub-id" sub-id "request:" request)
+  (swap! state update sub-id
+         (fn [existing-sub]
+           (if existing-sub
+             (assoc-in existing-sub [:ledgers ledger] {:serialization serialization})
+             (log/info "Existing subscription for sub-id: " sub-id "cannot be found, assume just closed.")))))
+
+(defn unsubscribe-ledger
+  "Unsubscribe from ledger"
+  [{:keys [state] :as _subscriptions} sub-id {:keys [ledger] :as request}]
+  (log/debug "Unsubscribe websocket request by sub-id:" sub-id "request:" request)
+  (swap! state update-in [sub-id :ledgers]
+         (fn [ledger-subs]
+           (if ledger-subs
+             (dissoc ledger-subs ledger)
+             (log/info "Existing subscription for sub-id:" sub-id "cannot be found, assume just closed.")))))

@@ -2,8 +2,8 @@
   (:require [clojure.core.async :as async]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
-            [fluree.server.handlers.shared :refer [defhandler]]
             [fluree.server.consensus.subscriptions :as subscriptions]
+            [fluree.server.handlers.shared :refer [defhandler]]
             [ring.adapter.jetty9 :as http]))
 
 (set! *warn-on-reflection* true)

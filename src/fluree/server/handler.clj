@@ -10,8 +10,8 @@
             [fluree.server.handlers.create :as create]
             [fluree.server.handlers.ledger :as ledger]
             [fluree.server.handlers.remote-resource :as remote]
-            [fluree.server.handlers.transact :as srv-tx]
             [fluree.server.handlers.subscription :as subscription]
+            [fluree.server.handlers.transact :as srv-tx]
             [malli.core :as m]
             [muuntaja.core :as muuntaja]
             [muuntaja.format.core :as mf]
@@ -388,18 +388,18 @@
 
 (def fluree-remote-routes
   ["/remote"
-    ["/latestCommit"
-     {:post {:summary    "Read latest commit for a ledger"
-             :parameters {:body LatestCommitRequestBody}
-             :handler    #'remote/latest-commit}}]
-    ["/resource"
-     {:post {:summary    "Read resource from address"
-             :parameters {:body AddressRequestBody}
-             :handler    #'remote/read-resource-address}}]
-    ["/addresses"
-     {:post {:summary    "Retrieve ledger address from alias"
-             :parameters {:body AliasRequestBody}
-             :handler    #'remote/published-ledger-addresses}}]])
+   ["/latestCommit"
+    {:post {:summary    "Read latest commit for a ledger"
+            :parameters {:body LatestCommitRequestBody}
+            :handler    #'remote/latest-commit}}]
+   ["/resource"
+    {:post {:summary    "Read resource from address"
+            :parameters {:body AddressRequestBody}
+            :handler    #'remote/read-resource-address}}]
+   ["/addresses"
+    {:post {:summary    "Retrieve ledger address from alias"
+            :parameters {:body AliasRequestBody}
+            :handler    #'remote/published-ledger-addresses}}]])
 
 (def fluree-subscription-routes
   ["/subscribe"
