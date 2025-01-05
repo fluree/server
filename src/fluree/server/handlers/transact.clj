@@ -34,8 +34,9 @@
           (watcher/deliver-error watcher tx-id persist-resp))))))
 
 (defn transact!
-  [p consensus watcher expanded-txn opts]
-  (let [ledger-id     (get-first-value expanded-txn const/iri-ledger)
+  [consensus watcher expanded-txn opts]
+  (let [p             (promise)
+        ledger-id     (get-first-value expanded-txn const/iri-ledger)
         tx-id         (derive-tx-id (:raw-txn opts))
         final-resp-ch (watcher/create-watch watcher tx-id)]
 
@@ -70,7 +71,8 @@
             (deliver p {:ledger ledger-id
                         :commit commit-address
                         :t      t
-                        :tx-id  tx-id})))))))
+                        :tx-id  tx-id})))))
+    p))
 
 (defn throw-ledger-doesnt-exist
   [ledger]
@@ -80,20 +82,16 @@
                                 :body   {:error err-message}}}))))
 
 (defhandler default
-  [{:keys          [fluree/conn fluree/consensus fluree/watcher credential/did raw-txn]
+  [{:keys [fluree/conn fluree/consensus fluree/watcher credential/did raw-txn]
     {:keys [body]} :parameters}]
   (let [txn-context    (ctx-util/txn-context body)
         [expanded-txn] (-> (ctx-util/use-fluree-context body)
                            jld-processor/expand
                            util/sequential)
-        ledger-id  (-> expanded-txn (get const/iri-ledger) (get 0) (get "@value"))
-        resp-p     (promise)]
-    (log/trace "parsed transact req:" expanded-txn)
-    (or (deref! (fluree/exists? conn ledger-id))
-        (throw-ledger-doesnt-exist ledger-id))
-    ;; kick of async process that will eventually deliver resp or exception to resp-p
-    (transact! resp-p consensus watcher expanded-txn (cond-> {:context txn-context :raw-txn raw-txn}
-                                                       did (assoc :did did)))
-
-    {:status 200
-     :body   (deref! resp-p)}))
+        ledger-id      (get-first-value expanded-txn const/iri-ledger)]
+    (if (deref! (fluree/exists? conn ledger-id))
+      (let [opts   (cond-> {:context txn-context :raw-txn raw-txn}
+                     did (assoc :did did))
+            resp-p (transact! consensus watcher expanded-txn opts)]
+        {:status 200, :body (deref! resp-p)})
+      (throw-ledger-doesnt-exist ledger-id))))
