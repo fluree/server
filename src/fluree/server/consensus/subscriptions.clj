@@ -50,6 +50,26 @@
                (ws/close! ws))))
   sub-state)
 
+(defn replace-existing
+  [{:keys [chan ws] :as sub} sub-chan websocket]
+  (when chan
+    (close-chan chan "Duplicate subscription"))
+  (when ws
+    (ws/close! ws))
+  (assoc sub :chan sub-chan, :ws websocket))
+
+(defn establish-subscription-state
+  [state sub-id sub-chan websocket]
+  (swap! state update sub-id replace-existing sub-chan websocket))
+
+(defn close-subscription-state
+  [state sub-id]
+  (let [{:keys [chan ws]} (get @state sub-id)]
+    (close-chan chan nil)
+    (try (ws/close! ws)
+         (catch Exception _ :ignore))
+    (swap! state dissoc sub-id)))
+
 (defn send-message
   "Sends a message to an individual socket. If an exception occurs,
   closes the socket and removes it from the subscription map."
@@ -61,10 +81,10 @@
         (log/info "Websocket channel closed (java.io.IOException) for sub-id:" sub-id))
       (catch ClosedChannelException _
         (log/info "Websocket channel closed for sub-id: " sub-id)
-        (close-subscription sub-state sub-id nil nil))
+        (close-subscription-state sub-state sub-id))
       (catch Exception e
         (log/error e "Error sending message to websocket subscriber:" sub-id)
-        (close-subscription sub-state sub-id nil nil)))))
+        (close-subscription-state sub-state sub-id)))))
 
 (defn send-message-to-all
   "Sends a message to all subscriptions. Message sent as JSON stringified map
@@ -102,30 +122,18 @@
   [^Subscriptions subs]
   (.close subs))
 
-(defn replace-existing
-  [{:keys [chan ws] :as sub} sub-chan websocket]
-  (when chan
-    (close-chan chan "Duplicate subscription"))
-  (when ws
-    (ws/close! ws))
-  (assoc sub :chan sub-chan, :ws websocket))
-
 (defn establish-subscription
   "Establish a new communication subscription with a client using async chan
   to send messages"
   [{:keys [state] :as _subscriptions} websocket sub-id sub-chan opts]
   (log/debug "Establishing new subscription id:" sub-id "with opts" opts)
-  (swap! state update sub-id replace-existing sub-chan websocket))
+  (establish-subscription-state state sub-id sub-chan websocket))
 
 (defn close-subscription
   [{:keys [state] :as _subscriptions} sub-id status-code reason]
   (log/debug "Closing websocket subscription for sub-id:" sub-id
              "with status code:" status-code "and reason:" reason)
-  (let [{:keys [chan ws]} (get @state sub-id)]
-    (close-chan chan nil)
-    (try (ws/close! ws)
-         (catch Exception _ :ignore))
-    (swap! state dissoc sub-id)))
+  (close-subscription-state state sub-id))
 
 (defn subscribe-ledger
   "Subscribe to ledger"
