@@ -75,6 +75,13 @@
               [:tx-id DID]
               [:commit  LedgerAddress]]]))
 
+(def TransactCallbackRequestBody
+  (m/schema [:map-of :any :any]))
+
+(def TransactCallbackResponseBody
+  (m/schema [:and
+             [:map-of :keyword :any]]))
+
 (def FqlQuery (m/schema (-> (fql/query-schema [])
                             ;; hack to make query schema open instead of closed
                             ;; TODO: remove once db is updated to open
@@ -407,13 +414,24 @@
           :parameters {:body SubscriptionRequestBody}
           :handler    #'subscription/default}}])
 
+(def fluree-callback-routes
+  ["/callback"
+   ["/transaction"
+    {:post {:summary    "Report progress of delegated transaction processing"
+            :parameters {:body TransactCallbackRequestBody}
+            :responses  {200 {:body TransactCallbackResponseBody}
+                         400 {:body ErrorResponse}
+                         500 {:body ErrorResponse}}
+            :handler    #'srv-tx/callback}}]])
+
 (def default-fluree-routes
   #{fluree-create-routes
     fluree-transact-routes
     fluree-query-routes
     fluree-history-routes
     fluree-remote-routes
-    fluree-subscription-routes})
+    fluree-subscription-routes
+    fluree-callback-routes})
 
 (defn combine-fluree-routes
   [mw-config fluree-route-list]
