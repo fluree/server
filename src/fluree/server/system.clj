@@ -131,16 +131,12 @@
        slurp
        (start-config profile))))
 
-(defn read-resource
-  [resource-name]
-  (-> resource-name io/resource slurp))
-
 (defn start-resource
   ([resource-name]
    (start-resource resource-name :prod))
   ([resource-name profile]
    (-> resource-name
-       read-resource
+       config/read-resource
        (start-config profile))))
 
 (def start
