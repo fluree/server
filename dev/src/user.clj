@@ -1,5 +1,6 @@
 (ns user
   (:require [clojure.string :as str]
+            [fluree.db.connection.system :as conn-system]
             [fluree.server.handlers.transact :as tx-handler]
             [fluree.server.handlers.create :as create-handler]
             [fluree.server.consensus.raft.handler :as consensus-handler]
@@ -10,15 +11,17 @@
             [integrant.core :as ig]
             [integrant.repl :refer [clear go halt init reset reset-all]]))
 
+
 ;; Register dev-config as the default config
-(def sys-config (ig/expand (config/load-resource "config.json" :dev)))
+(def sys-config (config/read-resource "file-config.jsonld"))
 
 (defn set-config!
   "Sets a new config for use with (go)"
   [config]
   (alter-var-root #'sys-config (constantly config)))
 
-(integrant.repl/set-prep! (fn [] sys-config))
+(integrant.repl/set-prep! (fn []
+                            (-> sys-config config/parse conn-system/prepare)))
 
 (defn start!
   "Starts dev repl. Optionally provide a config
@@ -28,20 +31,3 @@
   ([config]
    (set-config! (ig/expand config))
    (go)))
-
-(comment
-
- (start!) ;; default :dev profile config
-
- ;; single-server raft config startup
- (start! (config/load-resource "config-raft.json" :dev))
-
- (start! (config/load-resource "config-sid-migration.json" :dev))
-
- ;; 3 server raft config startup
- (start! (config/load-resource "config-raft.json" :dev-3-server-1))
- (start! (config/load-resource "config-raft.json" :dev-3-server-2))
- (start! (config/load-resource "config-raft.json" :dev-3-server-3))
-
-
- )
