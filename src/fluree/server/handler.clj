@@ -263,9 +263,9 @@
           policy-values   (when-let [pv (get-in req [:headers "fluree-policy-values"])]
                             (try
                               (let [pv* (json/parse pv false)]
-                                (if (map? pv*)
+                                (if (sequential? pv*)
                                   pv*
-                                  (throw (ex-info "Invalid Fluree-Policy-Values header, it must be a map of variables to values."
+                                  (throw (ex-info "Invalid Fluree-Policy-Values header, it must be a valid values binding: [[\"?varA\" \"?varB\"] [[<a1> <b1>] [<a2> <b2>] ...]]"
                                                   {:status 400}))))
                               (catch Exception _
                                 (throw (ex-info "Invalid Fluree-Policy-Values header: must be JSON."
