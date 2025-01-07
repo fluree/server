@@ -45,6 +45,7 @@
                                       {"@id"          "ex:ssnRestriction"
                                        "@type"        ["f:AccessPolicy" "ex:EmployeePolicy"]
                                        "f:onProperty" [{"@id" "schema:ssn"}]
+                                       "f:required"   true
                                        "f:action"     [{"@id" "f:view"} {"@id" "f:modify"}]
                                        "f:query"      {"@type"  "@json"
                                                        "@value" {"@context" {"ex" "http://example.org/ns/"}
@@ -272,6 +273,7 @@
                                        "@type"        ["f:AccessPolicy" "ex:EmployeePolicy"]
                                        "f:onProperty" [{"@id" "schema:ssn"}]
                                        "f:action"     [{"@id" "f:view"} {"@id" "f:modify"}]
+                                       "f:required"   true
                                        "f:query"      {"@type"  "@json"
                                                        "@value" {"@context" {"ex" "http://example.org/ns/"}
                                                                  "where"    {"@id"     "?$identity"
@@ -295,7 +297,7 @@
                         (json/write-value-as-string
                          (assoc secret-query
                                 "opts" {"policyClass"  "ex:EmployeePolicy"
-                                        "policyValues" {"?$identity" alice-did}}))
+                                        "policyValues" ["?$identity" [alice-did]]}))
                         :headers json-headers}
           query-res    (api-post :query query-req)]
 
@@ -315,7 +317,7 @@
                                                    schema:ssn ?ssn.}")
                          :headers (assoc sparql-headers
                                          "Fluree-Policy-Class" "ex:EmployeePolicy"
-                                         "Fluree-Policy-Values" (json/write-value-as-string {"?$identity" alice-did}))}
+                                         "Fluree-Policy-Values" (json/write-value-as-string ["?$identity" [alice-did]]))}
               query-res (api-post :query query-req)]
 
           (is (= [["ex:alice" "111-11-1111"]]
@@ -369,6 +371,7 @@
                                       "@type"        ["f:AccessPolicy" "ex:EmployeePolicy"]
                                       "f:onProperty" [{"@id" "schema:ssn"}]
                                       "f:action"     [{"@id" "f:view"} {"@id" "f:modify"}]
+                                      "f:required"   true
                                       "f:query"      {"@type"  "@json"
                                                       "@value" {"@context" {"ex" "http://example.org/ns/"}
                                                                 "where"    {"@id"     "?$identity"
@@ -378,7 +381,7 @@
                                       "f:action" {"@id" "f:view"}
                                       "f:query"  {"@type"  "@json"
                                                   "@value" {}}}]}
-          policy-values {"?$identity" alice-did}
+          policy-values ["?$identity" [alice-did]]
           query-req     {:body
                          (json/write-value-as-string
                           (assoc secret-query
