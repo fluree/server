@@ -30,10 +30,9 @@
                             fluree/db
                             (fluree/stage txn opts)
                             deref!)
-          commit-result (deref!
-                         ;; following uses :file-data? and will return map with {:keys [db data-file commit-file]}
-                         (fluree/commit! ledger staged-db {:file-data? true}))
-          broadcast-msg (events/transaction-committed params commit-result)]
+          result        (deref!
+                         (fluree/apply-stage! ledger staged-db))
+          broadcast-msg (events/transaction-committed params result)]
       (broadcast/announce-new-ledger! subscriptions watcher broadcast-msg))))
 
 (defn transact!
@@ -50,9 +49,9 @@
                             fluree/db
                             (fluree/stage txn opts)
                             deref!)
-          commit-result (deref!
-                         (fluree/commit! ledger staged-db {:file-data? true}))
-          broadcast-msg (events/transaction-committed params commit-result)]
+          result        (deref!
+                         (fluree/apply-stage! ledger staged-db))
+          broadcast-msg (events/transaction-committed params result)]
       (broadcast/announce-new-commit! subscriptions watcher broadcast-msg))))
 
 (defn process-event
