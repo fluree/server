@@ -13,7 +13,7 @@
         encrypted-flag (.get bb)
         encrypted?     (= 2 encrypted-flag)                 ;; first byte is encrypted? (2) or not (1)
         _              (when-not encrypted?
-                         (throw (ex-info (str "Attempting to read encrypted file, but not flagged as encrypted.")
+                         (throw (ex-info "Attempting to read encrypted file, but not flagged as encrypted."
                                          {:status 500
                                           :error  :db/storage-error})))
         iv             (byte-array 16)                      ;; initialization vector

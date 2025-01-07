@@ -1,8 +1,9 @@
 (ns fluree.server.config
   (:require [clojure.java.io :as io]
-            [fluree.db.util.json :as json]
-            [fluree.server.config.env :as env]
-            [fluree.server.config.validation :as validation]))
+            [fluree.db.connection.config :as conn-config]
+            [fluree.db.util.core :as util :refer [get-id  get-first-value]]
+            [fluree.server.config.validation :as validation]
+            [fluree.server.config.vocab :as vocab]))
 
 (set! *warn-on-reflection* true)
 
@@ -18,43 +19,56 @@
 
 (defn apply-overrides
   [config profile]
-  (let [profile-overrides (get-in config [:profiles profile])
-        env-overrides     (env/config)]
+  (let [profile-overrides (get-in config [:profiles profile])]
     (-> config
         (dissoc :profiles)
-        (deep-merge profile-overrides env-overrides))))
+        (deep-merge profile-overrides))))
 
-(defn with-config-ns
-  [k]
-  (keyword "fluree.server.config" (name k)))
+(defn consensus?
+  [node]
+  (conn-config/type? node vocab/consensus-type))
 
-(defn with-namespaced-keys
-  [cfg]
-  (reduce-kv (fn [m k v]
-               (assoc m (with-config-ns k) v))
-             {} cfg))
+(defn raft-consensus?
+  [node]
+  (and (consensus? node)
+       (-> node (get-first-value vocab/consensus-protocol) (= "raft"))))
+
+(defn standalone-consensus?
+  [node]
+  (and (consensus? node)
+       (-> node (get-first-value vocab/consensus-protocol) (= "standalone"))))
+
+(defn http-api?
+  [node]
+  (and (conn-config/type? node vocab/api-type)
+       (contains? node vocab/http-port)))
+
+(defn jetty-api?
+  [node]
+  (http-api? node))
+
+(defn derive-server-node-id
+  [node]
+  (let [id (get-id node)]
+    (cond
+      (raft-consensus? node)       (derive id :fluree.server.consensus/raft)
+      (standalone-consensus? node) (derive id :fluree.server.consensus/standalone)
+      (jetty-api? node)            (derive id :fluree.server.http/jetty) ; TODO: Enable other http servers
+      :else                        (conn-config/derive-node-id node))
+    node))
 
 (defn finalize
   [config profile]
   (-> config
       (apply-overrides profile)
-      validation/coerce
-      with-namespaced-keys))
-
-(defn parse-config
-  [cfg]
-  (json/parse cfg false))
+      validation/coerce))
 
 (defn read-resource
   [resource-name]
-  (-> resource-name
-      io/resource
-      slurp
-      parse-config))
+  (-> resource-name io/resource slurp))
 
-(defn read-file
-  [path]
-  (-> path
-      io/file
-      slurp
-      parse-config))
+(defn parse
+  [cfg]
+  (-> cfg
+      (conn-config/parse (map derive-server-node-id))
+      (assoc :fluree.server/subscriptions {})))

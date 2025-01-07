@@ -83,7 +83,7 @@
         (catch Exception e
           (log/error (str "Unable to create storage directory: " path
                           " with error: " (.getMessage e) ". Permission issue?"))
-          (log/error (str "Fatal Error, shutting down!"))
+          (log/error "Fatal Error, shutting down!")
           (System/exit 1))))
     (catch Exception e (throw e))))
 
