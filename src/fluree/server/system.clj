@@ -139,8 +139,7 @@
    (start-resource resource-name :prod))
   ([resource-name profile]
    (-> resource-name
-       io/resource
-       slurp
+       config/read-resource
        (start-config profile))))
 
 (def start

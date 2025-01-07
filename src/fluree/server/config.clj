@@ -1,5 +1,6 @@
 (ns fluree.server.config
-  (:require [fluree.db.connection.config :as conn-config]
+  (:require [clojure.java.io :as io]
+            [fluree.db.connection.config :as conn-config]
             [fluree.db.util.core :as util :refer [get-id  get-first-value]]
             [fluree.server.config.validation :as validation]
             [fluree.server.config.vocab :as vocab]))
@@ -61,6 +62,10 @@
   (-> config
       (apply-overrides profile)
       validation/coerce))
+
+(defn read-resource
+  [resource-name]
+  (-> resource-name io/resource slurp))
 
 (defn parse
   [cfg]
