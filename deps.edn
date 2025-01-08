@@ -61,6 +61,14 @@
    :exec-fn     kaocha.runner/exec-fn
    :exec-args   {:kaocha.filter/skip-meta [:pending]}}
 
+  :benchmark
+  {:extra-paths ["test"]
+   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.88.1376"}
+                 clj-http/clj-http   {:mvn/version "3.13.0"}}
+   :exec-fn     kaocha.runner/exec-fn
+   :exec-args   {:kaocha.filter/focus-meta [:benchmark]
+                 :kaocha.filter/focus ["fluree.server.integration.benchmark-test"]}}
+
   :pending-tests
   {:extra-paths ["test"]
    :extra-deps  {lambdaisland/kaocha {:mvn/version "1.88.1376"}

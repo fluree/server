@@ -29,6 +29,10 @@ docker-push:
 test: prepare
 	clojure -X:test
 
+.PHONY: benchmark
+benchmark: prepare
+	clojure -X:benchmark
+
 .PHONY: pending-tests
 pending-tests: prepare
 	clojure -X:pending-tests
