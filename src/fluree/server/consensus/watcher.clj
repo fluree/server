@@ -36,14 +36,16 @@
   [state max-txn-wait-ms id]
   (let [promise-ch (async/promise-chan)]
     (swap! state assoc id promise-ch)
-    (async/go
-      (async/<! (async/timeout max-txn-wait-ms))
-      ;; we close the promise chan when delivering, so put! will be false if
-      ;; response already delivered
-      (when (async/put! promise-ch :timeout)
-        (log/debug "Timed out waiting for transaction to complete:" id
-                   "after" max-txn-wait-ms "ms."))
-      (remove-watch-state state id))
+    (when (and max-txn-wait-ms
+               (< max-txn-wait-ms 0))
+      (async/go
+        (async/<! (async/timeout max-txn-wait-ms))
+        ;; we close the promise chan when delivering, so put! will be false if
+        ;; response already delivered
+        (when (async/put! promise-ch :timeout)
+          (log/debug "Timed out waiting for transaction to complete:" id
+                     "after" max-txn-wait-ms "ms."))
+        (remove-watch-state state id)))
     ;; return promise ch, will end up with result or closed at end of wait-ms
     promise-ch))
 
@@ -79,6 +81,8 @@
     (deliver-error-state state id error)))
 
 (defn start
+  ([]
+   (start 0))
   ([max-txn-wait-ms]
    (start max-txn-wait-ms (new-watcher-atom)))
   ([max-txn-wait-ms watcher-atom]
