@@ -11,19 +11,23 @@
 
 (def ^:private mb-size (* 1024 1024)) ; 1 MB in bytes
 
-(def ^:private test-data-dir "./benchmark-data")
+(def ^:private test-data-dir "benchmark-data")
 
 (def ^:private benchmark-results (atom []))
 
 (defn- clear-test-data-dir
-  "Deletes all contents of the test-data-dir."
+  "Deletes all contents of the test-data-dir, including files and directories."
   []
-  (let [dir (io/file test-data-dir)]
-    (when (.exists dir)
-      (doseq [file (file-seq dir)]
-        (when (.isFile file)
-          (io/delete-file file true)))
-      (println "Cleared test-data-dir contents."))))
+  (let [dir (io/file test-data-dir)
+        abs-dir (.getAbsoluteFile dir)] ;; Resolve to absolute path
+    (println "Clearing test-data-dir contents from " abs-dir)
+    (if (.exists abs-dir)
+      (do
+        (doseq [file (reverse (file-seq abs-dir))] ;; Reverse to delete children first
+          (io/delete-file file true))
+        (io/delete-file abs-dir true)
+        (println "Cleared test-data-dir contents."))
+      (println "Directory does not exist:" (.getAbsolutePath dir)))))
 
 (defn run-benchmarks-with-config
   "Runs all benchmark tests with the specified configuration file."
@@ -33,7 +37,6 @@
                    slurp
                    json/read-value)
         ; Find the API server config and update its port
-        _ (println config)
         updated-port-config (update config "@graph"
                                     (fn [nodes]
                                       (mapv (fn [node]
@@ -41,13 +44,16 @@
                                                 (assoc node "httpPort" @api-port)
                                                 node))
                                             nodes)))
-        updated-config (update updated-port-config "@graph"
-                               (fn [nodes]
-                                 (mapv (fn [node]
-                                         (if (= "Storage" (get node "@type"))
-                                           (assoc node "filePath" test-data-dir)
-                                           node))
-                                       nodes)))
+        updated-config (if (= config-file "file-config.jsonld")
+                         (update updated-port-config "@graph"
+                                 (fn [nodes]
+                                   (mapv (fn [node]
+                                           (if (= "Storage" (get node "@type"))
+                                             (assoc node "filePath" test-data-dir)
+                                             node))
+                                         nodes)))
+                         updated-port-config)
+        _ (println updated-config)
         server (system/start-config updated-config)]
     (try
       (run-tests)
