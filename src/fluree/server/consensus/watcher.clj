@@ -6,13 +6,13 @@
   operations get delivered via consensus, where they end up being picked up by a
   responsible server from a queue, processed, and then the results broadcast
   back out."
-  (:refer-clojure :exclude [remove-watch])
-  (:require [clojure.core.async :as async :refer [<!]]
+  (:require [clojure.core.async :as async]
             [fluree.db.util.log :as log]))
+
+(set! *warn-on-reflection* true)
 
 (defprotocol Watcher
   (create-watch [w id])
-  (remove-watch [w id])
   (deliver-commit [w id t ledger-id commit-address])
   (deliver-error [w id error]))
 
@@ -73,8 +73,6 @@
   Watcher
   (create-watch [_ id]
     (create-watch-state state max-txn-wait-ms id))
-  (remove-watch [_ id]
-    (remove-watch-state state id))
   (deliver-commit [_ id t ledger-id commit-address]
     (deliver-commit-state state id t ledger-id commit-address))
   (deliver-error [_ id error]
