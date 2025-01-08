@@ -69,7 +69,7 @@
     (async/put! resp-chan error)
     (async/close! resp-chan)))
 
-(defrecord LocalWatcher [state max-txn-wait-ms]
+(defrecord TimeoutWatcher [state max-txn-wait-ms]
   Watcher
   (create-watch [_ id]
     (create-watch-state state max-txn-wait-ms id))
@@ -82,10 +82,10 @@
   ([max-txn-wait-ms]
    (start max-txn-wait-ms (new-watcher-atom)))
   ([max-txn-wait-ms watcher-atom]
-   (->LocalWatcher watcher-atom max-txn-wait-ms)))
+   (->TimeoutWatcher watcher-atom max-txn-wait-ms)))
 
 (defn stop
-  [^LocalWatcher watcher]
+  [^TimeoutWatcher watcher]
   (let [watcher-atom (:state watcher)
         watches      (vals @watcher-atom)]
     (run! async/close! watches)
