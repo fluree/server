@@ -1,5 +1,4 @@
 (ns fluree.server.integration.benchmark-test
-  #_{:clj-kondo/ignore [:unused-referred-var]}
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing use-fixtures]]
@@ -12,7 +11,19 @@
 
 (def ^:private mb-size (* 1024 1024)) ; 1 MB in bytes
 
+(def ^:private test-data-dir "./benchmark-data")
+
 (def ^:private benchmark-results (atom []))
+
+(defn- clear-test-data-dir
+  "Deletes all contents of the test-data-dir."
+  []
+  (let [dir (io/file test-data-dir)]
+    (when (.exists dir)
+      (doseq [file (file-seq dir)]
+        (when (.isFile file)
+          (io/delete-file file true)))
+      (println "Cleared test-data-dir contents."))))
 
 (defn run-benchmarks-with-config
   "Runs all benchmark tests with the specified configuration file."
@@ -23,11 +34,18 @@
                    json/read-value)
         ; Find the API server config and update its port
         _ (println config)
-        updated-config (update config "@graph"
+        updated-port-config (update config "@graph"
+                                    (fn [nodes]
+                                      (mapv (fn [node]
+                                              (if (= "API" (get node "@type"))
+                                                (assoc node "httpPort" @api-port)
+                                                node))
+                                            nodes)))
+        updated-config (update updated-port-config "@graph"
                                (fn [nodes]
                                  (mapv (fn [node]
-                                         (if (= "API" (get node "@type"))
-                                           (assoc node "httpPort" @api-port)
+                                         (if (= "Storage" (get node "@type"))
+                                           (assoc node "filePath" test-data-dir)
                                            node))
                                        nodes)))
         server (system/start-config updated-config)]
@@ -91,12 +109,10 @@
    Returns a map of performance metrics."
   [ledger-name total-size-mb batch-size-mb]
   (let [start-time    (System/nanoTime)
-        ; Use smaller effective batch size to avoid novelty limits
-        effective-batch-size (min batch-size-mb 0.5) ; 0.5MB max per batch
-        num-batches   (Math/ceil (/ total-size-mb effective-batch-size))
+        num-batches   (Math/ceil (/ total-size-mb batch-size-mb))
         batch-results (doall
                        (for [batch (range num-batches)]
-                         (let [batch-data (generate-transaction-data effective-batch-size)
+                         (let [batch-data (generate-transaction-data batch-size-mb)
                                _         (println (format "Processing batch %d of %.0f" (inc batch) num-batches))
                                req      (json/write-value-as-string
                                          (assoc batch-data "ledger" ledger-name))
@@ -106,8 +122,6 @@
                                              {:batch  batch
                                               :status (:status res)
                                               :body   (:body res)})))
-                           ; Add delay between batches to allow indexing
-                           (Thread/sleep 2000)
                            {:batch-num    batch
                             :status       (:status res)
                             :time-taken   (/ (- (System/nanoTime) start-time) 1e9)})))
@@ -143,6 +157,7 @@
           (is (> (:mb-per-second results) 0)))))))
 
 (deftest ^:benchmark benchmark-file-storage-test
+  (clear-test-data-dir)
   (run-benchmarks-with-config
    "file-config.jsonld"
    #(benchmark-with-config "file")))
