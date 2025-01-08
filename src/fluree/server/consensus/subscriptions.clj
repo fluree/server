@@ -7,7 +7,7 @@
            (java.nio.channels ClosedChannelException)))
 
 (defprotocol Publicizer
-  (publicize-commit [p ledger-id commit-addr])
+  (publicize-commit [p ledger-id t commit-addr])
   (publicize-new-ledger [p ledger-id commit-addr]))
 
 (defn close-chan
@@ -102,9 +102,9 @@
 (defrecord Subscriptions [state]
   Publicizer
   (publicize-new-ledger [_ ledger-id commit-addr]
-    (send-message-to-all state "ledger-created" ledger-id {:commit commit-addr}))
-  (publicize-commit [_ ledger-id commit-addr]
-    (send-message-to-all state "new-commit" ledger-id {:commit commit-addr}))
+    (send-message-to-all state "ledger-created" ledger-id {:commit commit-addr, :t 1}))
+  (publicize-commit [_ ledger-id t commit-addr]
+    (send-message-to-all state "new-commit" ledger-id {:commit commit-addr, :t t}))
 
   Closeable
   (close [_]

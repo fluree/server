@@ -20,7 +20,7 @@
     (log/info "New transaction completed for" ledger-id
               "tx-id: " tx-id "by server:" server)
     (watcher/deliver-commit watcher tx-id ledger-id t commit)
-    (subscriptions/publicize-commit subscriptions ledger-id commit)
+    (subscriptions/publicize-commit subscriptions ledger-id t commit)
     ::new-commit))
 
 (defn announce-error!
