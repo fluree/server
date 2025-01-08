@@ -84,9 +84,7 @@
   ([]
    (start 0))
   ([max-txn-wait-ms]
-   (start max-txn-wait-ms (new-watcher-atom)))
-  ([max-txn-wait-ms watcher-atom]
-   (->TimeoutWatcher watcher-atom max-txn-wait-ms)))
+   (->TimeoutWatcher (new-watcher-atom) max-txn-wait-ms)))
 
 (defn stop
   [^TimeoutWatcher watcher]
