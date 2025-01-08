@@ -55,7 +55,7 @@
     (let [response {:tx-id          id
                     :ledger-id      ledger-id
                     :t              t
-                    :commit-address commit-address}]
+                    :commit commit-address}]
       (remove-watch-state watcher-atom id)
       (async/put! resp-chan response)
       (async/close! resp-chan))))

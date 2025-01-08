@@ -102,9 +102,9 @@
 (defrecord Subscriptions [state]
   Publicizer
   (publicize-new-ledger [_ ledger-id commit-addr]
-    (send-message-to-all state "ledger-created" ledger-id {:commit-address commit-addr}))
+    (send-message-to-all state "ledger-created" ledger-id {:commit commit-addr}))
   (publicize-commit [_ ledger-id commit-addr]
-    (send-message-to-all state "new-commit" ledger-id {:commit-address commit-addr}))
+    (send-message-to-all state "new-commit" ledger-id {:commit commit-addr}))
 
   Closeable
   (close [_]

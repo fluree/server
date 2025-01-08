@@ -55,10 +55,10 @@
                       {:status 500 :error :db/response-closed}))
 
           :else
-          (let [{:keys [ledger-id commit-address t tx-id]} final-resp]
+          (let [{:keys [ledger-id commit t tx-id]} final-resp]
             (log/info "Ledger created:" ledger-id)
             (deliver p {:ledger ledger-id
-                        :commit commit-address
+                        :commit commit
                         :t      t
                         :tx-id  tx-id})))))
     p))

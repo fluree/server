@@ -65,11 +65,11 @@
           (deliver p final-resp)
 
           :else
-          (let [{:keys [ledger-id commit-address t tx-id]} final-resp]
+          (let [{:keys [ledger-id commit t tx-id]} final-resp]
             (log/info "Transaction completed for:" ledger-id "tx-id:" tx-id
-                      "commit head:" commit-address)
+                      "commit head:" commit)
             (deliver p {:ledger ledger-id
-                        :commit commit-address
+                        :commit commit
                         :t      t
                         :tx-id  tx-id})))))
     p))
