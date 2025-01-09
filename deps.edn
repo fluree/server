@@ -1,7 +1,7 @@
 {:deps {org.clojure/clojure    {:mvn/version "1.11.3"}
         org.clojure/core.async {:mvn/version "1.6.681"}
         com.fluree/db          {:git/url "https://github.com/fluree/db.git"
-                                :git/sha "19d1d8c0d6269aeccbc3f7dfd7276df939600c8e"}
+                                :git/sha "1192c3cb845b905d6b70f2dae4509a299d274d74"}
         com.fluree/json-ld     {:git/url "https://github.com/fluree/json-ld.git"
                                 :git/sha "73a990a4b803d0b4cfbbbe4dc16275b39a3add4e"}
 
@@ -63,11 +63,9 @@
 
   :benchmark
   {:extra-paths ["test"]
-   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.88.1376"}
-                 clj-http/clj-http   {:mvn/version "3.13.0"}}
-   :exec-fn     kaocha.runner/exec-fn
-   :exec-args   {:kaocha.filter/focus-meta [:benchmark]
-                 :kaocha.filter/focus ["fluree.server.integration.benchmark-test"]}}
+   :extra-deps {clj-http/clj-http   {:mvn/version "3.13.0"}}
+   :jvm-opts ["-Xmx8g"]
+   :exec-fn     fluree.server.benchmark/run-benchmark-suite}
 
   :pending-tests
   {:extra-paths ["test"]

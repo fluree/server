@@ -40,4 +40,4 @@ EXPOSE 58090
 
 VOLUME ./data
 
-ENTRYPOINT ["sh", "-c", "java -Xmx${JAVA_XMX} -jar server.jar $@"]
+ENTRYPOINT ["java", "-jar", "-Xmx8g", "server.jar"]

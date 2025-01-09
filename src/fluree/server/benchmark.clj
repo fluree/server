@@ -1,4 +1,4 @@
-(ns fluree.server.integration.benchmark-test
+(ns fluree.server.benchmark
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing use-fixtures]]
@@ -67,9 +67,9 @@
     (println "\n=== Benchmark Summary ===")
     (doseq [storage-type ["file" "memory"]]
       (println (format "\n%s Storage Results:" (str/upper-case storage-type)))
-      (doseq [total-size [5 10 25 50]]
+      (doseq [total-size [1 5 10]]
         (println (format "\nTotal Size: %d MB" total-size))
-        (doseq [batch-size [1 5]]
+        (doseq [batch-size [1 5 10]]
           (when (<= batch-size total-size)
             (let [matching-results (filter #(and (= (:storage-type %) storage-type)
                                                  (= (:total-size-mb %) total-size)
@@ -151,8 +151,8 @@
 (defn benchmark-with-config
   [storage-type]
   (testing (format "Benchmark performance with %s storage configuration" storage-type)
-    (doseq [total-size [5 10 25 50]
-            batch-size [1 5]]
+    (doseq [total-size [1 5 10]
+            batch-size [1 5 10]]
       (when (<= batch-size total-size)
         (let [ledger-name (create-rand-ledger (format "benchmark-%s-%dMB-%dMB"
                                                       storage-type total-size batch-size))
@@ -162,17 +162,12 @@
           (print-benchmark-results results)
           (is (> (:mb-per-second results) 0)))))))
 
-(deftest ^:benchmark benchmark-file-storage-test
+(defn run-benchmark-suite [_]
   (clear-test-data-dir)
   (run-benchmarks-with-config
    "file-config.jsonld"
-   #(benchmark-with-config "file")))
-
-(deftest ^:benchmark benchmark-memory-storage-test
+   #(benchmark-with-config "file"))
   (run-benchmarks-with-config
    "memory-config.jsonld"
-   #(benchmark-with-config "memory")))
-
-(deftest ^:benchmark print-benchmark-summary
-  (testing "Print summary of all benchmark results"
-    (print-summary-results)))
+   #(benchmark-with-config "memory"))
+  (print-summary-results))
