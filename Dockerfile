@@ -34,11 +34,12 @@ RUN groupadd --gid ${USER_GID} ${USER_NAME} && \
 USER ${USER_NAME}
 
 COPY --from=builder --chown=${USER_NAME}:${USER_NAME} /usr/src/fluree-server/target/server-*.jar ./server.jar
+COPY entrypoint.sh /
 
 EXPOSE 8090
 EXPOSE 58090
 
 VOLUME ./data
 
-ENTRYPOINT ["java", "-jar", "server.jar"]
+ENTRYPOINT ["/entrypoint.sh", "-jar", "server.jar"]
 CMD ["--profile=docker"]
