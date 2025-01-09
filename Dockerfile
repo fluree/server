@@ -18,7 +18,6 @@ ARG USER_NAME=fluree
 ARG USER_UID=10001
 ARG USER_GID=${USER_UID}
 ENV FLUREE_HOME=/opt/fluree-server
-ENV JAVA_OPTS="-Xmx8g"
 
 WORKDIR ${FLUREE_HOME}
 
@@ -40,5 +39,7 @@ EXPOSE 58090
 
 VOLUME ./data
 
-ENTRYPOINT ["java", "-jar", "server.jar"]
+# To over-ride the XMX var below, you can set the `_JAVA_OPTIONS` env var
+# and pass it in at runtime, i.e. `docker run -e _JAVA_OPTIONS="-Xmx12g" fluree/server`
+ENTRYPOINT ["java", "-jar", "-Xmx8g", "server.jar"]
 CMD ["--profile=docker"]
