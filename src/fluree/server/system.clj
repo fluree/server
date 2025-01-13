@@ -51,16 +51,16 @@
   (subscriptions/listen))
 
 (defmethod ig/halt-key! :fluree.server/subscriptions
-  [_ subsc]
-  (subscriptions/close subsc))
+  [_ subs]
+  (subscriptions/close subs))
 
 (defmethod ig/init-key :fluree.server/watcher
   [_ {:keys [max-txn-wait-ms]}]
-  (watcher/watch max-txn-wait-ms))
+  (watcher/start max-txn-wait-ms))
 
 (defmethod ig/halt-key! :fluree.server/watcher
   [_ watcher]
-  (watcher/close watcher))
+  (watcher/stop watcher))
 
 (defmethod ig/init-key :fluree.server.consensus/raft
   [_ config]
@@ -94,8 +94,11 @@
   (standalone/stop transactor))
 
 (defmethod ig/init-key :fluree.server.api/handler
-  [_ {:keys [connection consensus watcher subscriptions root-identities closed-mode]}]
-  (handler/app connection consensus watcher subscriptions root-identities closed-mode))
+  [_ config]
+  (-> config
+      (select-keys [:connection :consensus :watcher :subscriptions :root-identities
+                    :closed-mode])
+      handler/app))
 
 (defmethod ig/init-key :fluree.server.http/jetty
   [_ {:keys [handler] :as config}]

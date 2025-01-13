@@ -4,7 +4,7 @@
    [fluree.db.api :as fluree]
    [fluree.db.constants :as const]
    [fluree.db.util.context :as ctx-util]
-   [fluree.db.util.core :as util]
+   [fluree.db.util.core :as util :refer [get-first-value]]
    [fluree.db.util.log :as log]
    [fluree.json-ld.processor.api :as jld-processor]
    [fluree.server.consensus :as consensus]
@@ -24,11 +24,12 @@
         ;; check for exception trying to put txn in consensus, if so we must deliver the
         ;; watch here, but if successful the consensus process will deliver the watch downstream
         (when (util/exception? persist-resp)
-          (watcher/deliver-watch watcher tx-id persist-resp))))))
+          (watcher/deliver-error watcher tx-id persist-resp))))))
 
 (defn create-ledger
-  [p consensus watcher expanded-txn opts]
-  (let [ledger-id     (-> expanded-txn (get const/iri-ledger) (get 0) (get "@value"))
+  [consensus watcher expanded-txn opts]
+  (let [p             (promise)
+        ledger-id     (get-first-value expanded-txn const/iri-ledger)
         tx-id         (derive-tx-id expanded-txn)
         final-resp-ch (watcher/create-watch watcher tx-id)]
 
@@ -54,12 +55,13 @@
                       {:status 500 :error :db/response-closed}))
 
           :else
-          (let [{:keys [ledger-id commit-file-meta t tx-id]} final-resp]
+          (let [{:keys [ledger-id commit t tx-id]} final-resp]
             (log/info "Ledger created:" ledger-id)
             (deliver p {:ledger ledger-id
-                        :commit (:address commit-file-meta)
+                        :commit commit
                         :t      t
-                        :tx-id  tx-id})))))))
+                        :tx-id  tx-id})))))
+    p))
 
 (defn throw-ledger-exists
   [ledger]
@@ -76,11 +78,8 @@
         [expanded-txn] (-> (ctx-util/use-fluree-context body)
                            jld-processor/expand
                            util/sequential)
-        ledger-id      (-> expanded-txn (get const/iri-ledger) (get 0) (get "@value"))
-        resp-p         (promise)]
-    (or (not (deref! (fluree/exists? conn ledger-id)))
-        (throw-ledger-exists ledger-id))
-    ;; kick of async process that will eventually deliver resp or exception to resp-p
-    (create-ledger resp-p consensus watcher expanded-txn {:context txn-context})
-    {:status 201
-     :body   (deref! resp-p)}))
+        ledger-id      (get-first-value expanded-txn const/iri-ledger)]
+    (if-not (deref! (fluree/exists? conn ledger-id))
+      (let [resp-p (create-ledger consensus watcher expanded-txn {:context txn-context})]
+        {:status 201, :body (deref! resp-p)})
+      (throw-ledger-exists ledger-id))))

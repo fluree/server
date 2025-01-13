@@ -32,7 +32,7 @@
                  ;; add in the new ledger to state
                  (assoc-in [:ledgers ledger-id] {:t              t
                                                  :status         :ready
-                                                 :commit-address (:address commit-file-meta)}))))
+                                                 :commit (:address commit-file-meta)}))))
     ;; return original params for broadcast step
     create-result
 

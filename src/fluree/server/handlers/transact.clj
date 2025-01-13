@@ -4,7 +4,7 @@
             [fluree.db.api :as fluree]
             [fluree.db.constants :as const]
             [fluree.db.util.context :as ctx-util]
-            [fluree.db.util.core :as util]
+            [fluree.db.util.core :as util :refer [get-first-value]]
             [fluree.db.util.log :as log]
             [fluree.json-ld :as json-ld]
             [fluree.json-ld.processor.api :as jld-processor]
@@ -31,11 +31,12 @@
         ;; check for exception trying to put txn in consensus, if so we must deliver the
         ;; watch here, but if successful the consensus process will deliver the watch downstream
         (when (util/exception? persist-resp)
-          (watcher/deliver-watch watcher tx-id persist-resp))))))
+          (watcher/deliver-error watcher tx-id persist-resp))))))
 
 (defn transact!
-  [p consensus watcher expanded-txn opts]
-  (let [ledger-id     (-> expanded-txn (get const/iri-ledger) (get 0) (get "@value"))
+  [consensus watcher expanded-txn opts]
+  (let [p             (promise)
+        ledger-id     (get-first-value expanded-txn const/iri-ledger)
         tx-id         (derive-tx-id (:raw-txn opts))
         final-resp-ch (watcher/create-watch watcher tx-id)]
 
@@ -64,13 +65,14 @@
           (deliver p final-resp)
 
           :else
-          (let [{:keys [ledger-id commit-file-meta t tx-id]} final-resp]
+          (let [{:keys [ledger-id commit t tx-id]} final-resp]
             (log/info "Transaction completed for:" ledger-id "tx-id:" tx-id
-                      "commit head:" (:address commit-file-meta))
+                      "commit head:" commit)
             (deliver p {:ledger ledger-id
-                        :commit (:address commit-file-meta)
+                        :commit commit
                         :t      t
-                        :tx-id  tx-id})))))))
+                        :tx-id  tx-id})))))
+    p))
 
 (defn throw-ledger-doesnt-exist
   [ledger]
@@ -80,20 +82,29 @@
                                 :body   {:error err-message}}}))))
 
 (defhandler default
-  [{:keys          [fluree/conn fluree/consensus fluree/watcher credential/did raw-txn]
+  [{:keys [fluree/conn fluree/consensus fluree/watcher credential/did raw-txn]
     {:keys [body]} :parameters}]
   (let [txn-context    (ctx-util/txn-context body)
         [expanded-txn] (-> (ctx-util/use-fluree-context body)
                            jld-processor/expand
                            util/sequential)
-        ledger-id  (-> expanded-txn (get const/iri-ledger) (get 0) (get "@value"))
-        resp-p     (promise)]
-    (log/trace "parsed transact req:" expanded-txn)
-    (or (deref! (fluree/exists? conn ledger-id))
-        (throw-ledger-doesnt-exist ledger-id))
-    ;; kick of async process that will eventually deliver resp or exception to resp-p
-    (transact! resp-p consensus watcher expanded-txn (cond-> {:context txn-context :raw-txn raw-txn}
-                                                       did (assoc :did did)))
+        ledger-id      (get-first-value expanded-txn const/iri-ledger)]
+    (if (deref! (fluree/exists? conn ledger-id))
+      (let [opts   (cond-> {:context txn-context :raw-txn raw-txn}
+                     did (assoc :did did))
+            resp-p (transact! consensus watcher expanded-txn opts)]
+        {:status 200, :body (deref! resp-p)})
+      (throw-ledger-doesnt-exist ledger-id))))
 
-    {:status 200
-     :body   (deref! resp-p)}))
+(defhandler callback
+  [{:fluree/keys   [watcher]
+    {:keys [body]} :parameters}]
+  (let [{:keys [ledger-id tx-id status]} body]
+    (if (= status "ok")
+      (let [{:keys [commit t]} body]
+        (watcher/deliver-commit watcher tx-id t ledger-id commit))
+      (let [{:keys [error-msg error-data]}
+            body
+            ex (ex-info error-msg error-data)]
+        (watcher/deliver-error watcher tx-id ex)))
+    {:status 200, :body {:status "ok"}}))
