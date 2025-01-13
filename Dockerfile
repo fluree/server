@@ -39,5 +39,7 @@ EXPOSE 58090
 
 VOLUME ./data
 
-ENTRYPOINT ["java", "-Xmx8g", "-jar", "server.jar"]
+# To over-ride the XMX var below, you can set the `_JAVA_OPTIONS` env var
+# and pass it in at runtime, i.e. `docker run -e _JAVA_OPTIONS="-Xmx12g" fluree/server`
+ENTRYPOINT ["java", "-jar", "-Xmx8g", "server.jar"]
 CMD ["--profile=docker"]
