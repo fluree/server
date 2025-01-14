@@ -3,7 +3,10 @@
     "@base": "https://ns.flur.ee/config/memory/",
     "@vocab": "https://ns.flur.ee/system#",
     "profiles": {
-      "@container": [ "@graph", "@index" ]
+      "@container": [
+        "@graph",
+        "@index"
+      ]
     }
   },
   "@id": "standaloneServer",
@@ -27,6 +30,12 @@
         "@type": "Publisher",
         "storage": {
           "@id": "memoryStorage"
+        }
+      },
+      "defaults": {
+        "indexing": {
+          "reindexMinBytes": 1000000,
+          "reindexMaxBytes": 1000000000
         }
       }
     },

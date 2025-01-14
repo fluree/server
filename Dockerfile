@@ -18,6 +18,7 @@ ARG USER_NAME=fluree
 ARG USER_UID=10001
 ARG USER_GID=${USER_UID}
 ENV FLUREE_HOME=/opt/fluree-server
+ENV JAVA_XMX=8g
 
 WORKDIR ${FLUREE_HOME}
 
@@ -39,5 +40,4 @@ EXPOSE 58090
 
 VOLUME ./data
 
-ENTRYPOINT ["java", "-Xmx8g", "-jar", "server.jar"]
-CMD ["--profile=docker"]
+ENTRYPOINT ["java", "-jar", "-Xmx8g", "server.jar"]
