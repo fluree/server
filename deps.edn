@@ -62,10 +62,13 @@
    :exec-args   {:kaocha.filter/skip-meta [:pending]}}
 
   :benchmark
-  {:extra-paths ["test"]
-   :extra-deps {clj-http/clj-http   {:mvn/version "3.13.0"}}
-   :jvm-opts ["-Xmx8g"]
-   :exec-fn     fluree.server.benchmark/run-benchmark-suite}
+  {:extra-paths ["dev/src" "test"]
+   :extra-deps  {org.clojure/tools.namespace {:mvn/version "1.5.0"}
+                 clj-http/clj-http           {:mvn/version "3.13.0"}
+                 criterium/criterium         {:mvn/version "0.4.6"}
+                 integrant/repl              {:mvn/version "0.3.3"}}
+   :jvm-opts    ["-Xmx8g"]
+   :exec-fn     benchmark/run-benchmark-suite}
 
   :pending-tests
   {:extra-paths ["test"]

@@ -1,7 +1,7 @@
-(ns fluree.server.benchmark
+(ns benchmark
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is testing use-fixtures]]
+            [clojure.test :refer [is testing]]
             [fluree.server.integration.test-system
              :refer [api-post create-rand-ledger json-headers set-server-ports api-port]
              :as test-system]
@@ -11,7 +11,7 @@
 
 (def ^:private mb-size (* 1024 1024)) ; 1 MB in bytes
 
-(def ^:private test-data-dir "benchmark-data")
+(def ^:private test-data-dir "dev/data/benchmark")
 
 (def ^:private benchmark-results (atom []))
 
