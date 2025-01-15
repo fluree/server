@@ -1,6 +1,7 @@
 .nrepl-port
 /.cpcache
 /data/*
+/dev/data/benchmark/*
 /target/*
 .clj-kondo/babashka
 .clj-kondo/metosin
@@ -11,3 +12,4 @@
 !/.clj-kondo/ci-config.edn
 /.lsp/
 /dev/data/*
+/data*/**
