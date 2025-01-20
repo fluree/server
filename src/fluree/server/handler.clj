@@ -93,7 +93,7 @@
 (def QueryResponse
   (m/schema [:orn
              [:select [:sequential [:or coll? map?]]]
-             [:select-one [:or coll? map?]]]))
+             [:select-one [:or coll? map? nil? [:enum "null"]]]]))
 
 (def HistoryQuery
   (m/schema (fqh/history-query-schema [[:from LedgerAlias]])
@@ -248,6 +248,15 @@
                   (handler req*))))
         (handler req)))))
 
+(def wrap-no-result
+  "Handle a nil response from a selectOne query with no results."
+  (fn [handler]
+    (fn [req]
+      (let [{:keys [status body] :as result} (handler req)]
+        (if (and (= 200 status) (nil? body))
+          (assoc result :body "null")
+          result)))))
+
 (defn wrap-set-fuel-header
   [handler]
   (fn [req]
@@ -361,6 +370,7 @@
                                 [200 coercion/coerce-exceptions-middleware]
                                 [300 coercion/coerce-response-middleware]
                                 [400 coercion/coerce-request-middleware]
+                                [450 wrap-no-result]
                                 [500 wrap-policy-metadata]
                                 [600 (wrap-closed-mode root-identities closed-mode)]
                                 [1000 exception-middleware]])))
