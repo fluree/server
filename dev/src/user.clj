@@ -1,5 +1,6 @@
 (ns user
   (:require [clojure.string :as str]
+            [fluree.db.api :as fluree]
             [fluree.db.connection.system :as conn-system]
             [fluree.server.handlers.transact :as tx-handler]
             [fluree.server.handlers.create :as create-handler]
