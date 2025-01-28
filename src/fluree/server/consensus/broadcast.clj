@@ -11,7 +11,7 @@
     (log/info (str "New Ledger successfully created by server " server
                    ": " ledger-id " with tx-id: " tx-id "."))
     (watcher/deliver-commit watcher tx-id ledger-id t commit)
-    (subscriptions/publicize-new-ledger subscriptions ledger-id commit)
+    (subscriptions/broadcast-new-ledger subscriptions ledger-id commit)
     ::new-ledger))
 
 (defn announce-new-commit!
@@ -20,7 +20,7 @@
     (log/info "New transaction completed for" ledger-id
               "tx-id: " tx-id "by server:" server)
     (watcher/deliver-commit watcher tx-id ledger-id t commit)
-    (subscriptions/publicize-commit subscriptions ledger-id t commit)
+    (subscriptions/broadcast-commit subscriptions ledger-id t commit)
     ::new-commit))
 
 (defn announce-error!
