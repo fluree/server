@@ -28,7 +28,7 @@
 
 (defn broadcast!
   [{:keys [fluree/watcher] :as _config} exception-meta]
-  (broadcast/announce-error! watcher exception-meta))
+  (broadcast/broadcast-error! watcher exception-meta))
 
 (defn handler
   "Handles transaction exceptions and broadcasts them to network."

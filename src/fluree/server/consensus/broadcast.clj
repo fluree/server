@@ -8,7 +8,7 @@
 (defprotocol Broadcaster
   (-broadcast [b ledger-id event]))
 
-(defn announce-new-ledger!
+(defn broadcast-new-ledger!
   [subscriptions watcher new-ledger-params new-ledger-result]
   (let [{:keys [ledger-id t commit server tx-id] :as ledger-created-event}
         (events/ledger-created new-ledger-params new-ledger-result)]
@@ -18,7 +18,7 @@
     (-broadcast subscriptions ledger-id ledger-created-event)
     ::new-ledger))
 
-(defn announce-new-commit!
+(defn broadcast-new-commit!
   [subscriptions watcher commit-params commit-result]
   (let [{:keys [ledger-id t commit tx-id server] :as transaction-commited-event}
         (events/transaction-committed commit-params commit-result)]
@@ -28,7 +28,7 @@
     (-broadcast subscriptions ledger-id transaction-commited-event)
     ::new-commit))
 
-(defn announce-error!
+(defn broadcast-error!
   [watcher error-event]
   (let [{:keys [tx-id ex-message ex-data]} error-event]
     (log/debug "Delivering tx-exception to watcher with msg/data: " ex-message ex-data)

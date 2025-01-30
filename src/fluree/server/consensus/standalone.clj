@@ -32,7 +32,7 @@
                             deref!)
           result        (deref!
                          (fluree/apply-stage! ledger staged-db))]
-      (broadcast/announce-new-ledger! subscriptions watcher params result))))
+      (broadcast/broadcast-new-ledger! subscriptions watcher params result))))
 
 (defn transact!
   [conn subscriptions watcher {:keys [ledger-id tx-id txn opts] :as params}]
@@ -50,7 +50,7 @@
                             deref!)
           result        (deref!
                          (fluree/apply-stage! ledger staged-db))]
-      (broadcast/announce-new-commit! subscriptions watcher params result))))
+      (broadcast/broadcast-new-commit! subscriptions watcher params result))))
 
 (defn process-event
   [conn subscriptions watcher event]
@@ -63,7 +63,7 @@
                              :tx-queue      (transact! conn subscriptions watcher event-msg)))]
         (if (exception? result)
           (let [error-msg (events/error event-msg result)]
-            (broadcast/announce-error! watcher error-msg))
+            (broadcast/broadcast-error! watcher error-msg))
           result))
       (catch Exception e
         (log/error "Unexpected event message - expected two-tuple of [event-type event-data], "

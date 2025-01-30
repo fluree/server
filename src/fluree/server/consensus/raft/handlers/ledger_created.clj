@@ -84,4 +84,4 @@
 (defn broadcast!
   "Responsible for producing the event broadcast to connected peers."
   [{:keys [fluree/watcher fluree/subscriptions] :as _config} handler-result]
-  (broadcast/announce-new-ledger! subscriptions watcher {} handler-result))
+  (broadcast/broadcast-new-ledger! subscriptions watcher {} handler-result))

@@ -100,4 +100,4 @@
 (defn broadcast!
   "Responsible for producing the event broadcast to connected peers."
   [{:keys [fluree/watcher fluree/subscriptions] :as _config} commit-result]
-  (broadcast/announce-new-commit! subscriptions watcher {} commit-result))
+  (broadcast/broadcast-new-commit! subscriptions watcher {} commit-result))
