@@ -98,10 +98,10 @@
 
 (defrecord Subscriptions [state]
   Broadcaster
-  (broadcast-new-ledger [_ ledger-id commit-addr]
-    (send-message-to-all state "ledger-created" ledger-id {:commit commit-addr, :t 1}))
-  (broadcast-commit [_ ledger-id t commit-addr]
-    (send-message-to-all state "new-commit" ledger-id {:commit commit-addr, :t t}))
+  (broadcast-new-ledger [_ ledger-id tx-id commit-addr]
+    (send-message-to-all state "ledger-created" ledger-id {:tx-id tx-id, :commit commit-addr, :t 1}))
+  (broadcast-commit [_ ledger-id t tx-id commit-addr]
+    (send-message-to-all state "new-commit" ledger-id {:tx-id tx-id, :commit commit-addr, :t t}))
 
   Closeable
   (close [_]
