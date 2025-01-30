@@ -86,26 +86,21 @@
 (defn send-message-to-all
   "Sends a message to all subscriptions. Message sent as JSON stringified map
   in the form: {action: commit, ledger: my/ledger, data: {...}}"
-  [sub-state action ledger-alias data]
+  [sub-state ledger-id action data]
   (let [data*   (if (string? data)
                   (json/parse data false)
                   data)
-        message (json/stringify {"action" action
-                                 "ledger" ledger-alias
+        message (json/stringify {"action" (name action)
+                                 "ledger" ledger-id
                                  "data"   data*})
         sub-ids (all-sub-ids @sub-state)]
     (run! #(send-message sub-state % message) sub-ids)))
 
 (defrecord Subscriptions [state]
   Broadcaster
-  (broadcast-new-ledger [_ ledger-id ledger-created-event]
-    (let [message (-> ledger-created-event
-                      (select-keys [:tx-id :commit])
-                      (assoc :t 1))]
-      (send-message-to-all state "ledger-created" ledger-id message)))
-  (broadcast-commit [_ ledger-id transaction-committed-event]
-    (let [message (select-keys transaction-committed-event [:tx-id :commit :t])]
-      (send-message-to-all state "new-commit" ledger-id message)))
+  (-broadcast [_ ledger-id {:keys [action] :as event}]
+    (let [message (select-keys event [:tx-id :commit :t])]
+      (send-message-to-all state action ledger-id message)))
 
   Closeable
   (close [_]
