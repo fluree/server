@@ -31,9 +31,8 @@
                             (fluree/stage txn opts)
                             deref!)
           result        (deref!
-                         (fluree/apply-stage! ledger staged-db))
-          broadcast-msg (events/transaction-committed params result)]
-      (broadcast/announce-new-ledger! subscriptions watcher broadcast-msg))))
+                         (fluree/apply-stage! ledger staged-db))]
+      (broadcast/announce-new-ledger! subscriptions watcher params result))))
 
 (defn transact!
   [conn subscriptions watcher {:keys [ledger-id tx-id txn opts] :as params}]
@@ -50,9 +49,8 @@
                             (fluree/stage txn opts)
                             deref!)
           result        (deref!
-                         (fluree/apply-stage! ledger staged-db))
-          broadcast-msg (events/transaction-committed params result)]
-      (broadcast/announce-new-commit! subscriptions watcher broadcast-msg))))
+                         (fluree/apply-stage! ledger staged-db))]
+      (broadcast/announce-new-commit! subscriptions watcher params result))))
 
 (defn process-event
   [conn subscriptions watcher event]

@@ -44,9 +44,19 @@
    {:ledger-id ledger-id
     :t         (:t db)
     :tx-id     tx-id
-    :commit    address})
+    :commit    address
+    :action    :transaction-committed})
   ([processing-server event-params commit-result]
    (-> (transaction-committed event-params commit-result)
+       (assoc :server processing-server))))
+
+(defn ledger-created
+  ([event-params commit-result]
+   (-> event-params
+       (transaction-committed commit-result)
+       (assoc :action :ledger-created)))
+  ([processing-server event-params commit-result]
+   (-> (ledger-created event-params commit-result)
        (assoc :server processing-server))))
 
 (defn error
