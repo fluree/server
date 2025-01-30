@@ -2,13 +2,10 @@
   (:require [clojure.core.async :as async]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
+            [fluree.server.consensus.broadcast :refer [Broadcaster]]
             [ring.adapter.jetty9.websocket :as ws])
   (:import (java.io Closeable IOException)
            (java.nio.channels ClosedChannelException)))
-
-(defprotocol Broadcaster
-  (broadcast-commit [b ledger-id t commit-addr])
-  (broadcast-new-ledger [b ledger-id commit-addr]))
 
 (defn close-chan
   [chan message]
