@@ -63,8 +63,8 @@
   ([params exception]
    (-> params
        (select-keys [:ledger-id :tx-id])
-       (assoc :ex-message (ex-message exception)
-              :ex-data    (ex-data exception))))
+       (assoc :error-message (ex-message exception)
+              :error-data    (ex-data exception))))
   ([processing-server params exception]
    (-> (error params exception)
        (assoc :server processing-server))))
