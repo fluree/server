@@ -13,8 +13,8 @@
 
 (defprotocol Watcher
   (create-watch [w id])
-  (deliver-commit [w id t ledger-id commit-address])
-  (deliver-error [w id error]))
+  (-deliver-commit [w id t ledger-id commit-address])
+  (-deliver-error [w id error]))
 
 (defn new-watcher-atom
   "This atom maps a request's unique id (e.g. tx-id) to a promise that will be
@@ -75,10 +75,19 @@
   Watcher
   (create-watch [_ id]
     (create-watch-state state max-txn-wait-ms id))
-  (deliver-commit [_ id t ledger-id commit-address]
+  (-deliver-commit [_ id t ledger-id commit-address]
     (deliver-commit-state state id t ledger-id commit-address))
-  (deliver-error [_ id error]
+  (-deliver-error [_ id error]
     (deliver-error-state state id error)))
+
+(defn deliver-commit
+  [w id event]
+  (let [{:keys [ledger-id t commit]} event]
+    (-deliver-commit w id ledger-id t commit)))
+
+(defn deliver-error
+  [w id error]
+  (-deliver-error w id error))
 
 (defn start
   ([]

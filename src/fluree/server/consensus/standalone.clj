@@ -62,8 +62,7 @@
                              :ledger-create (create-ledger! conn subscriptions watcher event-msg)
                              :tx-queue      (transact! conn subscriptions watcher event-msg)))]
         (if (exception? result)
-          (let [error-msg (events/error event-msg result)]
-            (broadcast/broadcast-error! watcher error-msg))
+          (broadcast/broadcast-error! subscriptions watcher event-msg result)
           result))
       (catch Exception e
         (log/error "Unexpected event message - expected two-tuple of [event-type event-data], "
