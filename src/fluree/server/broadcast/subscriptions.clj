@@ -1,8 +1,8 @@
-(ns fluree.server.consensus.subscriptions
+(ns fluree.server.broadcast.subscriptions
   (:require [clojure.core.async :as async]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
-            [fluree.server.consensus.broadcast :refer [Broadcaster]]
+            [fluree.server.broadcast :refer [Broadcaster]]
             [ring.adapter.jetty9.websocket :as ws])
   (:import (java.io Closeable IOException)
            (java.nio.channels ClosedChannelException)))

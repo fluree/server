@@ -8,7 +8,7 @@
             [fluree.server.config.vocab :as server-vocab]
             [fluree.server.consensus.raft :as raft]
             [fluree.server.consensus.standalone :as standalone]
-            [fluree.server.consensus.subscriptions :as subscriptions]
+            [fluree.server.broadcast.subscriptions :as subscriptions]
             [fluree.server.consensus.watcher :as watcher]
             [fluree.server.handler :as handler]
             [fluree.server.task.migrate-sid :as task.migrate-sid]
@@ -19,6 +19,8 @@
 
 (derive :fluree.server.consensus/raft :fluree.server/consensus)
 (derive :fluree.server.consensus/standalone :fluree.server/consensus)
+
+(derive :fluree.server/subscriptions :fluree.server/broadcast)
 
 (derive :fluree.server.http/jetty :fluree.server/http)
 
@@ -38,7 +40,7 @@
                                  :connection      (ig/ref :fluree.db/connection)
                                  :consensus       (ig/ref :fluree.server/consensus)
                                  :watcher         (ig/ref :fluree.server/watcher)
-                                 :subscriptions   (ig/ref :fluree.server/subscriptions)}}))
+                                 :subscriptions   (ig/ref :fluree.server/broadcast)}}))
 
 (defmethod ig/expand-key :fluree.server.consensus/standalone
   [k config]
