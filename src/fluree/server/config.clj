@@ -2,8 +2,10 @@
   (:require [clojure.java.io :as io]
             [fluree.db.connection.config :as conn-config]
             [fluree.db.util.core :as util :refer [get-id  get-first-value]]
+            [fluree.server.consensus :as-alias consensus]
             [fluree.server.config.validation :as validation]
-            [fluree.server.config.vocab :as vocab]))
+            [fluree.server.config.vocab :as vocab]
+            [fluree.server.http :as-alias http]))
 
 (set! *warn-on-reflection* true)
 
@@ -51,9 +53,9 @@
   [node]
   (let [id (get-id node)]
     (cond
-      (raft-consensus? node)       (derive id :fluree.server.consensus/raft)
-      (standalone-consensus? node) (derive id :fluree.server.consensus/standalone)
-      (jetty-api? node)            (derive id :fluree.server.http/jetty) ; TODO: Enable other http servers
+      (raft-consensus? node)       (derive id ::consensus/raft)
+      (standalone-consensus? node) (derive id ::consensus/standalone)
+      (jetty-api? node)            (derive id ::http/jetty) ; TODO: Enable other http servers
       :else                        (conn-config/derive-node-id node))
     node))
 
