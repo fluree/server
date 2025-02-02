@@ -2,9 +2,9 @@
   (:require [clojure.java.io :as io]
             [fluree.db.connection.config :as conn-config]
             [fluree.db.util.core :as util :refer [get-id  get-first-value]]
-            [fluree.server.consensus :as-alias consensus]
             [fluree.server.config.validation :as validation]
             [fluree.server.config.vocab :as vocab]
+            [fluree.server.consensus :as-alias consensus]
             [fluree.server.http :as-alias http]))
 
 (set! *warn-on-reflection* true)
