@@ -19,9 +19,7 @@
 
 (derive :fluree.server.consensus/raft :fluree.server/consensus)
 (derive :fluree.server.consensus/standalone :fluree.server/consensus)
-
 (derive :fluree.server/subscriptions :fluree.server/broadcast)
-
 (derive :fluree.server.http/jetty :fluree.server/http)
 
 (defmethod ig/expand-key :fluree.server/http
@@ -40,12 +38,12 @@
                                  :connection      (ig/ref :fluree.db/connection)
                                  :consensus       (ig/ref :fluree.server/consensus)
                                  :watcher         (ig/ref :fluree.server/watcher)
-                                 :subscriptions   (ig/ref :fluree.server/broadcast)}}))
+                                 :subscriptions   (ig/ref :fluree.server/subscriptions)}}))
 
 (defmethod ig/expand-key :fluree.server.consensus/standalone
   [k config]
   {k (assoc config
-            :subscriptions (ig/ref :fluree.server/subscriptions)
+            :broadcaster (ig/ref :fluree.server/broadcast)
             :watcher (ig/ref :fluree.server/watcher))})
 
 (defmethod ig/init-key :fluree.server/subscriptions
@@ -86,10 +84,10 @@
   (close))
 
 (defmethod ig/init-key :fluree.server.consensus/standalone
-  [_ {:keys [subscriptions watcher] :as config}]
+  [_ {:keys [broadcaster watcher] :as config}]
   (let [max-pending-txns (conn-config/get-first-integer config server-vocab/max-pending-txns)
         conn             (get-first config conn-vocab/connection)]
-    (standalone/start conn subscriptions watcher max-pending-txns)))
+    (standalone/start conn broadcaster watcher max-pending-txns)))
 
 (defmethod ig/halt-key! :fluree.server.consensus/standalone
   [_ transactor]
