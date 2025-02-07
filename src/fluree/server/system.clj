@@ -56,7 +56,9 @@
 
 (defmethod ig/init-key :fluree.server/watcher
   [_ {:keys [max-txn-wait-ms]}]
-  (watcher/start max-txn-wait-ms))
+  (if max-txn-wait-ms
+    (watcher/start max-txn-wait-ms)
+    (watcher/start)))
 
 (defmethod ig/halt-key! :fluree.server/watcher
   [_ watcher]
