@@ -324,6 +324,165 @@
                  (-> query-res :body json/read-value))
               "query policy opts should prevent seeing john's ssn"))))))
 
+(deftest ^:integration ^:json policy-class-target-subject-test
+  (testing "Class policy with target subject conditions"
+    (let [ledger-name  (create-rand-ledger "policy-class-target-subject-test")
+          policy [{"@id"       "ex:unclassRestriction"
+                   "@type"     ["f:AccessPolicy" "ex:UnclassPolicy"]
+                   "f:required" true
+                   "f:targetSubject"
+                   {"@type" "@json"
+                    "@value"
+                    {"@context" {"ex" "http://example.org/ns/"}
+                     "where" [{"@id" "?$target" "@type" "ex:Data"}]}}
+                   "f:action"  [{"@id" "f:view"}, {"@id" "f:modify"}]
+                   "f:query"   {"@type"  "@json"
+                                "@value" {"@context" {"ex" "http://example.org/ns/"}
+                                          "where"    [{"@id"               "?$this"
+                                                       "ex:classification" "?c"}
+                                                      ["filter", "(< ?c 1)"]]}}}
+                  {"@id"      "ex:defaultAllowView"
+                   "@type"    ["f:AccessPolicy" "ex:UnclassPolicy"]
+                   "f:action" {"@id" "f:view"}
+                   "f:query"  {"@type"  "@json"
+                               "@value" {}}}]
+          insert-data [{"@id"               "ex:data-0",
+                        "@type"             "ex:Data",
+                        "ex:classification" 0}
+                       {"@id"               "ex:data-1",
+                        "@type"             "ex:Data",
+                        "ex:classification" 1}
+                       {"@id"               "ex:data-2",
+                        "@type"             "ex:Data",
+                        "ex:classification" 2}
+                                                          ;; note below is of class ex:Other, not ex:Data
+                       {"@id"               "ex:other",
+                        "@type"             "ex:Other",
+                        "ex:classification" -99}
+                                                          ;; a node that refers to items in ex:Data which, if
+                                                          ;; pulled in a graph crawl, should still be restricted
+                       {"@id"          "ex:referred",
+                        "@type"        "ex:Referrer",
+                        "ex:referData" [{"@id" "ex:data-0"}
+                                        {"@id" "ex:data-1"}
+                                        {"@id" "ex:data-2"}]}]
+          txn-req      {:body
+                        (json/write-value-as-string
+                         {"ledger"   ledger-name
+                          "@context" {"ex" "http://example.org/ns/"
+                                      "f"  "https://ns.flur.ee/ledger#"}
+                          "insert" (concat insert-data policy)})
+                        :headers json-headers}
+          txn-res      (api-post :transact txn-req)
+          _            (assert (= 200 (:status txn-res)))
+          data-query   {"@context" {"ex" "http://example.org/ns/"},
+                        "from"     ledger-name,
+                        "where"    {"@id"   "?s",
+                                    "@type" "ex:Data"},
+                        "select"   {"?s" ["*"]}}
+          other-query  {"@context" {"ex" "http://example.org/ns/"},
+                        "from"     ledger-name,
+                        "where"    {"@id"   "?s",
+                                    "@type" "ex:Other"},
+                        "select"   {"?s" ["*"]}}
+          refer-query  {"@context" {"ex" "http://example.org/ns/"},
+                        "from"     ledger-name,
+                        "where"    {"@id"   "?s",
+                                    "@type" "ex:Referrer"},
+                        "select"   {"?s" ["*" {"ex:referData" ["*"]}]}}]
+
+      (testing "with policy default allow set to true"
+        (let [query-req {:body
+                         (json/write-value-as-string
+                          (assoc data-query
+                                 "opts" {"policyClass" "ex:UnclassPolicy"}))
+                         :headers json-headers}
+              query-res (api-post :query query-req)]
+
+          (is (= [{"@id"               "ex:data-0",
+                   "@type"             "ex:Data",
+                   "ex:classification" 0}]
+                 (-> query-res :body json/read-value))
+              "only data with classification < 1 should be visible when using opts.policyClass"))
+
+        (let [query-req {:body
+                         (json/write-value-as-string
+                          (assoc data-query
+                                 "opts" {"policy" policy}))
+                         :headers json-headers}
+              query-res (api-post :query query-req)]
+
+          (is (= [{"@id"               "ex:data-0",
+                   "@type"             "ex:Data",
+                   "ex:classification" 0}]
+                 (-> query-res :body json/read-value))
+              "only data with classification < 1 should be visible when using opts.policy"))
+
+        (let [query-req {:body
+                         (json/write-value-as-string
+                          (assoc other-query
+                                 "opts" {"policyClass" "ex:UnclassPolicy"}))
+                         :headers json-headers}
+              query-res (api-post :query query-req)]
+
+          (is (= [{"@id"               "ex:other",
+                   "@type"             "ex:Other",
+                   "ex:classification" -99}]
+                 (-> query-res :body json/read-value))
+              "ex:Other class should not be restricted"))
+
+        (let [query-req {:body
+                         (json/write-value-as-string
+                          (assoc refer-query
+                                 "opts" {"policyClass" "ex:UnclassPolicy"}))
+                         :headers json-headers}
+              query-res (api-post :query query-req)]
+
+          (is (= [{"@id"          "ex:referred"
+                   "@type"        "ex:Referrer"
+                   "ex:referData" [{"@id"               "ex:data-0"
+                                    "@type"             "ex:Data"
+                                    "ex:classification" 0}]}]
+                 (-> query-res :body json/read-value))
+              "in graph crawl ex:Data is still restricted")))
+
+      (testing "with policy default allow set to false"
+        ;; Create a new transaction without the default allow policy
+        (let [txn-req {:body
+                       (json/write-value-as-string
+                        {"ledger"   ledger-name
+                         "@context" {"ex" "http://example.org/ns/"
+                                     "f"  "https://ns.flur.ee/ledger#"}
+                         "where" [{"@id" "ex:defaultAllowView" "?p" "?o"}]
+                         "delete"   [{"@id" "ex:defaultAllowView" "?p" "?o"}]})
+                       :headers json-headers}
+              _       (api-post :transact txn-req)
+
+              ;; Test data query
+              query-req {:body
+                         (json/write-value-as-string
+                          (assoc data-query
+                                 "opts" {"policyClass" "ex:UnclassPolicy"}))
+                         :headers json-headers}
+              query-res (api-post :query query-req)]
+
+          (is (= [{"@id"               "ex:data-0",
+                   "@type"             "ex:Data",
+                   "ex:classification" 0}]
+                 (-> query-res :body json/read-value))
+              "only data with classification < 1 should be visible"))
+
+        (let [query-req {:body
+                         (json/write-value-as-string
+                          (assoc other-query
+                                 "opts" {"policyClass" "ex:UnclassPolicy"}))
+                         :headers json-headers}
+              query-res (api-post :query query-req)]
+
+          (is (= []
+                 (-> query-res :body json/read-value))
+              "ex:Other class should be restricted"))))))
+
 (deftest ^:integration ^:json policy-json-ld-opts-test
   (testing "policy-enforcing opts for json-ld policy are correctly handled"
     (let [ledger-name   (create-rand-ledger "policy-json-ld-opts-test")
