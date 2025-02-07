@@ -375,17 +375,20 @@
                         :headers json-headers}
           txn-res      (api-post :transact txn-req)
           _            (assert (= 200 (:status txn-res)))
-          data-query   {"@context" {"ex" "http://example.org/ns/"},
+          data-query   {"@context" {"ex" "http://example.org/ns/"
+                                    "f"  "https://ns.flur.ee/ledger#"},
                         "from"     ledger-name,
                         "where"    {"@id"   "?s",
                                     "@type" "ex:Data"},
                         "select"   {"?s" ["*"]}}
-          other-query  {"@context" {"ex" "http://example.org/ns/"},
+          other-query  {"@context" {"ex" "http://example.org/ns/"
+                                    "f"  "https://ns.flur.ee/ledger#"},
                         "from"     ledger-name,
                         "where"    {"@id"   "?s",
                                     "@type" "ex:Other"},
                         "select"   {"?s" ["*"]}}
-          refer-query  {"@context" {"ex" "http://example.org/ns/"},
+          refer-query  {"@context" {"ex" "http://example.org/ns/"
+                                    "f"  "https://ns.flur.ee/ledger#"},
                         "from"     ledger-name,
                         "where"    {"@id"   "?s",
                                     "@type" "ex:Referrer"},
