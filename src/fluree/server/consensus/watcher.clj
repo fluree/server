@@ -36,8 +36,7 @@
   [state max-txn-wait-ms id]
   (let [promise-ch (async/promise-chan)]
     (swap! state assoc id promise-ch)
-    (when (and max-txn-wait-ms
-               (< max-txn-wait-ms 0))
+    (when max-txn-wait-ms
       (async/go
         (async/<! (async/timeout max-txn-wait-ms))
         ;; we close the promise chan when delivering, so put! will be false if
@@ -91,7 +90,7 @@
 
 (defn start
   ([]
-   (start 0))
+   (start nil))
   ([max-txn-wait-ms]
    (->TimeoutWatcher (new-watcher-atom) max-txn-wait-ms)))
 
