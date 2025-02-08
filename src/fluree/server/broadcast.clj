@@ -29,8 +29,8 @@
     ::new-commit))
 
 (defn broadcast-error!
-  [_broadcaster watcher event-msg error]
-  (let [{:keys [tx-id]} event-msg]
+  [_broadcaster watcher event error]
+  (let [{:keys [tx-id]} event]
     (log/debug error "Delivering tx-exception to watcher")
     (watcher/deliver-error watcher tx-id error)
     ::error))

@@ -4,11 +4,7 @@
 
 (defn event-type
   [event]
-  (nth event 0))
-
-(defn event-data
-  [event]
-  (nth event 1))
+  (:type event))
 
 (defn create-ledger
   "Upon receiving a request to create a new ledger, an event
@@ -16,12 +12,13 @@
 
   Format is [event-name event-body]"
   [ledger-id tx-id txn opts]
-  [:ledger-create {:txn       txn
-                   :size      (count txn)
-                   :tx-id     tx-id
-                   :ledger-id ledger-id
-                   :opts      opts
-                   :instant   (System/currentTimeMillis)}])
+  {:type      :ledger-create
+   :txn       txn
+   :size      (count txn)
+   :tx-id     tx-id
+   :ledger-id ledger-id
+   :opts      opts
+   :instant   (System/currentTimeMillis)})
 
 (defn commit-transaction
   "Upon receiving a request to create a new ledger, an event
@@ -29,12 +26,13 @@
 
   Format is [event-name event-body]"
   [ledger-id tx-id txn opts]
-  [:tx-queue {:txn       txn
-              :size      (count txn)
-              :tx-id     tx-id
-              :ledger-id ledger-id
-              :opts      opts
-              :instant   (System/currentTimeMillis)}])
+  {:type      :tx-queue
+   :txn       txn
+   :size      (count txn)
+   :tx-id     tx-id
+   :ledger-id ledger-id
+   :opts      opts
+   :instant   (System/currentTimeMillis)})
 
 (defn transaction-committed
   "Post-transaction, the message we will broadcast out and/or deliver

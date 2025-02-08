@@ -57,12 +57,11 @@
   (go
     (try
       (let [event-type (events/event-type event)
-            event-msg  (events/event-data event)
             result     (<! (case event-type
-                             :ledger-create (create-ledger! conn broadcaster watcher event-msg)
-                             :tx-queue      (transact! conn broadcaster watcher event-msg)))]
+                             :ledger-create (create-ledger! conn broadcaster watcher event)
+                             :tx-queue      (transact! conn broadcaster watcher event)))]
         (if (exception? result)
-          (broadcast/broadcast-error! broadcaster watcher event-msg result)
+          (broadcast/broadcast-error! broadcaster watcher event result)
           result))
       (catch Exception e
         (log/error "Unexpected event message - expected two-tuple of [event-type event-data], "
