@@ -39,11 +39,11 @@
   to a client awaiting a response."
   ([{:keys [ledger-id tx-id] :as _event-params}
     {:keys [db address] :as _commit-result}]
-   {:ledger-id ledger-id
+   {:type      :transaction-committed
+    :ledger-id ledger-id
     :t         (:t db)
     :tx-id     tx-id
-    :commit    address
-    :action    :transaction-committed})
+    :commit    address})
   ([processing-server event-params commit-result]
    (-> (transaction-committed event-params commit-result)
        (assoc :server processing-server))))
@@ -52,7 +52,7 @@
   ([event-params commit-result]
    (-> event-params
        (transaction-committed commit-result)
-       (assoc :action :ledger-created)))
+       (assoc :type :ledger-created)))
   ([processing-server event-params commit-result]
    (-> (ledger-created event-params commit-result)
        (assoc :server processing-server))))

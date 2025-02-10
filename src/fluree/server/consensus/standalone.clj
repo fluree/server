@@ -64,8 +64,9 @@
           (broadcast/broadcast-error! broadcaster watcher event result)
           result))
       (catch Exception e
-        (log/error "Unexpected event message - expected two-tuple of [event-type event-data], "
-                   "and of a supported event type. Received:" event e)))))
+        (log/error e
+                   "Unexpected event message - expected a map with a supported "
+                   "event type. Received:" event)))))
 
 (defn new-transaction-queue
   ([conn broadcaster watcher]

@@ -3,7 +3,8 @@
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [fluree.server.broadcast :refer [Broadcaster]]
-            [ring.adapter.jetty9.websocket :as ws])
+            [ring.adapter.jetty9.websocket :as ws]
+            [fluree.server.consensus.events :as events])
   (:import (java.io Closeable IOException)
            (java.nio.channels ClosedChannelException)))
 
@@ -98,8 +99,9 @@
 
 (defrecord Subscriptions [state]
   Broadcaster
-  (-broadcast [_ ledger-id {:keys [action] :as event}]
-    (let [message (select-keys event [:tx-id :commit :t])]
+  (-broadcast [_ ledger-id event]
+    (let [action  (events/event-type event)
+          message (select-keys event [:tx-id :commit :t])]
       (send-message-to-all state action ledger-id message)))
 
   Closeable
