@@ -3,8 +3,8 @@
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [fluree.server.broadcast :refer [Broadcaster]]
-            [ring.adapter.jetty9.websocket :as ws]
-            [fluree.server.consensus.events :as events])
+            [fluree.server.consensus.events :as events]
+            [ring.adapter.jetty9.websocket :as ws])
   (:import (java.io Closeable IOException)
            (java.nio.channels ClosedChannelException)))
 
