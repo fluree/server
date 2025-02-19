@@ -18,8 +18,9 @@
   [{:keys [fluree/conn] {:keys [body]} :parameters :as req}]
   (let [query         (or (::handler/query body) body)
         format        (or (::handler/format body) :fql)
+        output        (if (-> req :headers (get "accept") (= "application/sparql-results+json")) :sparql :fql)
         _             (log/debug "query handler received query:" query)
-        override-opts (add-policy-enforcement-headers {:format format} req)]
+        override-opts (add-policy-enforcement-headers {:format format :output output} req)]
     {:status 200
      :body   (deref! (fluree/query-connection conn query override-opts))}))
 
