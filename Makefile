@@ -29,16 +29,16 @@ docker-run: ## Run in docker
 docker-push: ## Build and publish the server docker container
 	docker buildx build --platform linux/amd64,linux/arm64 -t fluree/server:latest -t fluree/server:$(shell git rev-parse HEAD) --build-arg="PROFILE=prod" --push .
 
-.PHONY: test ## Run tests
-test: prepare
+.PHONY: test
+test: prepare ## Run tests
 	clojure -X:test
 
 .PHONY: benchmark
 benchmark: prepare ## Benchmark performance
 	clojure -X:benchmark
 
-.PHONY: pending-tests ## Run pending tests
-pending-tests: prepare
+.PHONY: pending-tests
+pending-tests: prepare ## Run pending tests
 	clojure -X:pending-tests
 
 .PHONY: pt
