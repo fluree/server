@@ -1,8 +1,8 @@
 SOURCES := $(shell find src)
 RESOURCES := $(shell find resources)
 
-.PHONY: help ## Describe available tasks
-help:
+.PHONY: help
+help: ## Describe available tasks
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 target/server-%.jar: $(SOURCES) $(RESOURCES) prepare
