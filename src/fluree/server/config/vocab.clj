@@ -9,6 +9,12 @@
 (def consensus-type
   (conn-vocab/system-iri "Consensus"))
 
+(def broadcaster-type
+  (conn-vocab/system-iri "Broadcaster"))
+
+(def broadcaster
+  (conn-vocab/system-iri "broadcaster"))
+
 (def consensus-protocol
   (conn-vocab/system-iri "consensusProtocol"))
 

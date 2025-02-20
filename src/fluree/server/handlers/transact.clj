@@ -99,10 +99,10 @@
 (defhandler callback
   [{:fluree/keys   [watcher]
     {:keys [body]} :parameters}]
-  (let [{:keys [ledger-id tx-id status]} body]
+  (let [{:keys [tx-id status]} body]
     (if (= status "ok")
-      (let [{:keys [commit t]} body]
-        (watcher/deliver-commit watcher tx-id t ledger-id commit))
+      (let [event (dissoc body :status)]
+        (watcher/deliver-commit watcher tx-id event))
       (let [{:keys [error-msg error-data]}
             body
             ex (ex-info error-msg error-data)]

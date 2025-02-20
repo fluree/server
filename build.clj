@@ -8,4 +8,4 @@
 (defn uber [_]
   (bb/uber {:lib     lib
             :version version
-            :main    'fluree.server.main}))
+            :main    'fluree.server}))

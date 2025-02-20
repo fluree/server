@@ -1,4 +1,4 @@
-(ns fluree.server.main
+(ns fluree.server
   (:require [clojure.string :as str]
             [clojure.tools.cli :as cli]
             [fluree.db.util.log :as log]
@@ -41,6 +41,12 @@
     parsed-opts
     (update parsed-opts :errors conj multiple-configuration-error)))
 
+(defn parse-cli
+  [args]
+  (-> args
+      (cli/parse-opts cli-options)
+      validate-opts))
+
 (defn usage
   [summary]
   (str/join \newline ["Fluree Ledger Server"
@@ -57,7 +63,7 @@
   (println message)
   (System/exit status))
 
-(defn start-server
+(defn start
   [{:keys [profile] :as options}]
   (if-let [config-string (:string options)]
     (do (log/info "Starting Fluree server from command line configuration with profile:"
@@ -73,18 +79,19 @@
         (do (log/info "Starting Fluree server with profile:" profile)
             (system/start profile))))))
 
+(defn run
+  [{:keys [options errors summary]}]
+  (cond (seq errors)
+        (let [msg (error-message errors)]
+          (exit 1 msg))
+
+        (:help options)
+        (let [msg (usage summary)]
+          (exit 0 msg))
+
+        :else
+        (start options)))
+
 (defn -main
   [& args]
-  (let [{:keys [options errors summary]} (-> args
-                                             (cli/parse-opts cli-options)
-                                             validate-opts)]
-    (cond (seq errors)
-          (let [msg (error-message errors)]
-            (exit 1 msg))
-
-          (:help options)
-          (let [msg (usage summary)]
-            (exit 0 msg))
-
-          :else
-          (start-server options))))
+  (-> args parse-cli run))

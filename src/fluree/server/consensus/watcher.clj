@@ -13,8 +13,8 @@
 
 (defprotocol Watcher
   (create-watch [w id])
-  (deliver-commit [w id t ledger-id commit-address])
-  (deliver-error [w id error]))
+  (-deliver-commit [w id t ledger-id commit-address])
+  (-deliver-error [w id error]))
 
 (defn new-watcher-atom
   "This atom maps a request's unique id (e.g. tx-id) to a promise that will be
@@ -36,8 +36,7 @@
   [state max-txn-wait-ms id]
   (let [promise-ch (async/promise-chan)]
     (swap! state assoc id promise-ch)
-    (when (and max-txn-wait-ms
-               (< max-txn-wait-ms 0))
+    (when max-txn-wait-ms
       (async/go
         (async/<! (async/timeout max-txn-wait-ms))
         ;; we close the promise chan when delivering, so put! will be false if
@@ -75,14 +74,23 @@
   Watcher
   (create-watch [_ id]
     (create-watch-state state max-txn-wait-ms id))
-  (deliver-commit [_ id t ledger-id commit-address]
+  (-deliver-commit [_ id t ledger-id commit-address]
     (deliver-commit-state state id t ledger-id commit-address))
-  (deliver-error [_ id error]
+  (-deliver-error [_ id error]
     (deliver-error-state state id error)))
+
+(defn deliver-commit
+  [w id event]
+  (let [{:keys [ledger-id t commit]} event]
+    (-deliver-commit w id ledger-id t commit)))
+
+(defn deliver-error
+  [w id error]
+  (-deliver-error w id error))
 
 (defn start
   ([]
-   (start 0))
+   (start nil))
   ([max-txn-wait-ms]
    (->TimeoutWatcher (new-watcher-atom) max-txn-wait-ms)))
 

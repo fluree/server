@@ -1,14 +1,12 @@
-(ns fluree.server.consensus.subscriptions
+(ns fluree.server.broadcast.subscriptions
   (:require [clojure.core.async :as async]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
+            [fluree.server.broadcast :refer [Broadcaster]]
+            [fluree.server.consensus.events :as events]
             [ring.adapter.jetty9.websocket :as ws])
   (:import (java.io Closeable IOException)
            (java.nio.channels ClosedChannelException)))
-
-(defprotocol Publicizer
-  (publicize-commit [p ledger-id t commit-addr])
-  (publicize-new-ledger [p ledger-id commit-addr]))
 
 (defn close-chan
   [chan message]
@@ -89,22 +87,22 @@
 (defn send-message-to-all
   "Sends a message to all subscriptions. Message sent as JSON stringified map
   in the form: {action: commit, ledger: my/ledger, data: {...}}"
-  [sub-state action ledger-alias data]
+  [sub-state ledger-id action data]
   (let [data*   (if (string? data)
                   (json/parse data false)
                   data)
-        message (json/stringify {"action" action
-                                 "ledger" ledger-alias
+        message (json/stringify {"action" (name action)
+                                 "ledger" ledger-id
                                  "data"   data*})
         sub-ids (all-sub-ids @sub-state)]
     (run! #(send-message sub-state % message) sub-ids)))
 
 (defrecord Subscriptions [state]
-  Publicizer
-  (publicize-new-ledger [_ ledger-id commit-addr]
-    (send-message-to-all state "ledger-created" ledger-id {:commit commit-addr, :t 1}))
-  (publicize-commit [_ ledger-id t commit-addr]
-    (send-message-to-all state "new-commit" ledger-id {:commit commit-addr, :t t}))
+  Broadcaster
+  (-broadcast [_ ledger-id event]
+    (let [action  (events/event-type event)
+          message (select-keys event [:tx-id :commit :t])]
+      (send-message-to-all state action ledger-id message)))
 
   Closeable
   (close [_]

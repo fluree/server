@@ -3,7 +3,7 @@
             [clojure.java.io :as io]
             [fluree.db.util.filesystem :as fs]
             [fluree.db.util.log :as log]
-            [fluree.server.consensus.broadcast :as broadcast]
+            [fluree.server.broadcast :as broadcast]
             [fluree.server.consensus.raft.handlers.new-commit :as new-commit])
   (:import (java.io File)))
 
@@ -84,4 +84,4 @@
 (defn broadcast!
   "Responsible for producing the event broadcast to connected peers."
   [{:keys [fluree/watcher fluree/subscriptions] :as _config} handler-result]
-  (broadcast/announce-new-ledger! subscriptions watcher handler-result))
+  (broadcast/broadcast-new-ledger! subscriptions watcher {} handler-result))

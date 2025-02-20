@@ -5,8 +5,8 @@
             [fluree.db.util.async :refer [go-try]]
             [fluree.db.util.core :refer [exception? get-first-value]]
             [fluree.db.util.log :as log]
+            [fluree.server.broadcast :as broadcast]
             [fluree.server.consensus :as consensus]
-            [fluree.server.consensus.broadcast :as broadcast]
             [fluree.server.consensus.events :as events]
             [fluree.server.handlers.shared :refer [deref!]]))
 
@@ -21,7 +21,7 @@
                {} string-opts)))
 
 (defn create-ledger!
-  [conn subscriptions watcher {:keys [ledger-id txn opts] :as params}]
+  [conn broadcaster watcher {:keys [ledger-id txn opts] :as params}]
   (go-try
     (let [create-opts   (parse-opts txn)
           ledger        (deref!
@@ -31,12 +31,11 @@
                             (fluree/stage txn opts)
                             deref!)
           result        (deref!
-                         (fluree/apply-stage! ledger staged-db))
-          broadcast-msg (events/transaction-committed params result)]
-      (broadcast/announce-new-ledger! subscriptions watcher broadcast-msg))))
+                         (fluree/apply-stage! ledger staged-db))]
+      (broadcast/broadcast-new-ledger! broadcaster watcher params result))))
 
 (defn transact!
-  [conn subscriptions watcher {:keys [ledger-id tx-id txn opts] :as params}]
+  [conn broadcaster watcher {:keys [ledger-id tx-id txn opts] :as params}]
   (go-try
     (let [start-time    (System/currentTimeMillis)
           _             (log/debug "Starting transaction processing for ledger:" ledger-id
@@ -50,31 +49,29 @@
                             (fluree/stage txn opts)
                             deref!)
           result        (deref!
-                         (fluree/apply-stage! ledger staged-db))
-          broadcast-msg (events/transaction-committed params result)]
-      (broadcast/announce-new-commit! subscriptions watcher broadcast-msg))))
+                         (fluree/apply-stage! ledger staged-db))]
+      (broadcast/broadcast-new-commit! broadcaster watcher params result))))
 
 (defn process-event
-  [conn subscriptions watcher event]
+  [conn broadcaster watcher event]
   (go
     (try
       (let [event-type (events/event-type event)
-            event-msg  (events/event-data event)
             result     (<! (case event-type
-                             :ledger-create (create-ledger! conn subscriptions watcher event-msg)
-                             :tx-queue      (transact! conn subscriptions watcher event-msg)))]
+                             :ledger-create (create-ledger! conn broadcaster watcher event)
+                             :tx-queue      (transact! conn broadcaster watcher event)))]
         (if (exception? result)
-          (let [error-msg (events/error event-msg result)]
-            (broadcast/announce-error! watcher error-msg))
+          (broadcast/broadcast-error! broadcaster watcher event result)
           result))
       (catch Exception e
-        (log/error "Unexpected event message - expected two-tuple of [event-type event-data], "
-                   "and of a supported event type. Received:" event e)))))
+        (log/error e
+                   "Unexpected event message - expected a map with a supported "
+                   "event type. Received:" event)))))
 
 (defn new-transaction-queue
-  ([conn subscriptions watcher]
-   (new-transaction-queue conn subscriptions watcher nil))
-  ([conn subscriptions watcher max-pending-txns]
+  ([conn broadcaster watcher]
+   (new-transaction-queue conn broadcaster watcher nil))
+  ([conn broadcaster watcher max-pending-txns]
    (let [tx-queue (if (pos-int? max-pending-txns)
                     (async/chan max-pending-txns)
                     (async/chan))]
@@ -96,7 +93,7 @@
 
            :else
            (let [[event out-ch] input
-                 result         (<! (process-event conn subscriptions watcher event))
+                 result         (<! (process-event conn broadcaster watcher event))
                  i*             (inc i)]
              (log/trace "Processed transaction #" i* ". Result:" result)
              (async/put! out-ch result (fn [closed?]
@@ -130,8 +127,8 @@
       out-ch)))
 
 (defn start-buffered
-  [conn subscriptions watcher max-pending-txns]
-  (let [tx-queue (new-transaction-queue conn subscriptions watcher max-pending-txns)]
+  [conn broadcaster watcher max-pending-txns]
+  (let [tx-queue (new-transaction-queue conn broadcaster watcher max-pending-txns)]
     (->BufferedTransactor tx-queue)))
 
 (defrecord SynchronizedTransactor [tx-queue]
@@ -147,17 +144,17 @@
       out-ch)))
 
 (defn start-synchronized
-  [conn subscriptions watcher]
-  (let [tx-queue (new-transaction-queue conn subscriptions watcher)]
+  [conn broadcaster watcher]
+  (let [tx-queue (new-transaction-queue conn broadcaster watcher)]
     (->SynchronizedTransactor tx-queue)))
 
 (defn start
-  ([conn subscriptions watcher]
-   (start-synchronized conn subscriptions watcher))
-  ([conn subscriptions watcher max-pending-txns]
+  ([conn broadcaster watcher]
+   (start-synchronized conn broadcaster watcher))
+  ([conn broadcaster watcher max-pending-txns]
    (if max-pending-txns
-     (start-buffered conn subscriptions watcher max-pending-txns)
-     (start-synchronized conn subscriptions watcher))))
+     (start-buffered conn broadcaster watcher max-pending-txns)
+     (start-synchronized conn broadcaster watcher))))
 
 (defn stop
   [{:keys [tx-queue] :as _transactor}]
