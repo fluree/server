@@ -14,7 +14,7 @@ uberjar: target/server-%.jar ## Build an executable server uberjar
 .DEFAULT_GOAL := uberjar
 
 .PHONY: prepare
-prepare: ## Prepare clojure dependencies
+prepare: ## Prepare library dependencies
 	clojure -X:deps prep
 
 .PHONY: docker-build
