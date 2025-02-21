@@ -66,7 +66,13 @@
       (catch Exception e
         (log/error e
                    "Unexpected event message - expected a map with a supported "
-                   "event type. Received:" event)))))
+                   "event type. Received:" event)
+        ::error))))
+
+(defn error?
+  [result]
+  (or (= result ::error)
+      (nil? result)))
 
 (defn new-transaction-queue
   ([conn broadcaster watcher]
@@ -96,9 +102,10 @@
                  result         (<! (process-event conn broadcaster watcher event))
                  i*             (inc i)]
              (log/trace "Processed transaction #" i* ". Result:" result)
-             (async/put! out-ch result (fn [closed?]
-                                         (when-not closed?
-                                           (async/close! out-ch))))
+             (when-not (error? result)
+               (async/put! out-ch result (fn [closed?]
+                                           (when-not closed?
+                                             (async/close! out-ch)))))
              (recur i*)))))
      tx-queue)))
 
