@@ -125,7 +125,7 @@
   ([config]
    (start-config config nil))
   ([config _profile]
-   (-> config config/parse conn-system/parsed-initialize)))
+   (-> config config/parse conn-system/initialize)))
 
 (defn start-file
   ([path]
