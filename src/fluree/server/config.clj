@@ -72,5 +72,5 @@
 (defn parse
   [cfg]
   (-> cfg
-      (conn-config/parse (map derive-server-node-id))
+      (conn-config/parse derive-server-node-id)
       (assoc :fluree.server/subscriptions {})))
