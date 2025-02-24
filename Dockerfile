@@ -34,6 +34,7 @@ RUN groupadd --gid ${USER_GID} ${USER_NAME} && \
 USER ${USER_NAME}
 
 COPY --from=builder --chown=${USER_NAME}:${USER_NAME} /usr/src/fluree-server/target/server-*.jar ./server.jar
+ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.13.1/opentelemetry-javaagent.jar .
 
 EXPOSE 8090
 EXPOSE 58090

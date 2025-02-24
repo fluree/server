@@ -1,19 +1,34 @@
 <configuration>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>
-                %d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n
-            </pattern>
+      <encoder>
+        <pattern>
+            %d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n
+        </pattern>
+      </encoder>
+    </appender>
+    <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdc>true</includeMdc>
         </encoder>
     </appender>
 
-    <logger name="fluree" level="info" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-    </logger>
+   <!-- adds trace id to message -->
+   <appender name="OTEL" class="io.opentelemetry.instrumentation.logback.mdc.v1_0.OpenTelemetryAppender">
+      <if condition='property("JSON_LOGGING").equalsIgnoreCase("true")'>
+        <then>
+            <appender-ref ref="CONSOLE_JSON"/>
+        </then>
+        <else>
+            <appender-ref ref="CONSOLE"/>
+        </else>
+      </if>
+   </appender>
 
-    <root level="error">
-        <appender-ref ref="CONSOLE"/>
+    <root level="ERROR">
+      <appender-ref ref="OTEL"/>
     </root>
+
+    <logger name="fluree" level="info" additivity="true"/>
 
 </configuration>
