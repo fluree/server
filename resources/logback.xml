@@ -3,7 +3,7 @@
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
       <encoder>
         <pattern>
-            %d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n
+            %d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg [trace_id=%X{trace_id}]%n
         </pattern>
       </encoder>
     </appender>
@@ -29,6 +29,6 @@
       <appender-ref ref="OTEL"/>
     </root>
 
-    <logger name="fluree" level="info" additivity="true"/>
+    <logger name="fluree" level="${FLUREE_LOG_LEVEL:-info}" additivity="true"/>
 
 </configuration>

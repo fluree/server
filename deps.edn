@@ -26,9 +26,11 @@
         org.codehaus.janino/janino     {:mvn/version "3.1.10"}
 
         net.logstash.logback/logstash-logback-encoder {:mvn/version "8.0"}
-        io.opentelemetry/opentelemetry-api {:mvn/version "1.47.0"}
-        io.opentelemetry/opentelemetry-sdk {:mvn/version "1.47.0"}
-        io.opentelemetry.instrumentation/opentelemetry-logback-mdc-1.0 {:mvn/version "2.13.1-alpha"}
+        ;; io.opentelemetry/opentelemetry-api {:mvn/version "1.47.0"}
+        ;; io.opentelemetry/opentelemetry-sdk {:mvn/version "1.47.0"}
+        io.opentelemetry.instrumentation/opentelemetry-logback-mdc-1.0 {:mvn/version "2.12.0-alpha"}
+
+        com.github.steffan-westcott/clj-otel-api {:mvn/version "0.2.7"}
 
         ;; http
         ;; ring-jetty9-adapter 0.30.x+ uses Jetty 12 & requires JDK 17+

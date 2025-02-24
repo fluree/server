@@ -16,8 +16,11 @@ export OTEL_TRACES_SAMPLER="always_on"
 # export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318"
 export OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_MDC_ATTRIBUTES="*"
 export OTEL_RESOURCE_PROVIDERS_AWS_ENABLED="true"
+# this tells the otel collector to use X-Amzn-Trace-Id request header as trace and span id
+export export OTEL_PROPAGATORS=xray
 
-export JSON_LOGGING=true
+export JSON_LOGGING=${JSON_LOGGING:-false}
+export FLUREE_LOG_LEVEL=${FLUREE_LOG_LEVEL:-debug}
 
 clojure -X:deps prep
 clojure -X:run-dev
