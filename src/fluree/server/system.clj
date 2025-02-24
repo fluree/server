@@ -1,6 +1,5 @@
 (ns fluree.server.system
-  (:require [clojure.java.io :as io]
-            [fluree.db.connection.config :as conn-config]
+  (:require [fluree.db.connection.config :as conn-config]
             [fluree.db.connection.system :as conn-system]
             [fluree.db.connection.vocab :as conn-vocab]
             [fluree.db.util.core :as util :refer [get-first]]
@@ -132,8 +131,7 @@
    (start-file path :prod))
   ([path profile]
    (-> path
-       io/file
-       slurp
+       config/read-file
        (start-config profile))))
 
 (defn start-resource

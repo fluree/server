@@ -69,6 +69,10 @@
   [resource-name]
   (-> resource-name io/resource slurp))
 
+(defn read-file
+  [path]
+  (-> path io/file slurp))
+
 (defn parse
   [cfg]
   (-> cfg
