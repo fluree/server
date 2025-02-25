@@ -1,6 +1,7 @@
 (ns fluree.server.handlers.create
   (:require
-   [clojure.core.async :as async :refer [go <!]]
+   [clojure.core.async :as async :refer  [<! >!]]
+   [fluree.db.util.async :refer [go]]
    [fluree.db.api :as fluree]
    [fluree.db.constants :as const]
    [fluree.db.util.context :as ctx-util]
@@ -10,8 +11,7 @@
    [fluree.server.consensus :as consensus]
    [fluree.server.consensus.watcher :as watcher]
    [fluree.server.handlers.shared :refer [deref! defhandler]]
-   [fluree.server.handlers.transact :refer [derive-tx-id]]
-   [steffan-westcott.clj-otel.context :as otel-context]))
+   [fluree.server.handlers.transact :refer [derive-tx-id]]))
 
 (set! *warn-on-reflection* true)
 
@@ -75,7 +75,6 @@
   [{:keys [fluree/conn fluree/consensus fluree/watcher]
     {:keys [body]} :parameters}]
   (log/debug "create body:" body)
-  (log/debug "otel context" otel-context/dyn)
   (let [txn-context    (ctx-util/txn-context body)
         [expanded-txn] (-> (ctx-util/use-fluree-context body)
                            jld-processor/expand

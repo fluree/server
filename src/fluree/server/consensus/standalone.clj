@@ -1,34 +1,15 @@
 (ns fluree.server.consensus.standalone
-  (:require [clojure.core.async :as async :refer [<! >! go go-loop]]
+  (:require [clojure.core.async :as async :refer  [<! >!]]
             [fluree.db.api :as fluree]
             [fluree.db.constants :as const]
-            [fluree.db.util.async :refer [go-try]]
+            [fluree.db.util.async :refer [go-try go go-loop]]
             [fluree.db.util.core :refer [exception? get-first-value]]
             [fluree.db.util.log :as log]
             [fluree.server.broadcast :as broadcast]
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.events :as events]
             [fluree.server.handlers.shared :refer [deref!]]
-            [steffan-westcott.clj-otel.api.trace.span :as span]
-            [steffan-westcott.clj-otel.context :as otel-context])
-  (:import [io.opentelemetry.api.trace Span]
-           [org.slf4j MDC]))
-
-(defn get-trace-id [ctx]
-  (let [span (Span/fromContext ctx) ;; Get the span from the context
-        span-context (.getSpanContext span)] ;; Extract the span context
-    (if (.isValid span-context)
-      (.getTraceId span-context) ;; Get the trace ID from SpanContext
-      nil))) ;; Return nil if no valid trace
-(defmacro with-log-attributes
-  "Temporarily sets MDC (log attributes) for Logback logging within the body."
-  [attr-map & body]
-  `(let [attr-map# ~attr-map]
-     (doseq [[k# v#] attr-map#]
-       (org.slf4j.MDC/put (name k#) (str v#)))
-     (do ~@body)
-     (doseq [[k# v#] attr-map#]
-       (org.slf4j.MDC/remove (name k#)))))
+            [steffan-westcott.clj-otel.api.trace.span :as span]))
 
 (set! *warn-on-reflection* true)
 
@@ -42,9 +23,6 @@
 
 (defn create-ledger!
   [conn broadcaster watcher {:keys [ledger-id txn opts] :as params}]
-  (with-log-attributes {:current (get-trace-id (otel-context/current))
-                        :dyn (get-trace-id (otel-context/dyn))}
-    (log/debug "create ledger"))
   (go-try
     (let [create-opts   (parse-opts txn)
           ledger        (deref!
@@ -77,36 +55,21 @@
 
 (defn process-event
   [conn broadcaster watcher event]
-  (let [ctx (-> event meta :otel-context)]
-    (with-log-attributes {:current (get-trace-id (otel-context/current))
-                          :dyn (get-trace-id (otel-context/dyn))
-                          :ctx (get-trace-id ctx)}
-      (log/debug "process before with-context"))
-    (otel-context/with-context! ctx
-      (with-log-attributes {:current (get-trace-id (otel-context/current))
-                            :dyn (get-trace-id (otel-context/dyn))}
-        (log/debug "process before go"))
-      (go
-        (with-log-attributes {:current (get-trace-id (otel-context/current))
-                              :dyn (get-trace-id (otel-context/dyn))}
-          (log/debug "process start go"))
-
-        (try
-          (otel-context/with-bound-context!
-            (with-log-attributes {:current (get-trace-id (otel-context/current))
-                                  :dyn (get-trace-id (otel-context/dyn))}
-              (log/debug "with bound context "))
-            (let [event-type (events/event-type event)
-                  result     (<! (case event-type
-                                   :ledger-create (create-ledger! conn broadcaster watcher event)
-                                   :tx-queue      (transact! conn broadcaster watcher event)))]
-              (if (exception? result)
-                (broadcast/broadcast-error! broadcaster watcher event result)
-                result)))
-          (catch Exception e
-            (log/error e
-                       "Unexpected event message - expected a map with a supported "
-                       "event type. Received:" event)))))))
+  (go
+    (try
+      (span/with-span!  {:name "Process Event"
+                         :kind :consumer}
+        (let [event-type (events/event-type event)
+              result     (<! (case event-type
+                               :ledger-create (create-ledger! conn broadcaster watcher event)
+                               :tx-queue      (transact! conn broadcaster watcher event)))]
+          (if (exception? result)
+            (broadcast/broadcast-error! broadcaster watcher event result)
+            result)))
+      (catch Exception e
+        (log/error e
+                   "Unexpected event message - expected a map with a supported "
+                   "event type. Received:" event)))))
 
 (defn new-transaction-queue
   ([conn broadcaster watcher]

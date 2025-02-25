@@ -4,9 +4,7 @@
   methods. Currently, we support Raft and Standalone."
   (:require [fluree.db.util.log :as log]
             [fluree.server.consensus.events :as events]
-            [steffan-westcott.clj-otel.api.trace.span :as span]
-            [steffan-westcott.clj-otel.context :as otel-context]
-))
+            [steffan-westcott.clj-otel.api.trace.span :as span]))
 
 (set! *warn-on-reflection* true)
 
@@ -17,13 +15,10 @@
 (defn queue-new-ledger
   [transactor ledger-id tx-id txn opts]
   (log/trace "queue-new-ledger:" ledger-id tx-id txn)
-  (log/debug "queue: otel context" (otel-context/dyn))
   (span/with-span-binding [ctx {:name "Queue New Ledger"
                                 :kind :producer
                                 :attributes {"ledger.id" ledger-id
                                              "transaction.id" tx-id}}]
-  (log/debug "queue span: otel context" (otel-context/dyn) )
-  (log/debug "queue span: otel context atached" ctx )
     (let [event-params (events/create-ledger ledger-id tx-id txn opts)]
       (-queue-new-ledger transactor (with-meta event-params {:otel-context ctx})))))
 
@@ -34,6 +29,5 @@
                                 :kind :producer
                                 :attributes {"ledger.id" ledger-id
                                              "transaction.id" tx-id}}]
-    (log/debug "trace context" ctx)
     (let [event-params (events/commit-transaction ledger-id tx-id txn opts)]
       (-queue-new-transaction transactor (with-meta event-params {:otel-context ctx})))))
