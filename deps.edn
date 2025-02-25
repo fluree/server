@@ -1,7 +1,9 @@
 {:deps {org.clojure/clojure    {:mvn/version "1.11.3"}
         org.clojure/core.async {:mvn/version "1.6.681"}
-        com.fluree/db          {:git/url "https://github.com/fluree/db.git"
+        com.fluree/db          #_{:git/url "https://github.com/fluree/db.git"
                                 :git/sha "9dbd8accb6ee9160bca5d4848c99e52f71793b89"}
+        {:local/root "/Users/kurtharriger/dev/fluree/core/db"}
+
         com.fluree/json-ld     {:git/url "https://github.com/fluree/json-ld.git"
                                 :git/sha "73a990a4b803d0b4cfbbbe4dc16275b39a3add4e"}
 
@@ -83,4 +85,14 @@
    :extra-deps  {lambdaisland/kaocha {:mvn/version "1.88.1376"}
                  clj-http/clj-http   {:mvn/version "3.13.0"}}
    :exec-fn     kaocha.runner/exec-fn
-   :exec-args   {:kaocha.filter/focus-meta [:pending]}}}}
+   :exec-args   {:kaocha.filter/focus-meta [:pending]}}
+  :otel {:jvm-opts ["-javaagent:opentelemetry-javaagent.jar"
+                    "-DOTEL_SERVICE_NAME=fluree-server"
+                    "-DOTEL_RESOURCE_ATTRIBUTES=service.namespace=fluree"
+                    "-DOTEL_TRACES_SAMPLER=always_on"
+                    "-DOTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_MDC_ATTRIBUTES=*"
+                    "-DOTEL_RESOURCE_PROVIDERS_AWS_ENABLED=true"
+                    "-DOTEL_PROPAGATORS=xray"
+                    "-DJSON_LOGGING=true"
+                    "-DFLUREE_LOG_LEVEL=trace"]}}}
+

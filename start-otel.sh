@@ -19,8 +19,8 @@ export OTEL_RESOURCE_PROVIDERS_AWS_ENABLED="true"
 # this tells the otel collector to use X-Amzn-Trace-Id request header as trace and span id
 export export OTEL_PROPAGATORS=xray
 
-export JSON_LOGGING=${JSON_LOGGING:-false}
-export FLUREE_LOG_LEVEL=${FLUREE_LOG_LEVEL:-debug}
+export JSON_LOGGING=${JSON_LOGGING:-true}
+export FLUREE_LOG_LEVEL=${FLUREE_LOG_LEVEL:-trace}
 
 clojure -X:deps prep
 clojure -X:run-dev

@@ -358,7 +358,6 @@
                                 [10 (partial wrap-assoc-system connection consensus
                                              watcher subscriptions)]
                                 [20 (partial trace-http/wrap-server-span)]
-                                [25 (debug-middleware "kharriger")]
                                 [50 unwrap-credential]
                                 [100 wrap-set-fuel-header]
                                 [200 coercion/coerce-exceptions-middleware]

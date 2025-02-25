@@ -10,7 +10,8 @@
    [fluree.server.consensus :as consensus]
    [fluree.server.consensus.watcher :as watcher]
    [fluree.server.handlers.shared :refer [deref! defhandler]]
-   [fluree.server.handlers.transact :refer [derive-tx-id]]))
+   [fluree.server.handlers.transact :refer [derive-tx-id]]
+   [steffan-westcott.clj-otel.context :as otel-context]))
 
 (set! *warn-on-reflection* true)
 
@@ -74,6 +75,7 @@
   [{:keys [fluree/conn fluree/consensus fluree/watcher]
     {:keys [body]} :parameters}]
   (log/debug "create body:" body)
+  (log/debug "otel context" otel-context/dyn)
   (let [txn-context    (ctx-util/txn-context body)
         [expanded-txn] (-> (ctx-util/use-fluree-context body)
                            jld-processor/expand
