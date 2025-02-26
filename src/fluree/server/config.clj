@@ -67,11 +67,21 @@
 
 (defn read-resource
   [resource-name]
-  (-> resource-name io/resource slurp))
+  (try
+    (-> resource-name io/resource slurp)
+    (catch IllegalArgumentException e
+      (throw (ex-info (str "Unable to load configuration resource " resource-name)
+                      {:status 400, :error :server/missing-config}
+                      e)))))
 
 (defn read-file
   [path]
-  (-> path io/file slurp))
+  (try
+    (-> path io/file slurp)
+    (catch IllegalArgumentException e
+      (throw (ex-info (str "Unable to load configuration file at path: " path)
+                      {:status 400, :error :server/missing-config}
+                      e)))))
 
 (defn parse
   [cfg]
