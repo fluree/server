@@ -26,12 +26,25 @@
                                       WHERE  {?test a schema:Test;
                                                     ex:name ?name.}")
           query-res   (api-post :query {:body    query
-                                        :headers sparql-results-headers})]
+                                        :headers sparql-results-headers})
+
+          meta-res    (api-post :query {:body    query
+                                        :headers (assoc sparql-results-headers
+                                                        "Fluree-Meta" true)})]
 
       (is (= 200 (:status query-res)))
-
       (is (= {"head" {"vars" ["name"]}
               "results"
               {"bindings"
                [{"name" {"value" "query-sparql-test", "type" "literal"}}]}}
-             (-> query-res :body json/read-value))))))
+             (-> query-res :body json/read-value)))
+
+      (is (= 200 (:status meta-res)))
+      (is (= {"fuel" 2,
+              "status" 200,
+              "result"
+              {"results"
+               {"bindings"
+                [{"name" {"value" "query-sparql-test", "type" "literal"}}]},
+               "head" {"vars" ["name"]}}}
+             (-> meta-res :body json/read-value (dissoc "time")))))))
