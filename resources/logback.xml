@@ -1,34 +1,44 @@
 <configuration>
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>
+        %d{HH:mm:ss.SSS} %-5level %X{trace_id} %t %logger{36} - %msg%n
+      </pattern>
+    </encoder>
+  </appender>
+  <appender name="CONSOLE_COLORS" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+        <pattern>%highlight(%-5level) %cyan(%logger{24}) - %msg%n</pattern>
+    </encoder>
+  </appender>
+  <appender name="CONSOLE_TRACE_COLORS" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%highlight(%-5level) %cyan(%logger{24} %X{trace_id} %t) - %msg%n</pattern>
+    </encoder>
+  </appender>
+  <appender name="CONSOLE_JSON_PRETTY" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <jsonGeneratorDecorator class="net.logstash.logback.decorate.PrettyPrintingJsonGeneratorDecorator" />
+      <includeMdc>true</includeMdc>
+    </encoder>
+  </appender>
+  <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+      <includeMdc>true</includeMdc>
+    </encoder>
+  </appender>
 
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-      <encoder>
-        <pattern>
-            %d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg [trace_id=%X{trace_id}]%n
-        </pattern>
-      </encoder>
-    </appender>
-    <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-            <includeMdc>true</includeMdc>
-        </encoder>
-    </appender>
+  <appender name="OTEL" class="io.opentelemetry.instrumentation.logback.mdc.v1_0.OpenTelemetryAppender">
+    <appender-ref ref="${CONSOLE_APPENDER:-CONSOLE_COLOR}"/>
+  </appender>
 
-   <!-- adds trace id to message -->
-   <appender name="OTEL" class="io.opentelemetry.instrumentation.logback.mdc.v1_0.OpenTelemetryAppender">
-      <if condition='property("JSON_LOGGING").equalsIgnoreCase("true")'>
-        <then>
-            <appender-ref ref="CONSOLE_JSON"/>
-        </then>
-        <else>
-            <appender-ref ref="CONSOLE"/>
-        </else>
-      </if>
-   </appender>
 
-    <root level="ERROR">
-      <appender-ref ref="OTEL"/>
-    </root>
+  <root level="${ROOT_LOG_LEVEL:-INFO}">
+    <appender-ref ref="OTEL"/>
+  </root>
 
-    <logger name="fluree" level="${FLUREE_LOG_LEVEL:-info}" additivity="true"/>
+  <logger name="user" level="ALL"/>
+  <logger name="ch.qos.logback" level="WARN"/>
+  <logger name="fluree" level="${FLUREE_LOG_LEVEL:-INFO}"/>
 
 </configuration>
