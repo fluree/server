@@ -337,6 +337,7 @@
            (log/debug name "got response:" resp*))
          resp)))))
 
+
 (defn compose-fluree-middleware
   [{:keys [connection consensus watcher subscriptions root-identities closed-mode]
     :as _config}]
@@ -358,7 +359,6 @@
                                 [10 (partial wrap-assoc-system connection consensus
                                              watcher subscriptions)]
                                 [20 (partial trace-http/wrap-server-span)]
-                                [25 (debug-middleware "kharriger")]
                                 [50 unwrap-credential]
                                 [100 wrap-set-fuel-header]
                                 [200 coercion/coerce-exceptions-middleware]
