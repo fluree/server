@@ -11,8 +11,9 @@ if [ ! -f opentelemetry-javaagent.jar ]; then
     wget https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.13.1/opentelemetry-javaagent.jar
 fi
 
-export JAVA_TOOL_OPTIONS="-javaagent:opentelemetry-javaagent.jar"
-#export JAVA_TOOL_OPTIONS="$JAVA_TOOL_OPTIONS -Dio.opentelemetry.javaagent.slf4j.simpleLogger.defaultLogLevel=trace"
+export JAVA_AGENT="-javaagent:opentelemetry-javaagent.jar"
+#export JAVA_OPTS="$JAVA_OPTS -Dio.opentelemetry.javaagent.slf4j.simpleLogger.defaultLogLevel=trace"
+export JAVA_TOOL_OPTIONS="$JAVA_AGENT $JAVA_OPTS"
 export OTEL_SERVICE_NAME="fluree-server"
 export OTEL_RESOURCE_ATTRIBUTES=service.namespace=fluree
 
@@ -22,7 +23,7 @@ export OTEL_RESOURCE_PROVIDERS_AWS_ENABLED="true"
 # this tells the otel collector to use X-Amzn-Trace-Id request header as trace and span id
 export export OTEL_PROPAGATORS=xray
 
-export CONSOLE_APPENDER=${CONSOLE_APPENDER:-CONSOLE_COLORS}
+export CONSOLE_APPENDER=${CONSOLE_APPENDER:-CONSOLE_TRACE_COLORS}
 export ROOT_LOG_LEVEL=${ROOT_LOG_LEVEL:-INFO}
 export FLUREE_LOG_LEVEL=${FLUREE_LOG_LEVEL:-INFO}
 
