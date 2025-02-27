@@ -1,4 +1,4 @@
-#! /bin/bash -e
+#! /bin/bash -ex
 
 # https://opentelemetry.io/docs/zero-code/java/agent/getting-started/
 # https://opentelemetry.io/docs/languages/sdk-configuration/general
@@ -12,8 +12,8 @@ if [ ! -f opentelemetry-javaagent.jar ]; then
 fi
 
 export JAVA_AGENT="-javaagent:opentelemetry-javaagent.jar"
-#export JAVA_OPTS="$JAVA_OPTS -Dio.opentelemetry.javaagent.slf4j.simpleLogger.defaultLogLevel=trace"
-export JAVA_TOOL_OPTIONS="$JAVA_AGENT $JAVA_OPTS"
+#export JOPTS="$JOPTS-Dio.opentelemetry.javaagent.slf4j.simpleLogger.defaultLogLevel=trace"
+export JOPTS="$JAVA_AGENT $JOPTS"
 export OTEL_SERVICE_NAME="fluree-server"
 export OTEL_RESOURCE_ATTRIBUTES=service.namespace=fluree
 
@@ -52,13 +52,24 @@ if [ -z "$OTEL_EXPORTER_OTLP_ENDPOINT" ] && ! is_port_in_use 4318; then
     export OTEL_LOGS_EXPORTER="none"
 fi
 
+# when passing java opts to clojure each option needs to be prefixed with -J
+# it complains if you do -J"multiple space deliminated options"
+prepend_J() {
+  local result=()
+  for arg in "$@"; do
+    result+=("-J$arg")
+  done
+  echo "${result[@]}"
+}
+JOPTS=$(prepend_J $JOPTS)
+echo $JOPTS
 
 if [ "$1" == "repl" ]; then
     export PROFILES=${PROFILES:-":dev:dev/reloaded:run-dev:test"}
     if [ -n "$2" ]; then
       PROFILES="$2"
     fi
-    clojure -Sdeps '{:deps {nrepl/nrepl {:mvn/version,"1.1.0"},cider/cider-nrepl {:mvn/version,"0.45.0"}}}' -M:$PROFILES -m nrepl.cmdline --middleware "[cider.nrepl/cider-middleware]"
+    clojure $JOPTS -Sdeps '{:deps {nrepl/nrepl {:mvn/version,"1.1.0"},cider/cider-nrepl {:mvn/version,"0.45.0"}}}' -M:$PROFILES -m nrepl.cmdline --middleware "[cider.nrepl/cider-middleware]"
 else
-    clojure -X:run-dev
+    clojure $JOPTS -X:run-dev
 fi
