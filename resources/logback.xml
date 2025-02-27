@@ -41,4 +41,5 @@
   <logger name="ch.qos.logback" level="WARN"/>
   <logger name="fluree" level="${FLUREE_LOG_LEVEL:-INFO}"/>
 
+  <!-- <logger name="io.opentelemetry" level="TRACE"/> -->
 </configuration>

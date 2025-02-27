@@ -4,12 +4,15 @@
 # https://opentelemetry.io/docs/languages/sdk-configuration/general
 # https://opentelemetry.io/docs/languages/sdk-configuration/otlp-exporter/
 
+# run this before setting JAVA_TOOL_OPTIONS
+clojure -X:deps prep
+
 if [ ! -f opentelemetry-javaagent.jar ]; then
     wget https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.13.1/opentelemetry-javaagent.jar
 fi
 
 export JAVA_TOOL_OPTIONS="-javaagent:opentelemetry-javaagent.jar"
-
+#export JAVA_TOOL_OPTIONS="$JAVA_TOOL_OPTIONS -Dio.opentelemetry.javaagent.slf4j.simpleLogger.defaultLogLevel=trace"
 export OTEL_SERVICE_NAME="fluree-server"
 export OTEL_RESOURCE_ATTRIBUTES=service.namespace=fluree
 
@@ -48,7 +51,6 @@ if [ -z "$OTEL_EXPORTER_OTLP_ENDPOINT" ] && ! is_port_in_use 4318; then
     export OTEL_LOGS_EXPORTER="none"
 fi
 
-clojure -X:deps prep
 
 if [ "$1" == "repl" ]; then
     export PROFILES=${PROFILES:-":dev:dev/reloaded:run-dev:test"}

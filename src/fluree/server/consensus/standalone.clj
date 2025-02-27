@@ -1,8 +1,8 @@
 (ns fluree.server.consensus.standalone
-  (:require [clojure.core.async :as async :refer [<! >!]]
+  (:require [clojure.core.async :as async :refer [<! >! go go-loop]]
             [fluree.db.api :as fluree]
             [fluree.db.constants :as const]
-            [fluree.db.util.async :refer [go-try go go-loop]]
+            [fluree.db.util.async :refer [go-try]]
             [fluree.db.util.core :refer [exception? get-first-value]]
             [fluree.db.util.log :as log]
             [fluree.server.broadcast :as broadcast]
