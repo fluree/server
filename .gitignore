@@ -1,4 +1,6 @@
 .nrepl-port
+/.calva/
+/.portal/
 /.cpcache
 /data/*
 /dev/data/benchmark/*
@@ -13,3 +15,5 @@
 /.lsp/
 /dev/data/*
 /data*/**
+/checkouts/
+/.idea/

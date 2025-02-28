@@ -22,8 +22,8 @@ docker-build: ## Build the server docker container
 	docker buildx build -t fluree/server:latest -t fluree/server:$(shell git rev-parse HEAD) --build-arg="PROFILE=prod" --load .
 
 .PHONY: docker-run
-docker-run: ## Run in docker
-	docker run -p 58090:8090 -v `pwd`/data:/opt/fluree-server/data fluree/server
+docker-run: docker-build ## Run in docker
+	docker run -p 58090:8090 -v `pwd`/data:/opt/fluree-server/data fluree/server:latest
 
 .PHONY: docker-push
 docker-push: ## Build and publish the server docker container

@@ -24,7 +24,8 @@
             [reitit.swagger :as swagger]
             [reitit.swagger-ui :as swagger-ui]
             [ring.adapter.jetty9 :as http]
-            [ring.middleware.cors :as rmc])
+            [ring.middleware.cors :as rmc]
+            [steffan-westcott.clj-otel.api.trace.http :as trace-http])
   (:import (java.io InputStream)))
 
 (set! *warn-on-reflection* true)
@@ -356,6 +357,7 @@
                                 [10 wrap-cors]
                                 [10 (partial wrap-assoc-system connection consensus
                                              watcher subscriptions)]
+                                [20 (partial trace-http/wrap-server-span)]
                                 [50 unwrap-credential]
                                 [100 wrap-set-fuel-header]
                                 [200 coercion/coerce-exceptions-middleware]

@@ -2,6 +2,7 @@
   (:require [clojure.string :as str]
             [clojure.tools.cli :as cli]
             [fluree.db.util.log :as log]
+            [fluree.server.otel]
             [fluree.server.system :as system])
   (:gen-class))
 

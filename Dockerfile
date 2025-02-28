@@ -17,8 +17,21 @@ FROM eclipse-temurin:17-jre-jammy AS runner
 ARG USER_NAME=fluree
 ARG USER_UID=10001
 ARG USER_GID=${USER_UID}
-ENV FLUREE_HOME=/opt/fluree-server
-ENV JAVA_XMX=8g
+ENV FLUREE_HOME="/opt/fluree-server"
+ENV JAVA_XMX="8g"
+ENV JAVA_AGENT="-javaagent:opentelemetry-javaagent.jar"
+ENV JAVA_OPTS=""
+ENV OTEL_EXPORTER_OTLP_ENDPOINT=""
+ENV OTEL_SERVICE_NAME="fluree-server"
+ENV OTEL_RESOURCE_ATTRIBUTES="service.namespace=fluree"
+ENV OTEL_TRACES_SAMPLER="always_on"
+ENV OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_MDC_ATTRIBUTES="*"
+ENV OTEL_RESOURCE_PROVIDERS_AWS_ENABLED="true"
+ENV OTEL_PROPAGATORS="xray"
+
+ENV CONSOLE_APPENDER="CONSOLE_JSON"
+ENV ROOT_LOG_LEVEL="WARN"
+ENV FLUREE_LOG_LEVEL="INFO"
 
 WORKDIR ${FLUREE_HOME}
 
@@ -34,10 +47,14 @@ RUN groupadd --gid ${USER_GID} ${USER_NAME} && \
 USER ${USER_NAME}
 
 COPY --from=builder --chown=${USER_NAME}:${USER_NAME} /usr/src/fluree-server/target/server-*.jar ./server.jar
+COPY --chown=${USER_NAME}:${USER_NAME} docker-entrypoint.sh .
+ADD --chown=${USER_NAME}:${USER_NAME} https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.13.1/opentelemetry-javaagent.jar .
 
 EXPOSE 8090
 EXPOSE 58090
 
 VOLUME ./data
 
-ENTRYPOINT ["java", "-jar", "-Xmx8g", "server.jar"]
+# to run a clojure repl instead to inspect and validate configuration
+# docker run -it  --entrypoint "java" fluree/server:latest -cp server.jar clojure.main
+ENTRYPOINT [ "./docker-entrypoint.sh" ]

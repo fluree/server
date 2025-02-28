@@ -8,7 +8,9 @@
             [fluree.server.broadcast :as broadcast]
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.events :as events]
-            [fluree.server.handlers.shared :refer [deref!]]))
+            [fluree.server.handlers.shared :refer [deref!]]
+            [steffan-westcott.clj-otel.api.trace.span :as span]
+            [steffan-westcott.clj-otel.context :as otel-context]))
 
 (set! *warn-on-reflection* true)
 
@@ -54,20 +56,23 @@
 
 (defn process-event
   [conn broadcaster watcher event]
-  (go
-    (try
-      (let [event-type (events/event-type event)
-            result     (<! (case event-type
-                             :ledger-create (create-ledger! conn broadcaster watcher event)
-                             :tx-queue      (transact! conn broadcaster watcher event)))]
-        (if (exception? result)
-          (broadcast/broadcast-error! broadcaster watcher event result)
-          result))
-      (catch Exception e
-        (log/error e
-                   "Unexpected event message - expected a map with a supported "
-                   "event type. Received:" event)
-        ::error))))
+  (otel-context/with-context! (-> event meta :otel-context)
+    (span/with-span!  {:name "Process Event"
+                       :kind :consumer}
+      (go
+        (try
+          (let [event-type (events/event-type event)
+                result     (<! (case event-type
+                                 :ledger-create (create-ledger! conn broadcaster watcher event)
+                                 :tx-queue      (transact! conn broadcaster watcher event)))]
+            (if (exception? result)
+              (broadcast/broadcast-error! broadcaster watcher event result)
+              result))
+          (catch Exception e
+            (log/error e
+                       "Unexpected event message - expected a map with a supported "
+                       "event type. Received:" event)
+            ::error))))))
 
 (defn error?
   [result]

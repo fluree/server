@@ -1,1 +1,2 @@
-{:lint-as {fluree.server.handlers.shared/defhandler clojure.core/defn}}
+{:lint-as {fluree.server.handlers.shared/defhandler clojure.core/defn
+           steffan-westcott.clj-otel.api.trace.span/with-span-binding clojure.core/let}}

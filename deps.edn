@@ -23,6 +23,13 @@
         ;; logging
         ch.qos.logback/logback-classic {:mvn/version "1.5.6"}
         org.slf4j/slf4j-api            {:mvn/version "2.0.13"}
+        org.codehaus.janino/janino     {:mvn/version "3.1.10"}
+        net.logstash.logback/logstash-logback-encoder {:mvn/version "8.0"}
+        ;; note /opentelemetry-logback-mdc-1.0 pinned at 2.12.0-alpha pending
+        ;; https://github.com/steffan-westcott/clj-otel/issues/24
+        io.opentelemetry.instrumentation/opentelemetry-logback-mdc-1.0 {:mvn/version "2.12.0-alpha"}
+
+        com.github.steffan-westcott/clj-otel-api {:mvn/version "0.2.7"}
 
         ;; http
         ;; ring-jetty9-adapter 0.30.x+ uses Jetty 12 & requires JDK 17+
@@ -76,3 +83,4 @@
                  clj-http/clj-http   {:mvn/version "3.13.0"}}
    :exec-fn     kaocha.runner/exec-fn
    :exec-args   {:kaocha.filter/focus-meta [:pending]}}}}
+
