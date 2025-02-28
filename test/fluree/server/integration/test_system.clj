@@ -17,6 +17,10 @@
   {"Content-Type" "application/sparql-query"
    "Accept"       "application/json"})
 
+(def sparql-results-headers
+  {"Content-Type" "application/sparql-query"
+   "Accept"       "application/sparql-results+json"})
+
 (def jwt-headers
   {"Content-Type" "application/jwt"
    "Accept"       "application/json"})
