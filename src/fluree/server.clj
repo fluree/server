@@ -4,8 +4,7 @@
             [fluree.db.util.log :as log]
             [fluree.server.otel]
             [fluree.server.system :as system])
-  (:gen-class)
-  (:import [org.slf4j MDC]))
+  (:gen-class))
 
 (set! *warn-on-reflection* true)
 
@@ -67,7 +66,6 @@
 
 (defn start
   [{:keys [profile] :as options}]
-  (MDC/put "profile" (str profile))
   (if-let [config-string (:string options)]
     (do (log/info "Starting Fluree server from command line configuration with profile:"
                   profile)
