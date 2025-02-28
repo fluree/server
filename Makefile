@@ -22,8 +22,12 @@ docker-build: ## Build the server docker container
 	docker buildx build -t fluree/server:latest -t fluree/server:$(shell git rev-parse HEAD) --build-arg="PROFILE=prod" --load .
 
 .PHONY: docker-run
-docker-run: ## Run in docker
-	docker run -p 58090:8090 -v `pwd`/data:/opt/fluree-server/data fluree/server
+docker-run: docker-build ## Run in docker
+	docker run -p 58090:8090 -v `pwd`/data:/opt/fluree-server/data fluree/server:latest
+
+.PHONY: docker-repl
+docker-repl: docker-build ## Run in docker
+	docker run -p 5555:5555 -v `pwd`/data:/opt/fluree-server/data --entrypoint /opt/java/openjdk/bin/java -it fluree/server:latest  -cp server.jar -m clojure.repl -p 5555
 
 .PHONY: docker-push
 docker-push: ## Build and publish the server docker container

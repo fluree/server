@@ -15,6 +15,5 @@
 /.lsp/
 /dev/data/*
 /data*/**
-opentelemetry-javaagent.jar
 /checkouts/
 /.idea/

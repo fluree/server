@@ -4,14 +4,17 @@
 # https://opentelemetry.io/docs/languages/sdk-configuration/general
 # https://opentelemetry.io/docs/languages/sdk-configuration/otlp-exporter/
 
-# run this before setting JAVA_TOOL_OPTIONS
-clojure -X:deps prep
+SCRIPT_DIR="$(dirname "$(realpath "$0")")"
+cd $SCRIPT_DIR
 
 if [ ! -f opentelemetry-javaagent.jar ]; then
     wget https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.13.1/opentelemetry-javaagent.jar
 fi
+cd ../..
 
-export JAVA_AGENT="-javaagent:opentelemetry-javaagent.jar"
+clojure -X:deps prep
+
+export JAVA_AGENT="-javaagent:$SCRIPT_DIR/opentelemetry-javaagent.jar"
 #export JOPTS="$JOPTS-Dio.opentelemetry.javaagent.slf4j.simpleLogger.defaultLogLevel=trace"
 export JOPTS="$JAVA_AGENT $JOPTS"
 export OTEL_SERVICE_NAME="fluree-server"

@@ -1,0 +1,3 @@
+grafana/
+tempo-data/
+opentelemetry-javaagent.jar
