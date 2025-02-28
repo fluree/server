@@ -337,7 +337,6 @@
            (log/debug name "got response:" resp*))
          resp)))))
 
-
 (defn compose-fluree-middleware
   [{:keys [connection consensus watcher subscriptions root-identities closed-mode]
     :as _config}]

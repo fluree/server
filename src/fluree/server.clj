@@ -1,8 +1,8 @@
 (ns fluree.server
   (:require [clojure.string :as str]
             [clojure.tools.cli :as cli]
-            [fluree.server.otel]
             [fluree.db.util.log :as log]
+            [fluree.server.otel]
             [fluree.server.system :as system])
   (:gen-class)
   (:import [org.slf4j MDC]))

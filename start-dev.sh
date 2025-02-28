@@ -62,7 +62,6 @@ prepend_J() {
   echo "${result[@]}"
 }
 JOPTS=$(prepend_J $JOPTS)
-echo $JOPTS
 
 if [ "$1" == "repl" ]; then
     export PROFILES=${PROFILES:-":dev:dev/reloaded:run-dev:test"}
