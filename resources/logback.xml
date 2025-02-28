@@ -15,8 +15,7 @@
   </appender>
   <appender name="CONSOLE_TRACE_COLORS" class="ch.qos.logback.core.ConsoleAppender">
     <encoder>
-      <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) %cyan(%logger %X{trace_id} %t)\n  %msg%n</pattern>
-
+      <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) %cyan(%logger %t %X{trace_id})\n  %msg%n</pattern>
     </encoder>
   </appender>
   <appender name="CONSOLE_JSON_PRETTY" class="ch.qos.logback.core.ConsoleAppender">
@@ -32,7 +31,7 @@
   </appender>
 
   <appender name="OTEL" class="io.opentelemetry.instrumentation.logback.mdc.v1_0.OpenTelemetryAppender">
-    <appender-ref ref="${CONSOLE_APPENDER:-CONSOLE_COLORS}"/>
+    <appender-ref ref="${CONSOLE_APPENDER:-CONSOLE_TRACE_COLORS}"/>
   </appender>
 
 
