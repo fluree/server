@@ -10,18 +10,22 @@
      to implement a ContextStorageProvider that stores state in a var instead of thread locals.
      I spent a bit of time trying to figure this out but it seems quite a bit more involved than
      patching core.aysnc"
-  (:require [clojure.core.async.impl.dispatch :as dispatch])
-  (:import [io.opentelemetry.context Context]))
+  (:require [clojure.core.async.impl.dispatch :as dispatch]
+            [clojure.core.async :as async])
+  (:import [io.opentelemetry.context Context]
+           [java.util.concurrent Executor]))
+
 
 (defonce original-run dispatch/run)
-
 (defn wrapped-runable ^Runnable [^Runnable r]
-    (let [^Context ctx (Context/current)]
-        (.wrap ctx r)))
-
+     (.wrap (Context/current) r))
 (defn patched-run
  "Runs Runnable r with OpenTelemetry context propagation."
  [^Runnable r]
  (original-run (wrapped-runable r)))
 
 (alter-var-root #'dispatch/run (constantly patched-run))
+
+(defonce ^Executor original-thread-macro-executor @#'async/thread-macro-executor)
+
+(alter-var-root #'async/thread-macro-executor (constantly (Context/taskWrapping original-thread-macro-executor)))

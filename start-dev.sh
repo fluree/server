@@ -1,4 +1,4 @@
-#! /bin/bash -ex
+#! /bin/bash -e
 
 # https://opentelemetry.io/docs/zero-code/java/agent/getting-started/
 # https://opentelemetry.io/docs/languages/sdk-configuration/general
