@@ -1,2 +1,4 @@
 {:output ; GitHub Actions can parse this to provide more useful output
- {:pattern "::{{level}} file={{filename}},line={{row}},col={{col}}::{{message}}"}}
+ {:pattern "::{{level}} file={{filename}},line={{row}},col={{col}}::{{message}}"}
+ :lint-as {fluree.server.handlers.shared/defhandler clojure.core/defn
+           steffan-westcott.clj-otel.api.trace.span/with-span-binding clojure.core/let}}
