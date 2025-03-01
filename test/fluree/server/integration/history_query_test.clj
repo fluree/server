@@ -22,7 +22,7 @@
           txn-req       {:body
                          (json/write-value-as-string
                           {"ledger"   ledger-name
-                           "@context" ["https://ns.flur.ee" test-system/default-context]
+                           "@context" test-system/default-context
                            "insert"   [{"id"      "ex:query-test"
                                         "type"    "schema:Test"
                                         "ex:name" "query-test"}]})
@@ -32,7 +32,7 @@
           txn2-req      {:body
                          (json/write-value-as-string
                           {"ledger"   ledger-name
-                           "@context" ["https://ns.flur.ee" test-system/default-context]
+                           "@context" test-system/default-context
                            "insert"   [{"id"           "ex:query-test"
                                         "ex:test-type" "integration"}]})
                          :headers json-headers}
