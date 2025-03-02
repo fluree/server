@@ -336,7 +336,7 @@
            (log/debug name "got response:" resp*))
          resp)))))
 
-(defn compose-fluree-middleware
+(defn compose-app-middleware
   [{:keys [connection consensus watcher subscriptions root-identities closed-mode]
     :as _config}]
   (let [exception-middleware (exception/create-exception-middleware
@@ -434,10 +434,8 @@
     fluree-callback-routes})
 
 (defn combine-fluree-routes
-  [mw-config fluree-route-list]
-  (let [fluree-middleware (compose-fluree-middleware mw-config)]
-    (into ["/fluree" {:middleware fluree-middleware}]
-          fluree-route-list)))
+  [fluree-route-list]
+  (into ["/fluree"] fluree-route-list))
 
 (def fallback-handler
   (let [swagger-ui-handler (swagger-ui/create-swagger-ui-handler
@@ -474,6 +472,8 @@
   ([config]
    (app config default-fluree-routes))
   ([config fluree-route-list]
-   (let [fluree-routes (combine-fluree-routes config fluree-route-list)
-         router        (app-router fluree-routes)]
+   (let [app-middleware (compose-app-middleware config)
+         fluree-routes  (combine-fluree-routes fluree-route-list)
+         app-routes     ["" {:middleware app-middleware} fluree-routes]
+         router         (app-router app-routes)]
      (ring/ring-handler router fallback-handler))))
