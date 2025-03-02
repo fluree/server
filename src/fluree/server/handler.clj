@@ -424,18 +424,22 @@
                          500 {:body ErrorResponse}}
             :handler    #'srv-tx/callback}}]])
 
-(def default-fluree-routes
-  #{fluree-create-routes
-    fluree-transact-routes
-    fluree-query-routes
-    fluree-history-routes
-    fluree-remote-routes
-    fluree-subscription-routes
-    fluree-callback-routes})
+(def default-fluree-route-map
+  {:create       fluree-create-routes
+   :transact     fluree-transact-routes
+   :query        fluree-query-routes
+   :history      fluree-history-routes
+   :remote       fluree-remote-routes
+   :subscription fluree-subscription-routes})
 
 (defn combine-fluree-routes
-  [fluree-route-list]
-  (into ["/fluree"] fluree-route-list))
+  [fluree-route-map]
+  (->> fluree-route-map
+       vals
+       (into ["/fluree"])))
+
+(def default-fluree-routes
+  (combine-fluree-routes default-fluree-route-map))
 
 (def fallback-handler
   (let [swagger-ui-handler (swagger-ui/create-swagger-ui-handler
@@ -473,9 +477,8 @@
    (app config []))
   ([config custom-routes]
    (app config custom-routes default-fluree-routes))
-  ([config custom-routes fluree-route-list]
+  ([config custom-routes fluree-routes]
    (let [app-middleware (compose-app-middleware config)
-         fluree-routes  (combine-fluree-routes fluree-route-list)
          app-routes     (cond-> ["" {:middleware app-middleware} fluree-routes]
                           (seq custom-routes) (conj custom-routes))
          router         (app-router app-routes)]
