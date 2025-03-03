@@ -95,16 +95,3 @@
             resp-p (transact! consensus watcher expanded-txn opts)]
         {:status 200, :body (deref! resp-p)})
       (throw-ledger-doesnt-exist ledger-id))))
-
-(defhandler callback
-  [{:fluree/keys   [watcher]
-    {:keys [body]} :parameters}]
-  (let [{:keys [tx-id status]} body]
-    (if (= status "ok")
-      (let [event (dissoc body :status)]
-        (watcher/deliver-commit watcher tx-id event))
-      (let [{:keys [error-msg error-data]}
-            body
-            ex (ex-info error-msg error-data)]
-        (watcher/deliver-error watcher tx-id ex)))
-    {:status 200, :body {:status "ok"}}))

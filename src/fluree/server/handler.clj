@@ -75,13 +75,6 @@
               [:tx-id DID]
               [:commit  LedgerAddress]]]))
 
-(def TransactCallbackRequestBody
-  (m/schema [:map-of :any :any]))
-
-(def TransactCallbackResponseBody
-  (m/schema [:and
-             [:map-of :keyword :any]]))
-
 (def FqlQuery (m/schema (-> (fql/query-schema [])
                             ;; hack to make query schema open instead of closed
                             ;; TODO: remove once db is updated to open
@@ -413,16 +406,6 @@
    {:get {:summary    "Subscribe to ledger updates"
           :parameters {:body SubscriptionRequestBody}
           :handler    #'subscription/default}}])
-
-(def fluree-callback-routes
-  ["/callback"
-   ["/transaction"
-    {:post {:summary    "Report progress of delegated transaction processing"
-            :parameters {:body TransactCallbackRequestBody}
-            :responses  {200 {:body TransactCallbackResponseBody}
-                         400 {:body ErrorResponse}
-                         500 {:body ErrorResponse}}
-            :handler    #'srv-tx/callback}}]])
 
 (def default-fluree-route-map
   {:create       fluree-create-routes
