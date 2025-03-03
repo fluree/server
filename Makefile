@@ -45,7 +45,7 @@ clj-kondo-lint: ## Lint Clojure code with clj-kondo
 	clj-kondo --lint src:test:build.clj
 
 .PHONY: clj-kondo-lint-ci
-clj-kondo-lint-ci: prepare
+clj-kondo-lint-ci:
 	clj-kondo --lint src:test:build.clj --config .clj-kondo/ci-config.edn
 
 .PHONY: cljfmt-check
