@@ -27,14 +27,14 @@
                                          :instant   pos-int?}
                             :auth       {} ;; specific authorization logic to determine if action is allowed.
                             :handler    ledger-created/handler
-                            :processor  ledger-created/broadcast!}
+                            :processor  ledger-created/deliver!}
    :tx-queue               {:summary   "Queues a new transaction for a given ledger. If the transactor, processes transaction"
                             :produces-events [:new-commit :tx-exception]
                             :handler   tx-queue/handler
                             :processor tx-queue/processor}
    :new-commit             {:summary   "A transaction has been processed into a new commit. Broadcast to connected clients."
                             :handler   new-commit/handler
-                            :processor new-commit/broadcast!}
+                            :processor new-commit/deliver!}
    :tx-exception           {:summary "Any transaction that has an exception which is not recorded in a new commit.  Broadcast to connected clients."
                             :handler tx-exception/handler}
    :new-index-file         {:summary   "A new (pending) index file is created for an ongoing indexing process"

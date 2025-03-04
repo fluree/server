@@ -26,7 +26,7 @@
                   :error  :db/unexpected-error}
                  e)))))
 
-(defn broadcast!
+(defn deliver!
   [{:keys [fluree/watcher] :as _config} exception]
   (watcher/deliver-error watcher nil exception))
 
@@ -38,7 +38,7 @@
 
     (->> exception-meta
          (update-ledger-state config)
-         (broadcast! config))
+         (deliver! config))
 
     (catch Exception e
       (log/warn (str "Error recording transaction exception: " (ex-message e)))
