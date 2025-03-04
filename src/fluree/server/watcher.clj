@@ -80,9 +80,8 @@
     (deliver-error-state state id error)))
 
 (defn deliver-commit
-  [w id event]
-  (let [{:keys [ledger-id t commit]} event]
-    (-deliver-commit w id ledger-id t commit)))
+  [w {:keys [ledger-id tx-id t commit] :as _event}]
+  (-deliver-commit w tx-id ledger-id t commit))
 
 (defn deliver-error
   [w id error]

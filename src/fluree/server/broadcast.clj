@@ -14,7 +14,7 @@
         (events/ledger-created new-ledger-params new-ledger-result)]
     (log/info (str "New Ledger successfully created by server " server
                    ": " ledger-id " with tx-id: " tx-id "."))
-    (watcher/deliver-commit watcher tx-id ledger-created-event)
+    (watcher/deliver-commit watcher ledger-created-event)
     (-broadcast broadcaster ledger-id ledger-created-event)
     ::new-ledger))
 
@@ -24,7 +24,7 @@
         (events/transaction-committed commit-params commit-result)]
     (log/info "New transaction completed for" ledger-id
               "tx-id: " tx-id "by server:" server)
-    (watcher/deliver-commit watcher tx-id transaction-committed-event)
+    (watcher/deliver-commit watcher transaction-committed-event)
     (-broadcast broadcaster ledger-id transaction-committed-event)
     ::new-commit))
 
