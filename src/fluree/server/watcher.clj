@@ -1,4 +1,4 @@
-(ns fluree.server.consensus.watcher
+(ns fluree.server.watcher
   "System to manage and track pending requests through consensus in order to
   respond with the result. When mutation requests happen over http (e.g.
   creating a new ledger), we want to wait for the operation to complete through

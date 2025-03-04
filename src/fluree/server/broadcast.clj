@@ -1,7 +1,7 @@
 (ns fluree.server.broadcast
   (:require [fluree.db.util.log :as log]
             [fluree.server.consensus.events :as events]
-            [fluree.server.consensus.watcher :as watcher]))
+            [fluree.server.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
 

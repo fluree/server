@@ -11,7 +11,7 @@
             [fluree.server.consensus :as-alias consensus]
             [fluree.server.consensus.raft :as raft]
             [fluree.server.consensus.standalone :as standalone]
-            [fluree.server.consensus.watcher :as watcher]
+            [fluree.server.watcher :as watcher]
             [fluree.server.handler :as handler]
             [fluree.server.http :as-alias http]
             [fluree.server.task.migrate-sid :as task.migrate-sid]
