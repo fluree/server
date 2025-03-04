@@ -93,7 +93,8 @@
 (def QueryResponse
   (m/schema [:orn
              [:select [:sequential [:or coll? map?]]]
-             [:select-one [:or coll? map?]]]))
+             [:select-one [:or coll? map?]]
+             [:construct map?]]))
 
 (def HistoryQuery
   (m/schema (fqh/history-query-schema [[:from LedgerAlias]])
