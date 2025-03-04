@@ -46,9 +46,7 @@
 
 (defmethod ig/expand-key ::consensus/standalone
   [k config]
-  {k (assoc config
-            :broadcaster (ig/ref ::server/broadcast)
-            :watcher (ig/ref ::server/watcher))})
+  {k (assoc config :watcher (ig/ref ::server/watcher))})
 
 (defmethod ig/init-key ::server/subscriptions
   [_ _]
@@ -90,10 +88,10 @@
   (close))
 
 (defmethod ig/init-key ::consensus/standalone
-  [_ {:keys [broadcaster watcher] :as config}]
+  [_ {:keys [watcher] :as config}]
   (let [max-pending-txns (conn-config/get-first-integer config server-vocab/max-pending-txns)
         conn             (get-first config conn-vocab/connection)]
-    (standalone/start conn broadcaster watcher max-pending-txns)))
+    (standalone/start conn watcher max-pending-txns)))
 
 (defmethod ig/halt-key! ::consensus/standalone
   [_ transactor]

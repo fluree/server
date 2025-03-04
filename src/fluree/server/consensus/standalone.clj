@@ -8,7 +8,8 @@
             [fluree.server.broadcast :as broadcast]
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.events :as events]
-            [fluree.server.handlers.shared :refer [deref!]]))
+            [fluree.server.handlers.shared :refer [deref!]]
+            [fluree.server.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
 
@@ -21,47 +22,51 @@
                {} string-opts)))
 
 (defn create-ledger!
-  [conn broadcaster watcher {:keys [ledger-id txn opts] :as params}]
+  [conn watcher {:keys [ledger-id txn opts] :as params}]
   (go-try
-    (let [create-opts   (parse-opts txn)
-          ledger        (deref!
-                         (fluree/create conn ledger-id create-opts))
-          staged-db     (-> ledger
-                            fluree/db
-                            (fluree/stage txn opts)
-                            deref!)
-          result        (deref!
-                         (fluree/apply-stage! ledger staged-db))]
-      (broadcast/broadcast-new-ledger! broadcaster watcher params result))))
+    (let [create-opts      (parse-opts txn)
+          ledger           (deref!
+                            (fluree/create conn ledger-id create-opts))
+          staged-db        (-> ledger
+                               fluree/db
+                               (fluree/stage txn opts)
+                               deref!)
+          commit-result    (deref!
+                            (fluree/apply-stage! ledger staged-db))
+          new-ledger-event (events/ledger-created params commit-result)]
+      (watcher/deliver-commit watcher new-ledger-event))))
 
 (defn transact!
-  [conn broadcaster watcher {:keys [ledger-id tx-id txn opts] :as params}]
+  [conn watcher {:keys [ledger-id tx-id txn opts] :as params}]
   (go-try
-    (let [start-time    (System/currentTimeMillis)
-          _             (log/debug "Starting transaction processing for ledger:" ledger-id
+    (let [start-time       (System/currentTimeMillis)
+          _                (log/debug "Starting transaction processing for ledger:" ledger-id
                                    "with tx-id" tx-id ". Transaction sat in queue for"
                                    (- start-time (:instant params)) "milliseconds.")
-          ledger        (if (deref! (fluree/exists? conn ledger-id))
+          ledger           (if (deref! (fluree/exists? conn ledger-id))
                           (deref! (fluree/load conn ledger-id))
                           (throw (ex-info "Ledger does not exist" {:ledger ledger-id})))
-          staged-db     (-> ledger
+          staged-db        (-> ledger
                             fluree/db
                             (fluree/stage txn opts)
                             deref!)
-          result        (deref!
-                         (fluree/apply-stage! ledger staged-db))]
-      (broadcast/broadcast-new-commit! broadcaster watcher params result))))
+          commit-result    (deref!
+                                (fluree/apply-stage! ledger staged-db))
+          new-commit-event (events/transaction-committed params commit-result)]
+      (watcher/deliver-commit watcher new-commit-event))))
 
 (defn process-event
-  [conn broadcaster watcher event]
+  [conn watcher event]
   (go
     (try
       (let [event-type (events/event-type event)
             result     (<! (case event-type
-                             :ledger-create (create-ledger! conn broadcaster watcher event)
-                             :tx-queue      (transact! conn broadcaster watcher event)))]
+                             :ledger-create (create-ledger! conn watcher event)
+                             :tx-queue      (transact! conn watcher event)))]
         (if (exception? result)
-          (broadcast/broadcast-error! broadcaster watcher event result)
+          (let [{:keys [tx-id]} event]
+            (log/debug result "Delivering tx-exception to watcher")
+            (watcher/deliver-error watcher tx-id result))
           result))
       (catch Exception e
         (log/error e
@@ -75,9 +80,9 @@
       (nil? result)))
 
 (defn new-transaction-queue
-  ([conn broadcaster watcher]
-   (new-transaction-queue conn broadcaster watcher nil))
-  ([conn broadcaster watcher max-pending-txns]
+  ([conn watcher]
+   (new-transaction-queue conn watcher nil))
+  ([conn watcher max-pending-txns]
    (let [tx-queue (if (pos-int? max-pending-txns)
                     (async/chan max-pending-txns)
                     (async/chan))]
@@ -99,7 +104,7 @@
 
            :else
            (let [[event out-ch] input
-                 result         (<! (process-event conn broadcaster watcher event))
+                 result         (<! (process-event conn watcher event))
                  i*             (inc i)]
              (log/trace "Processed transaction #" i* ". Result:" result)
              (when-not (error? result)
@@ -134,8 +139,8 @@
       out-ch)))
 
 (defn start-buffered
-  [conn broadcaster watcher max-pending-txns]
-  (let [tx-queue (new-transaction-queue conn broadcaster watcher max-pending-txns)]
+  [conn watcher max-pending-txns]
+  (let [tx-queue (new-transaction-queue conn watcher max-pending-txns)]
     (->BufferedTransactor tx-queue)))
 
 (defrecord SynchronizedTransactor [tx-queue]
@@ -151,17 +156,17 @@
       out-ch)))
 
 (defn start-synchronized
-  [conn broadcaster watcher]
-  (let [tx-queue (new-transaction-queue conn broadcaster watcher)]
+  [conn watcher]
+  (let [tx-queue (new-transaction-queue conn watcher)]
     (->SynchronizedTransactor tx-queue)))
 
 (defn start
-  ([conn broadcaster watcher]
-   (start-synchronized conn broadcaster watcher))
-  ([conn broadcaster watcher max-pending-txns]
+  ([conn watcher]
+   (start-synchronized conn watcher))
+  ([conn watcher max-pending-txns]
    (if max-pending-txns
-     (start-buffered conn broadcaster watcher max-pending-txns)
-     (start-synchronized conn broadcaster watcher))))
+     (start-buffered conn watcher max-pending-txns)
+     (start-synchronized conn watcher))))
 
 (defn stop
   [{:keys [tx-queue] :as _transactor}]
