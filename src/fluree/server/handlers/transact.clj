@@ -35,37 +35,37 @@
 
 (defn transact!
   [consensus watcher expanded-txn opts]
-  (let [p             (promise)
-        ledger-id     (get-first-value expanded-txn const/iri-ledger)
-        tx-id         (derive-tx-id (:raw-txn opts))
-        final-resp-ch (watcher/create-watch watcher tx-id)]
+  (let [p         (promise)
+        ledger-id (get-first-value expanded-txn const/iri-ledger)
+        tx-id     (derive-tx-id (:raw-txn opts))
+        result-ch (watcher/create-watch watcher tx-id)]
 
     ;; register transaction into consensus
     (queue-consensus consensus watcher ledger-id tx-id expanded-txn opts)
 
     ;; wait for final response from consensus and deliver to promise
     (async/go
-      (let [final-resp (async/<! final-resp-ch)]
-        (log/debug "HTTP API transaction final response: " final-resp)
+      (let [result (async/<! result-ch)]
+        (log/debug "HTTP API transaction final response: " result)
         (cond
-          (= :timeout final-resp)
+          (= :timeout result)
           (deliver p (ex-info
                       (str "Timeout waiting for transaction to complete for: "
                            ledger-id " with tx-id: " tx-id)
                       {:status 408 :error :db/response-timeout}))
 
-          (nil? final-resp)
+          (nil? result)
           (deliver p (ex-info
                       (str "Unexpected close waiting for ledger transaction to complete for: "
                            ledger-id " with tx-id: " tx-id
                            ". Transaction may have processed, check ledger for confirmation.")
                       {:status 500 :error :db/response-closed}))
 
-          (util/exception? final-resp)
-          (deliver p final-resp)
+          (util/exception? result)
+          (deliver p result)
 
           :else
-          (let [{:keys [ledger-id commit t tx-id]} final-resp]
+          (let [{:keys [ledger-id commit t tx-id]} result]
             (log/info "Transaction completed for:" ledger-id "tx-id:" tx-id
                       "commit head:" commit)
             (deliver p {:ledger ledger-id
