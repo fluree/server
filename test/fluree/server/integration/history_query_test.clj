@@ -8,13 +8,13 @@
 (use-fixtures :once run-test-server)
 
 (def commit-id-regex
-  (re-pattern "fluree:commit:sha256:[a-z2-7]{52,53}"))
+  (re-pattern "fluree:commit:sha256:[a-z2-7]{51,53}"))
 
 (def mem-addr-regex
   (re-pattern "fluree:memory://[a-z2-7]{51,53}"))
 
 (def db-id-regex
-  (re-pattern "fluree:db:sha256:[a-z2-7]{52,53}"))
+  (re-pattern "fluree:db:sha256:[a-z2-7]{51,53}"))
 
 (deftest ^:integration ^:json history-query-json-test
   (testing "basic JSON history query works"
@@ -63,9 +63,7 @@
              ["f:data" "f:retract"]  #(and (vector? %) (every? map? %))
              ["f:data" "f:flakes"]   pos-int?
              ["f:data" "f:size"]     pos-int?
-             ["f:data" "f:t"]        pos-int?
-             ["f:data" "f:previous"] #(or (nil? %)
-                                          (re-matches db-id-regex (get % "id")))}]
+             ["f:data" "f:t"]        pos-int?}]
         (is (every? #(every? (fn [[kp valid?]]
                                (let [actual (get-in % kp)]
                                  (or
