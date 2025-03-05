@@ -119,7 +119,7 @@
   (ex-info "Too many pending transactions. Please try again later."
            {:status 503, :error :db/pending-transaction-limit}))
 
-(defrecord BufferedTransactor [tx-queue]
+(defrecord BufferedTransactor [watcher tx-queue]
   consensus/Transactor
   (-queue-new-ledger [_ new-ledger-event]
     (let [out-ch (async/chan)]
@@ -136,9 +136,9 @@
 (defn start-buffered
   [conn watcher max-pending-txns]
   (let [tx-queue (new-transaction-queue conn watcher max-pending-txns)]
-    (->BufferedTransactor tx-queue)))
+    (->BufferedTransactor watcher tx-queue)))
 
-(defrecord SynchronizedTransactor [tx-queue]
+(defrecord SynchronizedTransactor [watcher tx-queue]
   consensus/Transactor
   (-queue-new-ledger [_ new-ledger-event]
     (let [out-ch (async/chan)]
@@ -153,7 +153,7 @@
 (defn start-synchronized
   [conn watcher]
   (let [tx-queue (new-transaction-queue conn watcher)]
-    (->SynchronizedTransactor tx-queue)))
+    (->SynchronizedTransactor watcher tx-queue)))
 
 (defn start
   ([conn watcher]
