@@ -11,7 +11,7 @@
   (re-pattern "fluree:commit:sha256:[a-z2-7]{52,53}"))
 
 (def mem-addr-regex
-  (re-pattern "fluree:memory://[a-f0-9]{64}"))
+  (re-pattern "fluree:memory://[a-z2-7]{51,53}"))
 
 (def db-id-regex
   (re-pattern "fluree:db:sha256:[a-z2-7]{52,53}"))
