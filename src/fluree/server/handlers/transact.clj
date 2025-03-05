@@ -80,9 +80,7 @@
         (let [{:keys [ledger-id commit t tx-id]} result]
           (log/info "Transaction completed for:" ledger-id "tx-id:" tx-id
                     "commit head:" commit)
-          (case (events/event-type result)
-            :transaction-committed (broadcast/broadcast-new-commit! broadcaster result)
-            :ledger-created        (broadcast/broadcast-new-ledger! broadcaster result))
+          (broadcast/broadcast-event! broadcaster result)
           (deliver out-p {:ledger ledger-id
                           :commit commit
                           :t      t

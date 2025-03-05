@@ -1,4 +1,5 @@
-(ns fluree.server.broadcast)
+(ns fluree.server.broadcast
+  (:require [fluree.server.consensus.events :as events]))
 
 (set! *warn-on-reflection* true)
 
@@ -20,3 +21,10 @@
   [broadcaster {:keys [ledger-id] :as error-event}]
   (-broadcast-error broadcaster ledger-id error-event)
   ::error)
+
+(defn broadcast-event!
+  [broadcaster result]
+  (case (events/event-type result)
+    :transaction-committed (broadcast-new-commit! broadcaster result)
+    :ledger-created        (broadcast-new-ledger! broadcaster result)
+    :error                 (broadcast-error! broadcaster result)))
