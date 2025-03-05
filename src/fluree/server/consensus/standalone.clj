@@ -5,7 +5,6 @@
             [fluree.db.util.async :refer [go-try]]
             [fluree.db.util.core :refer [exception? get-first-value]]
             [fluree.db.util.log :as log]
-            [fluree.server.broadcast :as broadcast]
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.events :as events]
             [fluree.server.handlers.shared :refer [deref!]]
@@ -22,38 +21,34 @@
                {} string-opts)))
 
 (defn create-ledger!
-  [conn watcher {:keys [ledger-id txn opts] :as params}]
+  [conn watcher {:keys [ledger-id tx-id txn opts] :as _params}]
   (go-try
-    (let [create-opts      (parse-opts txn)
-          ledger           (deref!
-                            (fluree/create conn ledger-id create-opts))
-          staged-db        (-> ledger
-                               fluree/db
-                               (fluree/stage txn opts)
-                               deref!)
-          commit-result    (deref!
-                            (fluree/apply-stage! ledger staged-db))
-          new-ledger-event (events/ledger-created params commit-result)]
-      (watcher/deliver-commit watcher new-ledger-event))))
+    (let [create-opts   (parse-opts txn)
+          ledger        (deref!
+                         (fluree/create conn ledger-id create-opts))
+          staged-db     (-> ledger
+                            fluree/db
+                            (fluree/stage txn opts)
+                            deref!)
+          commit-result (deref! (fluree/apply-stage! ledger staged-db))]
+      (watcher/deliver-new-ledger watcher ledger-id tx-id commit-result))))
 
 (defn transact!
   [conn watcher {:keys [ledger-id tx-id txn opts] :as params}]
   (go-try
-    (let [start-time       (System/currentTimeMillis)
-          _                (log/debug "Starting transaction processing for ledger:" ledger-id
+    (let [start-time    (System/currentTimeMillis)
+          _             (log/debug "Starting transaction processing for ledger:" ledger-id
                                    "with tx-id" tx-id ". Transaction sat in queue for"
                                    (- start-time (:instant params)) "milliseconds.")
-          ledger           (if (deref! (fluree/exists? conn ledger-id))
+          ledger        (if (deref! (fluree/exists? conn ledger-id))
                           (deref! (fluree/load conn ledger-id))
                           (throw (ex-info "Ledger does not exist" {:ledger ledger-id})))
-          staged-db        (-> ledger
+          staged-db     (-> ledger
                             fluree/db
                             (fluree/stage txn opts)
                             deref!)
-          commit-result    (deref!
-                                (fluree/apply-stage! ledger staged-db))
-          new-commit-event (events/transaction-committed params commit-result)]
-      (watcher/deliver-commit watcher new-commit-event))))
+          commit-result (deref! (fluree/apply-stage! ledger staged-db))]
+      (watcher/deliver-commit watcher ledger-id tx-id commit-result))))
 
 (defn process-event
   [conn watcher event]
@@ -64,9 +59,9 @@
                              :ledger-create (create-ledger! conn watcher event)
                              :tx-queue      (transact! conn watcher event)))]
         (if (exception? result)
-          (let [{:keys [tx-id]} event]
+          (let [{:keys [ledger-id tx-id]} event]
             (log/debug result "Delivering tx-exception to watcher")
-            (watcher/deliver-error watcher tx-id result))
+            (watcher/deliver-error watcher ledger-id tx-id result))
           result))
       (catch Exception e
         (log/error e

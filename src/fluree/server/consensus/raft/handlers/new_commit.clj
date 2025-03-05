@@ -101,5 +101,5 @@
 (defn deliver!
   "Responsible for producing the event broadcast to connected peers."
   [{:keys [fluree/watcher] :as _config} commit-result]
-  (let [new-commit-event (events/transaction-committed {} commit-result)]
+  (let [new-commit-event (events/transaction-committed nil nil commit-result)]
     (watcher/deliver-commit watcher new-commit-event)))

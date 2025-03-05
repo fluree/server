@@ -7,24 +7,20 @@
   responsible server from a queue, processed, and then the results broadcast
   back out."
   (:require [clojure.core.async :as async]
-            [fluree.db.util.log :as log]))
+            [fluree.db.util.log :as log]
+            [fluree.server.consensus.events :as events]))
 
 (set! *warn-on-reflection* true)
 
 (defprotocol Watcher
   (create-watch [w id])
-  (-deliver-commit [w id t ledger-id commit-address])
-  (-deliver-error [w id error]))
+  (-deliver-event [w id event]))
 
 (defn new-watcher-atom
   "This atom maps a request's unique id (e.g. tx-id) to a promise that will be
   delivered"
   []
   (atom {}))
-
-(defn remove-watch-state
-  [watcher-atom id]
-  (swap! watcher-atom dissoc id))
 
 (defn create-watch-state
   "Creates a new watch for transaction `id`.
@@ -44,48 +40,42 @@
         (when (async/put! promise-ch :timeout)
           (log/debug "Timed out waiting for transaction to complete:" id
                      "after" max-txn-wait-ms "ms."))
-        (remove-watch-state state id)))
+        (swap! state dissoc id)))
     ;; return promise ch, will end up with result or closed at end of wait-ms
     promise-ch))
 
-(defn deliver-commit-state
-  [watcher-atom id ledger-id t commit-address]
-  ;; note: this can have a race condition, but given it is a promise chan, the
-  ;; second put! will be ignored
-  (when-let [resp-chan (get @watcher-atom id)]
-    (let [response {:tx-id          id
-                    :ledger-id      ledger-id
-                    :t              t
-                    :commit commit-address}]
-      (remove-watch-state watcher-atom id)
-      (async/put! resp-chan response)
-      (async/close! resp-chan))))
-
-(defn deliver-error-state
-  [watcher-atom id error]
-  ;; note: this can have a race condition, but given it is a promise chan, the
-  ;; second put! will be ignored
-  (when-let [resp-chan (get @watcher-atom id)]
-    (remove-watch-state watcher-atom id)
-    (async/put! resp-chan error)
-    (async/close! resp-chan)))
+(defn deliver-event-state
+  [current-state id event]
+  (if-let [resp-chan (get current-state id)]
+    (do (doto resp-chan
+          (async/put! event)
+          async/close!)
+        (dissoc current-state id))
+    current-state))
 
 (defrecord TimeoutWatcher [state max-txn-wait-ms]
   Watcher
   (create-watch [_ id]
     (create-watch-state state max-txn-wait-ms id))
-  (-deliver-commit [_ id t ledger-id commit-address]
-    (deliver-commit-state state id t ledger-id commit-address))
-  (-deliver-error [_ id error]
-    (deliver-error-state state id error)))
+  (-deliver-event [_ id event]
+    ;; note: this can have a race condition, but given it is a promise chan, the
+    ;; second put! will be ignored
+    (swap! state deliver-event-state id event)))
+
+(defn deliver-new-ledger
+  [w ledger-id tx-id commit-result]
+  (let [new-ledger-event (events/ledger-created ledger-id tx-id commit-result)]
+    (-deliver-event w tx-id new-ledger-event)))
 
 (defn deliver-commit
-  [w {:keys [ledger-id tx-id t commit] :as _event}]
-  (-deliver-commit w tx-id ledger-id t commit))
+  [w ledger-id tx-id commit-result]
+  (let [commit-event (events/transaction-committed ledger-id tx-id commit-result)]
+    (-deliver-event w tx-id commit-event)))
 
 (defn deliver-error
-  [w id error]
-  (-deliver-error w id error))
+  [w ledger-id tx-id ex]
+  (let [error-event (events/error ledger-id tx-id ex)]
+    (-deliver-event w tx-id error-event)))
 
 (defn start
   ([]

@@ -7,10 +7,7 @@
   (:type event))
 
 (defn create-ledger
-  "Upon receiving a request to create a new ledger, an event
-  message must be queued into the consensus state machine.
-
-  Format is [event-name event-body]"
+  "Create a new event message to create a new ledger"
   [ledger-id tx-id txn opts]
   {:type      :ledger-create
    :txn       txn
@@ -21,10 +18,7 @@
    :instant   (System/currentTimeMillis)})
 
 (defn commit-transaction
-  "Upon receiving a request to create a new ledger, an event
-  message must be queued into the consensus state machine.
-
-  Format is [event-name event-body]"
+  "Create a new event message to commit a new transaction"
   [ledger-id tx-id txn opts]
   {:type      :tx-queue
    :txn       txn
@@ -37,32 +31,36 @@
 (defn transaction-committed
   "Post-transaction, the message we will broadcast out and/or deliver
   to a client awaiting a response."
-  ([{:keys [ledger-id tx-id] :as _event-params}
-    {:keys [db address] :as _commit-result}]
+  ([ledger-id tx-id {:keys [db address] :as _commit-result}]
    {:type      :transaction-committed
     :ledger-id ledger-id
     :t         (:t db)
     :tx-id     tx-id
     :commit    address})
-  ([processing-server event-params commit-result]
-   (-> (transaction-committed event-params commit-result)
+  ([processing-server ledger-id tx-id commit-result]
+   (-> (transaction-committed ledger-id tx-id commit-result)
        (assoc :server processing-server))))
 
 (defn ledger-created
-  ([event-params commit-result]
-   (-> event-params
-       (transaction-committed commit-result)
+  ([ledger-id tx-id commit-result]
+   (-> (transaction-committed ledger-id tx-id commit-result)
        (assoc :type :ledger-created)))
-  ([processing-server event-params commit-result]
-   (-> (ledger-created event-params commit-result)
+  ([processing-server ledger-id tx-id commit-result]
+   (-> (ledger-created ledger-id tx-id commit-result)
        (assoc :server processing-server))))
 
 (defn error
-  ([params exception]
-   (-> params
-       (select-keys [:ledger-id :tx-id])
-       (assoc :error-message (ex-message exception)
-              :error-data    (ex-data exception))))
-  ([processing-server params exception]
-   (-> (error params exception)
+  ([ledger-id tx-id exception]
+   (-> {:type          :error
+        :ledger-id     ledger-id
+        :tx-id         tx-id
+        :error         exception
+        :error-message (ex-message exception)
+        :error-data    (ex-data exception)}))
+  ([processing-server ledger-id tx-id exception]
+   (-> (error ledger-id tx-id exception)
        (assoc :server processing-server))))
+
+(defn error?
+  [evt]
+  (-> evt :type (= :error)))

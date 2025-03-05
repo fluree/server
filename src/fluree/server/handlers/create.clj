@@ -10,7 +10,8 @@
    [fluree.server.consensus :as consensus]
    [fluree.server.watcher :as watcher]
    [fluree.server.handlers.shared :refer [deref! defhandler]]
-   [fluree.server.handlers.transact :refer [derive-tx-id]]))
+   [fluree.server.handlers.transact :refer [derive-tx-id monitor-consensus-persistence
+                                            monitor-commit]]))
 
 (set! *warn-on-reflection* true)
 
@@ -18,49 +19,16 @@
   [consensus watcher ledger tx-id txn opts]
   (let [;; initial response is not completion, but acknowledgement of persistence
         persist-resp-ch (consensus/queue-new-ledger consensus ledger tx-id txn opts)]
-
-    (go
-      (let [persist-resp (<! persist-resp-ch)]
-        ;; check for exception trying to put txn in consensus, if so we must deliver the
-        ;; watch here, but if successful the consensus process will deliver the watch downstream
-        (when (util/exception? persist-resp)
-          (watcher/deliver-error watcher tx-id persist-resp))))))
+    (monitor-consensus-persistence watcher ledger tx-id persist-resp-ch)))
 
 (defn create-ledger
-  [consensus watcher expanded-txn opts]
-  (let [p             (promise)
-        ledger-id     (get-first-value expanded-txn const/iri-ledger)
-        tx-id         (derive-tx-id expanded-txn)
-        final-resp-ch (watcher/create-watch watcher tx-id)]
-
-    ;; register ledger creation into consensus
+  [consensus watcher broadcaster expanded-txn opts]
+  (let [p         (promise)
+        ledger-id (get-first-value expanded-txn const/iri-ledger)
+        tx-id     (derive-tx-id expanded-txn)
+        result-ch (watcher/create-watch watcher tx-id)]
     (queue-consensus consensus watcher ledger-id tx-id expanded-txn opts)
-
-    ;; wait for final response from consensus and deliver to promise
-    (go
-      (let [final-resp (<! final-resp-ch)]
-        (log/debug "HTTP API ledger creation final response: " final-resp)
-        (cond
-          (= :timeout final-resp)
-          (deliver p (ex-info
-                      (str "Timeout waiting for ledger creation to complete for: "
-                           ledger-id " with tx-id: " tx-id)
-                      {:status 408 :error :db/response-timeout}))
-
-          (nil? final-resp)
-          (deliver p (ex-info
-                      (str "Unexpected close waiting for ledger creation to complete for: "
-                           ledger-id " with tx-id: " tx-id
-                           ". Transaction may have processed, check ledger for confirmation.")
-                      {:status 500 :error :db/response-closed}))
-
-          :else
-          (let [{:keys [ledger-id commit t tx-id]} final-resp]
-            (log/info "Ledger created:" ledger-id)
-            (deliver p {:ledger ledger-id
-                        :commit commit
-                        :t      t
-                        :tx-id  tx-id})))))
+    (monitor-commit p ledger-id tx-id broadcaster result-ch)
     p))
 
 (defn throw-ledger-exists
@@ -71,7 +39,7 @@
                                 :body   {:error err-message}}}))))
 
 (defhandler default
-  [{:keys [fluree/conn fluree/consensus fluree/watcher]
+  [{:keys [fluree/conn fluree/consensus fluree/broadcaster fluree/watcher]
     {:keys [body]} :parameters}]
   (log/debug "create body:" body)
   (let [txn-context    (ctx-util/txn-context body)
@@ -80,6 +48,7 @@
                            util/sequential)
         ledger-id      (get-first-value expanded-txn const/iri-ledger)]
     (if-not (deref! (fluree/exists? conn ledger-id))
-      (let [resp-p (create-ledger consensus watcher expanded-txn {:context txn-context})]
+      (let [resp-p (create-ledger consensus watcher broadcaster expanded-txn
+                                  {:context txn-context})]
         {:status 201, :body (deref! resp-p)})
       (throw-ledger-exists ledger-id))))

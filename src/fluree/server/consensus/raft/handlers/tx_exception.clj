@@ -28,7 +28,7 @@
 
 (defn deliver!
   [{:keys [fluree/watcher] :as _config} exception]
-  (watcher/deliver-error watcher nil exception))
+  (watcher/deliver-error watcher nil nil exception))
 
 (defn handler
   "Handles transaction exceptions and broadcasts them to network."
