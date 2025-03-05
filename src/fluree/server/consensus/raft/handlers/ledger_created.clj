@@ -85,5 +85,5 @@
 (defn deliver!
   "Responsible for producing the event broadcast to connected peers."
   [{:keys [fluree/watcher] :as _config} handler-result]
-  (let [new-ledger-event (events/ledger-created {} handler-result)]
-    (watcher/deliver-commit watcher new-ledger-event)))
+  (let [new-ledger-event (events/ledger-created nil nil handler-result)]
+    (watcher/deliver-commit watcher nil nil new-ledger-event)))

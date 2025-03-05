@@ -6,7 +6,7 @@
   operations get delivered via consensus, where they end up being picked up by a
   responsible server from a queue, processed, and then the results broadcast
   back out."
-  (:require [clojure.core.async :as async]
+  (:require [clojure.core.async :as async :refer [<! go]]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.events :as events]))
 
@@ -33,8 +33,8 @@
   (let [promise-ch (async/promise-chan)]
     (swap! state assoc id promise-ch)
     (when max-txn-wait-ms
-      (async/go
-        (async/<! (async/timeout max-txn-wait-ms))
+      (go
+        (<! (async/timeout max-txn-wait-ms))
         ;; we close the promise chan when delivering, so put! will be false if
         ;; response already delivered
         (when (async/put! promise-ch :timeout)

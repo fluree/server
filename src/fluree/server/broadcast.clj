@@ -1,5 +1,4 @@
-(ns fluree.server.broadcast
-  (:require [fluree.db.util.log :as log]))
+(ns fluree.server.broadcast)
 
 (set! *warn-on-reflection* true)
 
