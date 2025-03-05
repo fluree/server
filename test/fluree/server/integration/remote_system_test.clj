@@ -166,7 +166,7 @@
 
             authors-ledger      (create-rand-ledger "test/authors" authors-port)
             authors-insert-req  {:body    (json/write-value-as-string
-                                           {"@context" ["https://ns.flur.ee" context "https://schema.org"]
+                                           {"@context" [context "https://schema.org"]
                                             "ledger"   authors-ledger
                                             "insert"   [{"@id"   "https://www.wikidata.org/wiki/Q42"
                                                          "@type" "Person"
@@ -179,7 +179,7 @@
 
             books-ledger      (create-rand-ledger "test/books" books-port)
             books-insert-req  {:body    (json/write-value-as-string
-                                         {"@context" ["https://ns.flur.ee" context "https://schema.org"]
+                                         {"@context" [context "https://schema.org"]
                                           "ledger"   books-ledger
                                           "insert"   [{"id"     "https://www.wikidata.org/wiki/Q3107329",
                                                        "type"   ["Book"],
@@ -196,7 +196,7 @@
 
             movies-ledger      (create-rand-ledger "test/movies" movies-port)
             movies-insert-req  {:body    (json/write-value-as-string
-                                          {"@context" ["https://ns.flur.ee" context "https://schema.org"]
+                                          {"@context" [context "https://schema.org"]
                                            "ledger"   movies-ledger
                                            "insert"   [{"id"                        "https://www.wikidata.org/wiki/Q836821",
                                                         "type"                      ["Movie"],

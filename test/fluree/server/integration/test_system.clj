@@ -112,8 +112,7 @@
   ([name-root port]
    (let [ledger-name (str name-root "-" (random-uuid))
          req         {"ledger"   ledger-name
-                      "@context" ["https://ns.flur.ee"
-                                  default-context
+                      "@context" [default-context
                                   {"foo" "http://foobar.com/"}]
                       "insert"   [{"id"       "foo:create-test"
                                    "type"     "foo:test"

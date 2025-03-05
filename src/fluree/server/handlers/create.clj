@@ -2,11 +2,10 @@
   (:require
    [clojure.core.async :as async :refer [go <!]]
    [fluree.db.api :as fluree]
-   [fluree.db.constants :as const]
+   [fluree.db.api.transact :as transact-api]
    [fluree.db.util.context :as ctx-util]
-   [fluree.db.util.core :as util :refer [get-first-value]]
+   [fluree.db.util.core :as util]
    [fluree.db.util.log :as log]
-   [fluree.json-ld.processor.api :as jld-processor]
    [fluree.server.consensus :as consensus]
    [fluree.server.consensus.watcher :as watcher]
    [fluree.server.handlers.shared :refer [deref! defhandler]]
@@ -27,14 +26,14 @@
           (watcher/deliver-error watcher tx-id persist-resp))))))
 
 (defn create-ledger
-  [consensus watcher expanded-txn opts]
+  [consensus watcher txn opts]
   (let [p             (promise)
-        ledger-id     (get-first-value expanded-txn const/iri-ledger)
-        tx-id         (derive-tx-id expanded-txn)
+        ledger-id     (transact-api/extract-ledger-id txn)
+        tx-id         (derive-tx-id txn)
         final-resp-ch (watcher/create-watch watcher tx-id)]
 
     ;; register ledger creation into consensus
-    (queue-consensus consensus watcher ledger-id tx-id expanded-txn opts)
+    (queue-consensus consensus watcher ledger-id tx-id txn opts)
 
     ;; wait for final response from consensus and deliver to promise
     (go
@@ -75,11 +74,8 @@
     {:keys [body]} :parameters}]
   (log/debug "create body:" body)
   (let [txn-context    (ctx-util/txn-context body)
-        [expanded-txn] (-> (ctx-util/use-fluree-context body)
-                           jld-processor/expand
-                           util/sequential)
-        ledger-id      (get-first-value expanded-txn const/iri-ledger)]
+        ledger-id      (transact-api/extract-ledger-id body)]
     (if-not (deref! (fluree/exists? conn ledger-id))
-      (let [resp-p (create-ledger consensus watcher expanded-txn {:context txn-context})]
+      (let [resp-p (create-ledger consensus watcher body {:context txn-context})]
         {:status 201, :body (deref! resp-p)})
       (throw-ledger-exists ledger-id))))

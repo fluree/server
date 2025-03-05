@@ -26,7 +26,7 @@
   (let [ledger-name "credential-test"]
     (testing "create"
       (let [create-req {"ledger"   ledger-name
-                        "@context" ["https://ns.flur.ee" default-context]
+                        "@context" default-context
                         "insert"   {"@graph"
                                     [{"id"            (:id auth)
                                       "f:policyClass" {"id" "ex:RootPolicy"}
@@ -47,7 +47,7 @@
     (testing "transact"
       (let [txn-req (<!! (cred/generate
                           {"ledger"   ledger-name
-                           "@context" ["https://ns.flur.ee" default-context]
+                           "@context" default-context
                            "insert"   [{"id"      "ex:cred-test"
                                         "type"    "schema:Test"
                                         "ex:name" "cred test"
