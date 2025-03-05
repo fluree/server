@@ -11,8 +11,8 @@
             [fluree.server.broadcast :as broadcast]
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.events :as events]
-            [fluree.server.watcher :as watcher]
-            [fluree.server.handlers.shared :refer [defhandler deref!]]))
+            [fluree.server.handlers.shared :refer [defhandler deref!]]
+            [fluree.server.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
 

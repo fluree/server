@@ -11,10 +11,10 @@
             [fluree.server.consensus :as-alias consensus]
             [fluree.server.consensus.raft :as raft]
             [fluree.server.consensus.standalone :as standalone]
-            [fluree.server.watcher :as watcher]
             [fluree.server.handler :as handler]
             [fluree.server.http :as-alias http]
             [fluree.server.task.migrate-sid :as task.migrate-sid]
+            [fluree.server.watcher :as watcher]
             [integrant.core :as ig]
             [ring.adapter.jetty9 :as jetty]))
 

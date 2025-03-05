@@ -7,10 +7,10 @@
    [fluree.db.util.log :as log]
    [fluree.json-ld.processor.api :as jld-processor]
    [fluree.server.consensus :as consensus]
-   [fluree.server.watcher :as watcher]
    [fluree.server.handlers.shared :refer [deref! defhandler]]
    [fluree.server.handlers.transact :refer [derive-tx-id monitor-consensus-persistence
-                                            monitor-commit]]))
+                                            monitor-commit]]
+   [fluree.server.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
 
