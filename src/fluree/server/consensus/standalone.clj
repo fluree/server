@@ -8,7 +8,9 @@
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.events :as events]
             [fluree.server.handlers.shared :refer [deref!]]
-            [fluree.server.watcher :as watcher]))
+            [fluree.server.watcher :as watcher]
+            [steffan-westcott.clj-otel.api.trace.span :as span]
+            [steffan-westcott.clj-otel.context :as otel-context]))
 
 (set! *warn-on-reflection* true)
 
@@ -52,22 +54,25 @@
 
 (defn process-event
   [conn watcher event]
-  (go
-    (try
-      (let [event-type (events/event-type event)
-            result     (<! (case event-type
-                             :ledger-create (create-ledger! conn watcher event)
-                             :tx-queue      (transact! conn watcher event)))]
-        (if (exception? result)
-          (let [{:keys [ledger-id tx-id]} event]
-            (log/debug result "Delivering tx-exception to watcher")
-            (watcher/deliver-error watcher ledger-id tx-id result))
-          result))
-      (catch Exception e
-        (log/error e
-                   "Unexpected event message - expected a map with a supported "
-                   "event type. Received:" event)
-        ::error))))
+  (otel-context/with-context! (consensus/get-trace-context event)
+    (span/with-span!  {:name "Standalone Process Event"
+                       :kind :consumer}
+      (go
+        (try
+          (let [event-type (events/event-type event)
+                result     (<! (case event-type
+                                 :ledger-create (create-ledger! conn watcher event)
+                                 :tx-queue      (transact! conn watcher event)))]
+            (if (exception? result)
+              (let [{:keys [ledger-id tx-id]} event]
+                (log/debug result "Delivering tx-exception to watcher")
+                (watcher/deliver-error watcher ledger-id tx-id result))
+              result))
+          (catch Exception e
+            (log/error e
+                       "Unexpected event message - expected a map with a supported "
+                       "event type. Received:" event)
+            ::error))))))
 
 (defn error?
   [result]
