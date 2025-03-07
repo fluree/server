@@ -13,3 +13,4 @@
 /.lsp/
 /dev/data/*
 /data*/**
+.calva/repl.calva-repl
