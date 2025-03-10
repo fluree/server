@@ -251,17 +251,20 @@
           fuel 1000] ; TODO: get this for real
       (assoc-in resp [:headers "x-fdb-fuel"] (str fuel)))))
 
+(def fluree-header-opts
+  ["fluree-meta" "fluree-max-fuel" "fluree-identity" "fluree-policy-identity"
+   "fluree-policy" "fluree-policy-class" "fluree-policy-values"
+   "fluree-format" "fluree-output"])
+
 (defn wrap-header-opts
   "Extract options from headers, parse and validate them where necessary, and attach to
   request. Opts set in the header override those specified within the transaction or
-  query. Intended mainly to provide a method of specifying opts for SPARQL queries"
+  query."
   [handler]
   (fn [{:keys [headers credential/did] :as req}]
     (let [{:keys [meta max-fuel identity policy-identity policy policy-class policy-values format output]}
           (-> headers
-              (select-keys ["fluree-meta" "fluree-max-fuel" "fluree-identity" "fluree-policy-identity"
-                            "fluree-policy" "fluree-policy-class" "fluree-policy-values"
-                            "fluree-format" "fluree-output"])
+              (select-keys fluree-header-opts)
               (update-keys (fn [k] (keyword (subs k (count "fluree-"))))))
 
           meta     (when meta
