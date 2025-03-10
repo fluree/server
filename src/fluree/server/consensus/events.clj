@@ -6,6 +6,10 @@
   [event]
   (:type event))
 
+(defn type?
+  [evt type]
+  (-> evt event-type (= type)))
+
 (defn create-ledger
   "Create a new event message to create a new ledger"
   [ledger-id tx-id txn opts]
@@ -41,6 +45,10 @@
    (-> (transaction-committed ledger-id tx-id commit-result)
        (assoc :server processing-server))))
 
+(defn transaction-committed?
+  [evt]
+  (type? evt :transaction-committed))
+
 (defn ledger-created
   ([ledger-id tx-id commit-result]
    (-> (transaction-committed ledger-id tx-id commit-result)
@@ -48,6 +56,10 @@
   ([processing-server ledger-id tx-id commit-result]
    (-> (ledger-created ledger-id tx-id commit-result)
        (assoc :server processing-server))))
+
+(defn ledger-created?
+  [evt]
+  (type? evt :ledger-created))
 
 (defn error
   ([ledger-id tx-id exception]
@@ -63,4 +75,4 @@
 
 (defn error?
   [evt]
-  (-> evt :type (= :error)))
+  (type? evt :error))
