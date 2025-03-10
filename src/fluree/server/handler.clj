@@ -1,5 +1,6 @@
 (ns fluree.server.handler
   (:require [clojure.core.async :as async :refer [<!!]]
+            [clojure.string :as str]
             [fluree.db.json-ld.credential :as cred]
             [fluree.db.query.fql.syntax :as fql]
             [fluree.db.query.history.parse :as fqh]
@@ -264,7 +265,7 @@
               (update-keys (fn [k] (keyword (subs k (count "fluree-"))))))
 
           meta     (when meta
-                     (case meta
+                     (case (str/lower-case meta)
                        "false" false
                        "true"  true
                        (throw (ex-info "Invalid Fluree-Meta header: must be boolean."
