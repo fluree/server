@@ -14,6 +14,7 @@
 
 (defprotocol Watcher
   (create-watch [w id])
+  (watching? [w id])
   (-deliver-event [w id event]))
 
 (defn new-watcher-atom
@@ -57,6 +58,8 @@
   Watcher
   (create-watch [_ id]
     (create-watch-state state max-txn-wait-ms id))
+  (watching? [_ id]
+    (contains? @state id))
   (-deliver-event [_ id event]
     ;; note: this can have a race condition, but given it is a promise chan, the
     ;; second put! will be ignored
