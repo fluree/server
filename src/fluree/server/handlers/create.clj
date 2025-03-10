@@ -8,7 +8,8 @@
    [fluree.server.handlers.shared :refer [deref! defhandler]]
    [fluree.server.handlers.transact :refer [derive-tx-id monitor-consensus-persistence
                                             monitor-commit]]
-   [fluree.server.watcher :as watcher]))
+   [fluree.server.watcher :as watcher]
+   [steffan-westcott.clj-otel.api.trace.span :as span]))
 
 (set! *warn-on-reflection* true)
 
@@ -40,8 +41,10 @@
   (log/debug "create body:" body)
   (let [txn-context    (ctx-util/txn-context body)
         ledger-id      (transact-api/extract-ledger-id body)]
-    (if-not (deref! (fluree/exists? conn ledger-id))
-      (let [resp-p (create-ledger consensus watcher broadcaster ledger-id body
-                                  {:context txn-context})]
-        {:status 201, :body (deref! resp-p)})
-      (throw-ledger-exists ledger-id))))
+        (span/add-span-data! {:attributes {:ledger.id ledger-id :sname (System/getenv "OTEL_SERVICE_NAME")}})
+        (span/with-span! ["fluree.server.handlers.create/default" {:sname (System/getenv "OTEL_SERVICE_NAME") }]
+          (if-not (deref! (fluree/exists? conn ledger-id))
+            (let [resp-p (create-ledger consensus watcher broadcaster ledger-id body
+                                        {:context txn-context})]
+              {:status 201, :body (deref! resp-p)})
+            (throw-ledger-exists ledger-id)))))

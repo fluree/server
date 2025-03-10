@@ -54,25 +54,26 @@
 
 (defn process-event
   [conn watcher event]
-  (otel-context/with-context! (consensus/get-trace-context event)
-    (span/with-span!  {:name "Standalone Process Event"
-                       :kind :consumer}
-      (go
-        (try
-          (let [event-type (events/event-type event)
-                result     (<! (case event-type
-                                 :ledger-create (create-ledger! conn watcher event)
-                                 :tx-queue      (transact! conn watcher event)))]
-            (if (exception? result)
-              (let [{:keys [ledger-id tx-id]} event]
-                (log/debug result "Delivering tx-exception to watcher")
-                (watcher/deliver-error watcher ledger-id tx-id result))
-              result))
-          (catch Exception e
-            (log/error e
-                       "Unexpected event message - expected a map with a supported "
-                       "event type. Received:" event)
-            ::error))))))
+  (span/with-span!  {:name "fluree.server.consensus.standalone/process-event"
+                    ;; should be :consumer but only :server supported by xray  https://github.com/aws-observability/aws-otel-collector/issues/1773
+                     :span-kind :server
+                     :parent (consensus/get-trace-context event)}
+    (go
+      (try
+        (let [event-type (events/event-type event)
+              result     (<! (case event-type
+                               :ledger-create (create-ledger! conn watcher event)
+                               :tx-queue      (transact! conn watcher event)))]
+          (if (exception? result)
+            (let [{:keys [ledger-id tx-id]} event]
+              (log/debug result "Delivering tx-exception to watcher")
+              (watcher/deliver-error watcher ledger-id tx-id result))
+            result))
+        (catch Exception e
+          (log/error e
+                     "Unexpected event message - expected a map with a supported "
+                     "event type. Received:" event)
+          ::error)))))
 
 (defn error?
   [result]
