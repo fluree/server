@@ -1,6 +1,6 @@
 (ns fluree.server.consensus.raft.handlers.tx-exception
   (:require [fluree.db.util.log :as log]
-            [fluree.server.broadcast :as broadcast]))
+            [fluree.server.watcher :as watcher]))
 
 (defn update-ledger-state
   "Updates the latest commit in the ledger, and removes the processed transaction in the queue"
@@ -26,9 +26,9 @@
                   :error  :db/unexpected-error}
                  e)))))
 
-(defn broadcast!
-  [{:keys [fluree/subscriptions fluree/watcher] :as _config} exception]
-  (broadcast/broadcast-error! subscriptions watcher {} exception))
+(defn deliver!
+  [{:keys [fluree/watcher] :as _config} exception]
+  (watcher/deliver-error watcher nil nil exception))
 
 (defn handler
   "Handles transaction exceptions and broadcasts them to network."
@@ -38,7 +38,7 @@
 
     (->> exception-meta
          (update-ledger-state config)
-         (broadcast! config))
+         (deliver! config))
 
     (catch Exception e
       (log/warn (str "Error recording transaction exception: " (ex-message e)))

@@ -99,10 +99,13 @@
 
 (defrecord Subscriptions [state]
   Broadcaster
-  (-broadcast [_ ledger-id event]
+  (-broadcast-commit [_ ledger-id event]
     (let [action  (events/event-type event)
           message (select-keys event [:tx-id :commit :t])]
       (send-message-to-all state action ledger-id message)))
+  (-broadcast-error [_ ledger-id error-event]
+    ;; no-op as subscribers are only concerned with successful transactions
+    (log/debug "Skipping error broadcast of event" error-event "for ledger" ledger-id))
 
   Closeable
   (close [_]

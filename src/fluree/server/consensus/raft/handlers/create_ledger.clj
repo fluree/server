@@ -56,10 +56,9 @@
   "Pushes create-ledger request in consensus only if leader.
 
   Returns promise that will have the eventual response once committed."
-  [{:keys [consensus/raft-state] :as config} params commit-result]
-  (let [created-body (events/transaction-committed ; same as new-commit message
-                      (participant/this-server raft-state)
-                      params commit-result)]
+  [{:keys [consensus/raft-state] :as config} {:keys [ledger-id tx-id] :as _params} commit-result]
+  (let [created-body (events/ledger-created (participant/this-server raft-state)
+                                            ledger-id tx-id commit-result)]
 
     ;; returns promise
     (participant/leader-new-command! config :ledger-created created-body)))

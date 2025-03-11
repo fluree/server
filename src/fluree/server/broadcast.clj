@@ -1,36 +1,30 @@
 (ns fluree.server.broadcast
-  (:require [fluree.db.util.log :as log]
-            [fluree.server.consensus.events :as events]
-            [fluree.server.consensus.watcher :as watcher]))
+  (:require [fluree.server.consensus.events :as events]))
 
 (set! *warn-on-reflection* true)
 
 (defprotocol Broadcaster
-  (-broadcast [b ledger-id event]))
+  (-broadcast-commit [b ledger-id event])
+  (-broadcast-error [b ledger-id error-event]))
 
 (defn broadcast-new-ledger!
-  [broadcaster watcher new-ledger-params new-ledger-result]
-  (let [{:keys [ledger-id server tx-id] :as ledger-created-event}
-        (events/ledger-created new-ledger-params new-ledger-result)]
-    (log/info (str "New Ledger successfully created by server " server
-                   ": " ledger-id " with tx-id: " tx-id "."))
-    (watcher/deliver-commit watcher tx-id ledger-created-event)
-    (-broadcast broadcaster ledger-id ledger-created-event)
-    ::new-ledger))
+  [broadcaster {:keys [ledger-id] :as ledger-created-event}]
+  (-broadcast-commit broadcaster ledger-id ledger-created-event)
+  ::new-ledger)
 
 (defn broadcast-new-commit!
-  [broadcaster watcher commit-params commit-result]
-  (let [{:keys [ledger-id tx-id server] :as transaction-committed-event}
-        (events/transaction-committed commit-params commit-result)]
-    (log/info "New transaction completed for" ledger-id
-              "tx-id: " tx-id "by server:" server)
-    (watcher/deliver-commit watcher tx-id transaction-committed-event)
-    (-broadcast broadcaster ledger-id transaction-committed-event)
-    ::new-commit))
+  [broadcaster {:keys [ledger-id] :as transaction-committed-event}]
+  (-broadcast-commit broadcaster ledger-id transaction-committed-event)
+  ::new-commit)
 
 (defn broadcast-error!
-  [_broadcaster watcher event error]
-  (let [{:keys [tx-id]} event]
-    (log/debug error "Delivering tx-exception to watcher")
-    (watcher/deliver-error watcher tx-id error)
-    ::error))
+  [broadcaster {:keys [ledger-id] :as error-event}]
+  (-broadcast-error broadcaster ledger-id error-event)
+  ::error)
+
+(defn broadcast-event!
+  [broadcaster result]
+  (case (events/event-type result)
+    :transaction-committed (broadcast-new-commit! broadcaster result)
+    :ledger-created        (broadcast-new-ledger! broadcaster result)
+    :error                 (broadcast-error! broadcaster result)))

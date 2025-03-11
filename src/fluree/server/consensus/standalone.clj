@@ -5,10 +5,10 @@
             [fluree.db.util.async :refer [go-try]]
             [fluree.db.util.core :refer [exception? get-first-value]]
             [fluree.db.util.log :as log]
-            [fluree.server.broadcast :as broadcast]
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.events :as events]
-            [fluree.server.handlers.shared :refer [deref!]]))
+            [fluree.server.handlers.shared :refer [deref!]]
+            [fluree.server.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
 
@@ -21,7 +21,7 @@
                {} string-opts)))
 
 (defn create-ledger!
-  [conn broadcaster watcher {:keys [ledger-id txn opts] :as params}]
+  [conn watcher {:keys [ledger-id tx-id txn opts] :as _params}]
   (go-try
     (let [create-opts   (parse-opts txn)
           ledger        (deref!
@@ -30,12 +30,11 @@
                             fluree/db
                             (fluree/stage txn opts)
                             deref!)
-          result        (deref!
-                         (fluree/apply-stage! ledger staged-db))]
-      (broadcast/broadcast-new-ledger! broadcaster watcher params result))))
+          commit-result (deref! (fluree/apply-stage! ledger staged-db))]
+      (watcher/deliver-new-ledger watcher ledger-id tx-id commit-result))))
 
 (defn transact!
-  [conn broadcaster watcher {:keys [ledger-id tx-id txn opts] :as params}]
+  [conn watcher {:keys [ledger-id tx-id txn opts] :as params}]
   (go-try
     (let [start-time    (System/currentTimeMillis)
           _             (log/debug "Starting transaction processing for ledger:" ledger-id
@@ -48,20 +47,21 @@
                             fluree/db
                             (fluree/stage txn opts)
                             deref!)
-          result        (deref!
-                         (fluree/apply-stage! ledger staged-db))]
-      (broadcast/broadcast-new-commit! broadcaster watcher params result))))
+          commit-result (deref! (fluree/apply-stage! ledger staged-db))]
+      (watcher/deliver-commit watcher ledger-id tx-id commit-result))))
 
 (defn process-event
-  [conn broadcaster watcher event]
+  [conn watcher event]
   (go
     (try
       (let [event-type (events/event-type event)
             result     (<! (case event-type
-                             :ledger-create (create-ledger! conn broadcaster watcher event)
-                             :tx-queue      (transact! conn broadcaster watcher event)))]
+                             :ledger-create (create-ledger! conn watcher event)
+                             :tx-queue      (transact! conn watcher event)))]
         (if (exception? result)
-          (broadcast/broadcast-error! broadcaster watcher event result)
+          (let [{:keys [ledger-id tx-id]} event]
+            (log/debug result "Delivering tx-exception to watcher")
+            (watcher/deliver-error watcher ledger-id tx-id result))
           result))
       (catch Exception e
         (log/error e
@@ -75,9 +75,9 @@
       (nil? result)))
 
 (defn new-transaction-queue
-  ([conn broadcaster watcher]
-   (new-transaction-queue conn broadcaster watcher nil))
-  ([conn broadcaster watcher max-pending-txns]
+  ([conn watcher]
+   (new-transaction-queue conn watcher nil))
+  ([conn watcher max-pending-txns]
    (let [tx-queue (if (pos-int? max-pending-txns)
                     (async/chan max-pending-txns)
                     (async/chan))]
@@ -99,7 +99,7 @@
 
            :else
            (let [[event out-ch] input
-                 result         (<! (process-event conn broadcaster watcher event))
+                 result         (<! (process-event conn watcher event))
                  i*             (inc i)]
              (log/trace "Processed transaction #" i* ". Result:" result)
              (when-not (error? result)
@@ -119,7 +119,7 @@
   (ex-info "Too many pending transactions. Please try again later."
            {:status 503, :error :db/pending-transaction-limit}))
 
-(defrecord BufferedTransactor [tx-queue]
+(defrecord BufferedTransactor [watcher tx-queue]
   consensus/Transactor
   (-queue-new-ledger [_ new-ledger-event]
     (let [out-ch (async/chan)]
@@ -134,11 +134,11 @@
       out-ch)))
 
 (defn start-buffered
-  [conn broadcaster watcher max-pending-txns]
-  (let [tx-queue (new-transaction-queue conn broadcaster watcher max-pending-txns)]
-    (->BufferedTransactor tx-queue)))
+  [conn watcher max-pending-txns]
+  (let [tx-queue (new-transaction-queue conn watcher max-pending-txns)]
+    (->BufferedTransactor watcher tx-queue)))
 
-(defrecord SynchronizedTransactor [tx-queue]
+(defrecord SynchronizedTransactor [watcher tx-queue]
   consensus/Transactor
   (-queue-new-ledger [_ new-ledger-event]
     (let [out-ch (async/chan)]
@@ -151,17 +151,17 @@
       out-ch)))
 
 (defn start-synchronized
-  [conn broadcaster watcher]
-  (let [tx-queue (new-transaction-queue conn broadcaster watcher)]
-    (->SynchronizedTransactor tx-queue)))
+  [conn watcher]
+  (let [tx-queue (new-transaction-queue conn watcher)]
+    (->SynchronizedTransactor watcher tx-queue)))
 
 (defn start
-  ([conn broadcaster watcher]
-   (start-synchronized conn broadcaster watcher))
-  ([conn broadcaster watcher max-pending-txns]
+  ([conn watcher]
+   (start-synchronized conn watcher))
+  ([conn watcher max-pending-txns]
    (if max-pending-txns
-     (start-buffered conn broadcaster watcher max-pending-txns)
-     (start-synchronized conn broadcaster watcher))))
+     (start-buffered conn watcher max-pending-txns)
+     (start-synchronized conn watcher))))
 
 (defn stop
   [{:keys [tx-queue] :as _transactor}]

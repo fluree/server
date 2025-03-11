@@ -10,10 +10,9 @@
   This is called with new commits immediately after processing a transaction.
 
   Returns promise that will have the eventual response once committed."
-  [{:keys [consensus/raft-state] :as config} params commit-result]
-  (let [created-body (events/transaction-committed
-                      (participant/this-server raft-state)
-                      params commit-result)]
+  [{:keys [consensus/raft-state] :as config} {:keys [ledger-id tx-id] :as _params} commit-result]
+  (let [created-body (events/transaction-committed (participant/this-server raft-state)
+                                                   ledger-id tx-id commit-result)]
 
     ;; returns promise
     (participant/leader-new-command! config :new-commit created-body)))

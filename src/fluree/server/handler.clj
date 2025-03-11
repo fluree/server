@@ -75,13 +75,6 @@
               [:tx-id DID]
               [:commit  LedgerAddress]]]))
 
-(def TransactCallbackRequestBody
-  (m/schema [:map-of :any :any]))
-
-(def TransactCallbackResponseBody
-  (m/schema [:and
-             [:map-of :keyword :any]]))
-
 (def FqlQuery (m/schema (-> (fql/query-schema [])
                             ;; hack to make query schema open instead of closed
                             ;; TODO: remove once db is updated to open
@@ -179,13 +172,14 @@
    :handler    #'ledger/history})
 
 (defn wrap-assoc-system
-  [conn consensus watcher subscriptions handler]
+  [conn consensus watcher subscriptions broadcaster handler]
   (fn [req]
     (-> req
         (assoc :fluree/conn conn
                :fluree/consensus consensus
                :fluree/watcher watcher
-               :fluree/subscriptions subscriptions)
+               :fluree/subscriptions subscriptions
+               :fluree/broadcaster broadcaster)
         handler)))
 
 (defn wrap-cors
@@ -336,8 +330,9 @@
            (log/debug name "got response:" resp*))
          resp)))))
 
-(defn compose-fluree-middleware
-  [{:keys [connection consensus watcher subscriptions root-identities closed-mode]
+(defn compose-app-middleware
+  [{:keys [connection consensus watcher subscriptions broadcaster
+           root-identities closed-mode]
     :as _config}]
   (let [exception-middleware (exception/create-exception-middleware
                               (merge
@@ -355,7 +350,7 @@
     (sort-middleware-by-weight [[1 exception-middleware]
                                 [10 wrap-cors]
                                 [10 (partial wrap-assoc-system connection consensus
-                                             watcher subscriptions)]
+                                             watcher subscriptions broadcaster)]
                                 [50 unwrap-credential]
                                 [100 wrap-set-fuel-header]
                                 [200 coercion/coerce-exceptions-middleware]
@@ -414,30 +409,22 @@
           :parameters {:body SubscriptionRequestBody}
           :handler    #'subscription/default}}])
 
-(def fluree-callback-routes
-  ["/callback"
-   ["/transaction"
-    {:post {:summary    "Report progress of delegated transaction processing"
-            :parameters {:body TransactCallbackRequestBody}
-            :responses  {200 {:body TransactCallbackResponseBody}
-                         400 {:body ErrorResponse}
-                         500 {:body ErrorResponse}}
-            :handler    #'srv-tx/callback}}]])
-
-(def default-fluree-routes
-  #{fluree-create-routes
-    fluree-transact-routes
-    fluree-query-routes
-    fluree-history-routes
-    fluree-remote-routes
-    fluree-subscription-routes
-    fluree-callback-routes})
+(def default-fluree-route-map
+  {:create       fluree-create-routes
+   :transact     fluree-transact-routes
+   :query        fluree-query-routes
+   :history      fluree-history-routes
+   :remote       fluree-remote-routes
+   :subscription fluree-subscription-routes})
 
 (defn combine-fluree-routes
-  [mw-config fluree-route-list]
-  (let [fluree-middleware (compose-fluree-middleware mw-config)]
-    (into ["/fluree" {:middleware fluree-middleware}]
-          fluree-route-list)))
+  [fluree-route-map]
+  (->> fluree-route-map
+       vals
+       (into ["/fluree"])))
+
+(def default-fluree-routes
+  (combine-fluree-routes default-fluree-route-map))
 
 (def fallback-handler
   (let [swagger-ui-handler (swagger-ui/create-swagger-ui-handler
@@ -472,8 +459,12 @@
 
 (defn app
   ([config]
-   (app config default-fluree-routes))
-  ([config fluree-route-list]
-   (let [fluree-routes (combine-fluree-routes config fluree-route-list)
-         router        (app-router fluree-routes)]
+   (app config []))
+  ([config custom-routes]
+   (app config custom-routes default-fluree-routes))
+  ([config custom-routes fluree-routes]
+   (let [app-middleware (compose-app-middleware config)
+         app-routes     (cond-> ["" {:middleware app-middleware} fluree-routes]
+                          (seq custom-routes) (conj custom-routes))
+         router         (app-router app-routes)]
      (ring/ring-handler router fallback-handler))))
