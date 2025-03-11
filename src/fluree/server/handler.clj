@@ -353,7 +353,8 @@
                                 [10 wrap-cors]
                                 [10 (partial wrap-assoc-system connection consensus
                                              watcher subscriptions broadcaster)]
-                                [20 (partial trace-http/wrap-server-span)]
+                                [20 (partial trace-http/wrap-reitit-route)]
+                                [25 (partial trace-http/wrap-server-span)]
                                 [50 unwrap-credential]
                                 [100 wrap-set-fuel-header]
                                 [200 coercion/coerce-exceptions-middleware]
