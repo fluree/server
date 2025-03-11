@@ -13,7 +13,7 @@
           txn-req     {:body
                        (json/write-value-as-string
                         {"ledger"   ledger-name
-                         "@context" ["https://ns.flur.ee" test-system/default-context]
+                         "@context" test-system/default-context
                          "insert"   [{"id"      "ex:query-test"
                                       "type"    "schema:Test"
                                       "ex:name" "query-test"}]})
@@ -39,7 +39,7 @@
           txn-req     {:body
                        (json/write-value-as-string
                         {"ledger"   ledger-name
-                         "@context" ["https://ns.flur.ee" test-system/default-context]
+                         "@context" test-system/default-context
                          "insert"   {"@graph"
                                      [{"id"      "ex:query-test"
                                        "type"    "schema:Test"
@@ -69,7 +69,7 @@
           txn-req     {:body
                        (json/write-value-as-string
                         {"ledger"   ledger-name
-                         "@context" ["https://ns.flur.ee" test-system/default-context]
+                         "@context" test-system/default-context
                          "insert"   {"@graph"
                                      [{"id"          "ex:brian",
                                        "type"        "ex:User",
@@ -113,7 +113,7 @@
           txn-req     {:body
                        (json/write-value-as-string
                         {"ledger"   ledger-name
-                         "@context" ["https://ns.flur.ee" test-system/default-context]
+                         "@context" test-system/default-context
                          "insert"   [{"id"      "ex:query-test"
                                       "type"    "schema:Test"
                                       "ex:name" "query-test"}]})
@@ -151,7 +151,7 @@
                        :body
                        (json/write-value-as-string
                         {"ledger"   ledger-name
-                         "@context" ["https://ns.flur.ee" context]
+                         "@context" context
                          "insert"
                          {"@graph"
                           [{"id"          "ex:freddy"

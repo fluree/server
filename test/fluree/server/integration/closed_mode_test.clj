@@ -50,7 +50,7 @@
           (is (= 201 (:status resp))))))
     (testing "to transact"
       (let [transact-req {"ledger" "closed-test"
-                          "@context" ["https://ns.flur.ee" default-context]
+                          "@context" default-context
                           "insert" [{"@id" "ex:coin" "ex:name" "nickel"}]}
             resp (api-post :transact {:body (crypto/create-jws (json/write-value-as-string transact-req)
                                                                (:private root-auth))
@@ -87,7 +87,7 @@
   (testing "non-root request"
     (testing "to create"
       (let [create-req {"ledger" "closed-test2"
-                        "@context" ["https://ns.flur.ee" default-context]
+                        "@context" default-context
                         "insert" {"@graph"
                                   [{"id" (:id root-auth)
                                     "f:policyClass" {"id" "ex:RootPolicy"}
@@ -106,7 +106,7 @@
           (is (= {"error" "Untrusted credential."} (-> resp :body json/read-value))))))
     (testing "to transact"
       (let [create-req {"ledger" "closed-test"
-                        "@context" ["https://ns.flur.ee" default-context]
+                        "@context" default-context
                         "insert" [{"@id" "ex:coin" "ex:name" "nickel"}]}
             resp (api-post :transact {:body (crypto/create-jws (json/write-value-as-string create-req)
                                                                (:private non-root-auth))
@@ -152,7 +152,7 @@
   (testing "unsigned request"
     (testing "to create"
       (let [create-req {"ledger" "closed-test3"
-                        "@context" ["https://ns.flur.ee" default-context]
+                        "@context" default-context
                         "insert" {"@graph"
                                   [{"id" (:id auth)
                                     "f:policyClass" {"id" "ex:RootPolicy"}
@@ -170,7 +170,7 @@
           (is (= {"error" "Missing credential."} (-> resp :body json/read-value))))))
     (testing "to transact"
       (let [transact-req {"ledger" "closed-test3"
-                          "@context" ["https://ns.flur.ee" default-context]
+                          "@context" default-context
                           "insert" [{"@id" "ex:coin" "ex:name" "nickel"}]}
             resp (api-post :transact {:body (json/write-value-as-string transact-req)
                                       :headers json-headers})]

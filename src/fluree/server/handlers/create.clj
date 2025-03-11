@@ -1,11 +1,9 @@
 (ns fluree.server.handlers.create
   (:require
    [fluree.db.api :as fluree]
-   [fluree.db.constants :as const]
+   [fluree.db.api.transact :as transact-api]
    [fluree.db.util.context :as ctx-util]
-   [fluree.db.util.core :as util :refer [get-first-value]]
    [fluree.db.util.log :as log]
-   [fluree.json-ld.processor.api :as jld-processor]
    [fluree.server.consensus :as consensus]
    [fluree.server.handlers.shared :refer [deref! defhandler]]
    [fluree.server.handlers.transact :refer [derive-tx-id monitor-consensus-persistence
@@ -21,12 +19,11 @@
     (monitor-consensus-persistence watcher ledger tx-id persist-resp-ch)))
 
 (defn create-ledger
-  [consensus watcher broadcaster expanded-txn opts]
+  [consensus watcher broadcaster ledger-id txn opts]
   (let [p         (promise)
-        ledger-id (get-first-value expanded-txn const/iri-ledger)
-        tx-id     (derive-tx-id expanded-txn)
+        tx-id     (derive-tx-id txn)
         result-ch (watcher/create-watch watcher tx-id)]
-    (queue-consensus consensus watcher ledger-id tx-id expanded-txn opts)
+    (queue-consensus consensus watcher ledger-id tx-id txn opts)
     (monitor-commit p ledger-id tx-id broadcaster result-ch)
     p))
 
@@ -42,12 +39,9 @@
     {:keys [body]} :parameters}]
   (log/debug "create body:" body)
   (let [txn-context    (ctx-util/txn-context body)
-        [expanded-txn] (-> (ctx-util/use-fluree-context body)
-                           jld-processor/expand
-                           util/sequential)
-        ledger-id      (get-first-value expanded-txn const/iri-ledger)]
+        ledger-id      (transact-api/extract-ledger-id body)]
     (if-not (deref! (fluree/exists? conn ledger-id))
-      (let [resp-p (create-ledger consensus watcher broadcaster expanded-txn
+      (let [resp-p (create-ledger consensus watcher broadcaster ledger-id body
                                   {:context txn-context})]
         {:status 201, :body (deref! resp-p)})
       (throw-ledger-exists ledger-id))))
