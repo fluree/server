@@ -28,24 +28,20 @@
 
 (defn queue-new-ledger
   [transactor ledger-id tx-id txn opts]
-  (log/trace "queue-new-ledger:" ledger-id tx-id txn)
-  ;; (span/set-attribute! (span/get-span) "ledger.id" ledger-id)
-  ;; (span/set-attribute! (span/get-span) "transaction.id" tx-id)
-  (span/with-span! {:name "fluree.server.consensus/queue-new-ledger"
-                    :span-kind :producer
-                    :attributes {:ledger.id ledger-id
-                                 :transaction.id tx-id
-                                 :sname (System/getenv "OTEL_SERVICE_NAME")}}
-    (let [event-params (events/create-ledger ledger-id tx-id txn opts)]
-      (-queue-new-ledger transactor (with-trace-context event-params)))))
+  (log/with-mdc {:tx.id tx-id}
+    (log/trace "queue-new-ledger:" ledger-id tx-id txn)
+    (span/with-span! {:name "fluree.server.consensus/queue-new-ledger"
+                      :span-kind :producer
+                      :attributes {:tx.id tx-id}}
+      (let [event-params (events/create-ledger ledger-id tx-id txn opts)]
+        (-queue-new-ledger transactor (with-trace-context event-params))))))
 
 (defn queue-new-transaction
   [transactor ledger-id tx-id txn opts]
-  (log/trace "queue-new-transaction:" txn)
-  (span/with-span!  {:name "fluree.server.consensus/queue-new-transaction"
-                     :span-kind :producer
-                     :attributes {:ledger.id ledger-id
-                                  :transaction.id tx-id
-                                  :sname (System/getenv "OTEL_SERVICE_NAME")}}
-    (let [event-params (events/commit-transaction ledger-id tx-id txn opts)]
-      (-queue-new-transaction transactor (with-trace-context event-params)))))
+  (log/with-mdc {:tx.id tx-id}
+    (log/trace "queue-new-transaction:" txn)
+    (span/with-span!  {:name "fluree.server.consensus/queue-new-transaction"
+                       :span-kind :producer
+                       :attributes {:tx.id tx-id}}
+      (let [event-params (events/commit-transaction ledger-id tx-id txn opts)]
+        (-queue-new-transaction transactor (with-trace-context event-params))))))
