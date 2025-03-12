@@ -28,14 +28,14 @@
 (defhandler history
   [{:keys [fluree/conn] {{ledger :from :as query} :body} :parameters :as req}]
   (log/with-mdc {:ledger.id ledger}
-      (span/add-span-data! {:attributes (org.slf4j.MDC/getCopyOfContextMap)})
-   (log/debug "history handler got query:" query)
-   (let [ledger*       (->> ledger (fluree/load conn) deref!)
-         override-opts (add-policy-enforcement-headers {} req)
-         query*        (dissoc query :from)
-         _             (log/debug "history - Querying ledger" ledger "-" query*)
-         results       (deref! (fluree/history ledger* query* override-opts))]
+    (span/add-span-data! {:attributes (org.slf4j.MDC/getCopyOfContextMap)})
+    (log/debug "history handler got query:" query)
+    (let [ledger*       (->> ledger (fluree/load conn) deref!)
+          override-opts (add-policy-enforcement-headers {} req)
+          query*        (dissoc query :from)
+          _             (log/debug "history - Querying ledger" ledger "-" query*)
+          results       (deref! (fluree/history ledger* query* override-opts))]
 
-     (log/debug "history - query results:" results)
-     {:status 200
-      :body   results})))
+      (log/debug "history - query results:" results)
+      {:status 200
+       :body   results})))
