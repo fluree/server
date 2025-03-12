@@ -9,8 +9,7 @@
             [fluree.server.consensus.events :as events]
             [fluree.server.handlers.shared :refer [deref!]]
             [fluree.server.watcher :as watcher]
-            [steffan-westcott.clj-otel.api.trace.span :as span]
-            [steffan-westcott.clj-otel.context :as otel-context]))
+            [steffan-westcott.clj-otel.api.trace.span :as span]))
 
 (set! *warn-on-reflection* true)
 
