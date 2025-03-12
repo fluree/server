@@ -45,9 +45,8 @@
         ledger-id      (transact-api/extract-ledger-id body)]
     (log/with-mdc {:ledger.id ledger-id}
       (span/add-span-data! {:attributes (org.slf4j.MDC/getCopyOfContextMap)})
-      (span/with-span! ["fluree.server.handlers.create/default"]
-        (if-not (deref! (fluree/exists? conn ledger-id))
-          (let [resp-p (create-ledger consensus watcher broadcaster ledger-id body
-                                      {:context txn-context})]
-            {:status 201, :body (deref! resp-p)})
-          (throw-ledger-exists ledger-id))))))
+      (if-not (deref! (fluree/exists? conn ledger-id))
+        (let [resp-p (create-ledger consensus watcher broadcaster ledger-id body
+                                    {:context txn-context})]
+          {:status 201, :body (deref! resp-p)})
+        (throw-ledger-exists ledger-id)))))

@@ -11,7 +11,8 @@
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.events :as events]
             [fluree.server.handlers.shared :refer [defhandler deref!]]
-            [fluree.server.watcher :as watcher]))
+            [fluree.server.watcher :as watcher]
+            [steffan-westcott.clj-otel.api.trace.span :as span]))
 
 (set! *warn-on-reflection* true)
 
@@ -106,9 +107,12 @@
     {:keys [body]} :parameters}]
   (let [txn-context    (ctx-util/txn-context body)
         ledger-id      (transact-api/extract-ledger-id body)]
-    (if (deref! (fluree/exists? conn ledger-id))
-      (let [opts   (cond-> {:context txn-context :raw-txn raw-txn}
-                     did (assoc :did did))
-            resp-p (transact! consensus watcher broadcaster ledger-id body opts)]
-        {:status 200, :body (deref! resp-p)})
-      (throw-ledger-doesnt-exist ledger-id))))
+    (log/with-mdc {:ledger.id ledger-id}
+      (span/add-span-data! {:attributes (org.slf4j.MDC/getCopyOfContextMap)})
+
+      (if (deref! (fluree/exists? conn ledger-id))
+        (let [opts   (cond-> {:context txn-context :raw-txn raw-txn}
+                       did (assoc :did did))
+              resp-p (transact! consensus watcher broadcaster ledger-id body opts)]
+          {:status 200, :body (deref! resp-p)})
+        (throw-ledger-doesnt-exist ledger-id)))))
