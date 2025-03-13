@@ -1,5 +1,6 @@
 (ns fluree.server.handler
   (:require [clojure.core.async :as async :refer [<!!]]
+            [clojure.string :as str]
             [fluree.db.json-ld.credential :as cred]
             [fluree.db.query.fql.syntax :as fql]
             [fluree.db.query.history.parse :as fqh]
@@ -86,7 +87,8 @@
 (def QueryResponse
   (m/schema [:orn
              [:select [:sequential [:or coll? map?]]]
-             [:select-one [:or coll? map?]]]))
+             [:select-one [:or coll? map?]]
+             [:construct map?]]))
 
 (def HistoryQuery
   (m/schema (fqh/history-query-schema [[:from LedgerAlias]])
@@ -249,38 +251,77 @@
           fuel 1000] ; TODO: get this for real
       (assoc-in resp [:headers "x-fdb-fuel"] (str fuel)))))
 
-(defn wrap-policy-metadata
-  "Both Fluree-Policy-Class and Fluree-Policy-Identity can be optionally
-  set in the header for non-credentialed queries/transactions. The primary
-  motivation is enforcing policy with SPARQL which doesn't have an opts
-  map option, although if set, it will also override policyClass/Identity
-  that might have otherwise been set in FlureeQL/JSON."
+(def fluree-header-opts
+  ["fluree-meta" "fluree-max-fuel" "fluree-identity" "fluree-policy-identity"
+   "fluree-policy" "fluree-policy-class" "fluree-policy-values"
+   "fluree-format" "fluree-output"])
+
+(defn wrap-header-opts
+  "Extract options from headers, parse and validate them where necessary, and attach to
+  request. Opts set in the header override those specified within the transaction or
+  query."
   [handler]
-  (fn [req]
-    (let [policy-identity (get-in req [:headers "fluree-policy-identity"])
-          policy-class    (get-in req [:headers "fluree-policy-class"])
-          policy          (when-let [p (get-in req [:headers "fluree-policy"])]
-                            (try
-                              (json/parse p false)
-                              (catch Exception _
-                                (throw (ex-info "Invalid Fluree-Policy header: must be JSON."
-                                                {:status 400})))))
-          policy-values   (when-let [pv (get-in req [:headers "fluree-policy-values"])]
-                            (try
-                              (let [pv* (json/parse pv false)]
-                                (if (sequential? pv*)
-                                  pv*
-                                  (throw (ex-info "Invalid Fluree-Policy-Values header, it must be a valid values binding: [[\"?varA\" \"?varB\"] [[<a1> <b1>] [<a2> <b2>] ...]]"
-                                                  {:status 400}))))
-                              (catch Exception _
-                                (throw (ex-info "Invalid Fluree-Policy-Values header: must be JSON."
-                                                {:status 400})))))]
-      (handler
-       (cond-> req
-         policy-identity (assoc :policy/identity policy-identity)
-         policy-class (assoc :policy/class policy-class)
-         policy (assoc :policy/policy policy)
-         policy-values (assoc :policy/values policy-values))))))
+  (fn [{:keys [headers credential/did] :as req}]
+    (let [{:keys [meta max-fuel identity policy-identity policy policy-class policy-values format output]}
+          (-> headers
+              (select-keys fluree-header-opts)
+              (update-keys (fn [k] (keyword (subs k (count "fluree-"))))))
+
+          meta     (when meta
+                     (case (str/lower-case meta)
+                       "false" false
+                       "true"  true
+                       (throw (ex-info "Invalid Fluree-Meta header: must be boolean."
+                                       {:status 400}))))
+          max-fuel (when max-fuel
+                     (try (Integer/parseInt max-fuel)
+                          (catch Exception _
+                            (throw (ex-info "Invalid Fluree-Max-Fuel header: must be integer."
+                                            {:status 400})))))
+          ;; Accept header takes precedence over other ways of specifying query output
+          output   (cond (-> headers (get "accept") (= "application/sparql-results+json"))
+                         :sparql
+
+                         (= output "sparql") :sparql
+                         (= output "fql")    :fql
+                         :else               :fql)
+          ;; Content-Type header takes precedence over other ways of specifying query format
+          format        (cond (-> headers (get "content-type") (= "application/sparql-query"))
+                              :sparql
+
+                              (= format "sparql") :sparql
+                              (= output "fql")    :fql
+                              :else               :fql)
+          policy        (when policy
+                          (try (json/parse policy false)
+                               (catch Exception _
+                                 (throw (ex-info "Invalid Fluree-Policy header: must be JSON."
+                                                 {:status 400})))))
+          policy-values (when policy-values
+                          (try (let [pv (json/parse policy-values false)]
+                                 (if (sequential? pv)
+                                   pv
+                                   (throw (ex-info "Invalid Fluree-Policy-Values header, it must be a valid values binding: [[\"?varA\" \"?varB\"] [[<a1> <b1>] [<a2> <b2>] ...]]"
+                                                   {:status 400}))))
+                               (catch Exception _
+                                 (throw (ex-info "Invalid Fluree-Policy-Values header: must be JSON."
+                                                 {:status 400})))))
+
+          opts (cond-> {}
+                 meta            (assoc :meta meta)
+                 max-fuel        (assoc :max-fuel max-fuel)
+                 format          (assoc :format format)
+                 output          (assoc :output output)
+                 policy          (assoc :policy policy)
+                 policy-class    (assoc :policy-class policy-class)
+                 policy-values   (assoc :policy-values policy-values)
+
+                 policy-identity (assoc :identity identity)
+                 ;; Fluree-Identity overrides Fluree-Policy-Identity
+                 identity        (assoc :identity identity)
+                 ;; credential (signed) identity overrides all else
+                 did             (assoc :identity did))]
+      (handler (assoc req :fluree/opts opts)))))
 
 (defn sort-middleware-by-weight
   [weighted-middleware]
@@ -356,7 +397,7 @@
                                 [200 coercion/coerce-exceptions-middleware]
                                 [300 coercion/coerce-response-middleware]
                                 [400 coercion/coerce-request-middleware]
-                                [500 wrap-policy-metadata]
+                                [500 wrap-header-opts]
                                 [600 (wrap-closed-mode root-identities closed-mode)]
                                 [1000 exception-middleware]])))
 
