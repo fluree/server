@@ -41,8 +41,7 @@
                        :connection      (ig/ref ::db/connection)
                        :consensus       (ig/ref ::server/consensus)
                        :watcher         (ig/ref ::server/watcher)
-                       :subscriptions   (ig/ref ::server/subscriptions)
-                       :broadcaster     (ig/ref ::server/broadcast)}}))
+                       :subscriptions   (ig/ref ::server/subscriptions)}}))
 
 (defmethod ig/expand-key ::consensus/standalone
   [k config]
@@ -100,8 +99,7 @@
 (defmethod ig/init-key ::server/handler
   [_ config]
   (-> config
-      (select-keys [:connection :consensus :watcher :subscriptions :broadcaster :root-identities
-                    :closed-mode])
+      (select-keys [:connection :consensus :watcher :subscriptions :root-identities :closed-mode])
       handler/app))
 
 (defmethod ig/init-key ::http/jetty
