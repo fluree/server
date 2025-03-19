@@ -9,7 +9,7 @@
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.events :as events]
-            [fluree.server.watcher :as watcher]))
+            [fluree.server.consensus.response :as response]))
 
 (set! *warn-on-reflection* true)
 
@@ -100,6 +100,6 @@
 
 (defn deliver!
   "Responsible for producing the event broadcast to connected peers."
-  [{:keys [fluree/watcher] :as _config} commit-result]
-  (let [new-commit-event (events/transaction-committed nil nil commit-result)]
-    (watcher/deliver-commit watcher nil nil new-commit-event)))
+  [{:keys [fluree/watcher fluree/broadcaster] :as _config}
+   {:keys [ledger-id tx-id] :as commit-result}]
+  (response/announce-commit watcher broadcaster ledger-id tx-id commit-result))
