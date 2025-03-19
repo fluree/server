@@ -8,7 +8,6 @@
             [fluree.db.util.filesystem :as fs]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
-            [fluree.server.consensus.events :as events]
             [fluree.server.consensus.response :as response]))
 
 (set! *warn-on-reflection* true)

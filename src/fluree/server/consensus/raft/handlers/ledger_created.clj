@@ -3,7 +3,6 @@
             [clojure.java.io :as io]
             [fluree.db.util.filesystem :as fs]
             [fluree.db.util.log :as log]
-            [fluree.server.consensus.events :as events]
             [fluree.server.consensus.raft.handlers.new-commit :as new-commit]
             [fluree.server.consensus.response :as response])
   (:import (java.io File)))

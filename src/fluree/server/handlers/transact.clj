@@ -7,7 +7,6 @@
             [fluree.db.util.core :as util]
             [fluree.db.util.log :as log]
             [fluree.json-ld :as json-ld]
-            [fluree.server.broadcast :as broadcast]
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.events :as events]
             [fluree.server.handlers.shared :refer [defhandler deref!]]
