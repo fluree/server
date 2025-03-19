@@ -6,8 +6,8 @@
             [fluree.db.util.core :refer [exception? get-first-value]]
             [fluree.db.util.log :as log]
             [fluree.server.consensus :as consensus]
-            [fluree.server.consensus.response :as response]
             [fluree.server.consensus.events :as events]
+            [fluree.server.consensus.response :as response]
             [fluree.server.handlers.shared :refer [deref!]]))
 
 (set! *warn-on-reflection* true)
