@@ -52,6 +52,10 @@ clj-kondo-lint-ci:
 cljfmt-check: ## Check Clojure formatting with cljfmt
 	cljfmt check src test build.clj
 
+.PHONY: cljfmt-fix ## Fix Clojure formatting errors with cljfmt
+cljfmt-fix:
+	cljfmt fix src dev test build.clj
+
 .PHONY: clean
 clean: ## Remove build artifacts
 	rm -rf target
