@@ -53,21 +53,24 @@
 (defn process-event
   [conn watcher broadcaster event]
   (go
-    (try
-      (let [event-type (events/event-type event)
-            result     (<! (case event-type
+    (let [event-type (events/event-type event)
+          result     (try
+                       (<! (case event-type
                              :ledger-create (create-ledger! conn watcher broadcaster event)
-                             :tx-queue      (transact! conn watcher broadcaster event)))]
-        (if (exception? result)
-          (let [{:keys [ledger-id tx-id]} event]
-            (log/debug result "Delivering tx-exception to watcher")
-            (response/announce-error watcher broadcaster ledger-id tx-id result))
-          result))
-      (catch Exception e
-        (log/error e
-                   "Unexpected event message - expected a map with a supported "
-                   "event type. Received:" event)
-        ::error))))
+                             :tx-queue      (transact! conn watcher broadcaster event)))
+                       (catch Exception e
+                         (log/error e
+                                    "Unexpected event message - expected a map with a supported "
+                                    "event type. Received:" event)
+                         (ex-info (str "Unexpected event message - expected a map with a supported "
+                                       "event type.")
+                                  {:status 500, :error :consensus/unexpected-event}
+                                  e)))]
+      (if (exception? result)
+        (let [{:keys [ledger-id tx-id]} event]
+          (log/debug result "Delivering tx-exception to watcher")
+          (response/announce-error watcher broadcaster ledger-id tx-id result))
+        result))))
 
 (defn error?
   [result]
