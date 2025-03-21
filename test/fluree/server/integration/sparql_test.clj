@@ -1,8 +1,9 @@
 (ns fluree.server.integration.sparql-test
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [fluree.server.integration.test-system
-             :refer [api-post create-rand-ledger json-headers run-test-server
-                     sparql-headers sparql-results-headers]]
+             :refer [api-post create-rand-ledger run-test-server sparql-headers
+                     sparql-results-headers sparql-update-headers]]
             [jsonista.core :as json]))
 
 (use-fixtures :once run-test-server)
@@ -10,14 +11,16 @@
 (deftest ^:integration ^:sparql query-sparql-test
   (testing "basic SPARQL query works"
     (let [ledger-name (create-rand-ledger "query-sparql-test")
-          txn         {"ledger"   ledger-name
-                       "@context" {"schema" "http://schema.org/"
-                                   "ex"     "http://example.org/"}
-                       "insert"   [{"@id"     "ex:query-sparql-test"
-                                    "@type"   "schema:Test"
-                                    "ex:name" "query-sparql-test"}]}
-          txn-res     (api-post :transact {:body    (json/write-value-as-string txn)
-                                           :headers json-headers})
+          txn         (str/join "\n"
+                                ["PREFIX schema: <http://schema.org/>"
+                                 "PREFIX ex: <http://example.org/>"
+                                 "INSERT DATA"
+                                 (str " { GRAPH <" ledger-name ">")
+                                 "{"
+                                 "ex:query-sparql-test a schema:Test ; ex:name \"query-sparql-test\" ."
+                                 "}"
+                                 "}"])
+          txn-res     (api-post :transact {:body txn :headers sparql-update-headers})
           _           (assert (= 200 (:status txn-res)))
           query       (str "PREFIX schema: <http://schema.org/>
                                       PREFIX ex: <http://example.org/>
