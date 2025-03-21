@@ -28,7 +28,8 @@
       ;; check for exception trying to put txn in consensus, if so we must deliver the
       ;; watch here, but if successful the consensus process will deliver the watch downstream
       (when (util/exception? persist-resp)
-        (watcher/deliver-error watcher ledger tx-id persist-resp)))))
+        (let [error-event (events/error ledger tx-id persist-resp)]
+          (watcher/deliver-event watcher tx-id error-event))))))
 
 (defn queue-consensus
   "Register a new commit with consensus"
