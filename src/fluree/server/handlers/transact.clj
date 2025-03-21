@@ -50,7 +50,10 @@
         (= :timeout result)
         (let [ex (ex-info (str "Timeout waiting for transaction to complete for: "
                                ledger-id " with tx-id: " tx-id)
-                          {:status 408, :error :db/response-timeout :tx-id tx-id})]
+                          {:status 408
+                           :error  :db/response-timeout
+                           :ledger ledger-id
+                           :tx-id  tx-id})]
           (deliver out-p ex))
 
         (nil? result)
@@ -58,7 +61,10 @@
                                ledger-id " with tx-id: " tx-id
                                ". Transaction may have processed, check ledger"
                                " for confirmation.")
-                          {:status 500, :error :db/response-missing :tx-id tx-id})]
+                          {:status 500
+                           :error  :db/response-missing
+                           :ledger ledger-id
+                           :tx-id  tx-id})]
           (deliver out-p ex))
 
         (util/exception? result)
