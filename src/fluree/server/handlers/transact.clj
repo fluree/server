@@ -105,7 +105,7 @@
 (defhandler default
   [{:keys [fluree/conn fluree/consensus fluree/watcher fluree/broadcaster credential/did fluree/opts raw-txn]
     {:keys [body]} :parameters}]
-  (let [txn            (if (= :sparql (:format opts))
+  (let [txn            (if (sparql/sparql-format? opts)
                          (sparql/->fql body)
                          body)
         txn-context    (ctx-util/txn-context txn)
