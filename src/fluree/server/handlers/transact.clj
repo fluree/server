@@ -3,6 +3,7 @@
             [fluree.crypto :as crypto]
             [fluree.db.api :as fluree]
             [fluree.db.api.transact :as transact-api]
+            [fluree.db.query.sparql :as sparql]
             [fluree.db.util.context :as ctx-util]
             [fluree.db.util.core :as util]
             [fluree.db.util.log :as log]
@@ -102,13 +103,16 @@
                                 :body   {:error err-message}}}))))
 
 (defhandler default
-  [{:keys [fluree/conn fluree/consensus fluree/watcher fluree/broadcaster credential/did raw-txn]
+  [{:keys [fluree/conn fluree/consensus fluree/watcher fluree/broadcaster credential/did fluree/opts raw-txn]
     {:keys [body]} :parameters}]
-  (let [txn-context    (ctx-util/txn-context body)
-        ledger-id      (transact-api/extract-ledger-id body)]
+  (let [txn            (if (sparql/sparql-format? opts)
+                         (sparql/->fql body)
+                         body)
+        txn-context    (ctx-util/txn-context txn)
+        ledger-id      (transact-api/extract-ledger-id txn)]
     (if (deref! (fluree/exists? conn ledger-id))
-      (let [opts   (cond-> {:context txn-context :raw-txn raw-txn}
-                     did (assoc :did did))
-            resp-p (transact! consensus watcher broadcaster ledger-id body opts)]
+      (let [opts (cond-> (merge opts {:context txn-context :raw-txn raw-txn :format :fql})
+                   did (assoc :did did))
+            resp-p (transact! consensus watcher broadcaster ledger-id txn opts)]
         {:status 200, :body (deref! resp-p)})
       (throw-ledger-doesnt-exist ledger-id))))
