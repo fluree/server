@@ -405,6 +405,7 @@
            :parameters {:body CreateRequestBody}
            :responses  {201 {:body CreateResponseBody}
                         400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
                         500 {:body ErrorResponse}}
            :handler    #'create/default}}])
 
@@ -414,6 +415,7 @@
            :parameters {:body TransactRequestBody}
            :responses  {200 {:body TransactResponseBody}
                         400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
                         500 {:body ErrorResponse}}
            :handler    #'srv-tx/default}}])
 
