@@ -65,7 +65,9 @@
              http/ws-upgrade-request?]))
 
 (def TransactRequestBody
-  (m/schema [:map-of :any :any]))
+  (m/schema [:orn
+             [:sparql :string]
+             [:fql [:map-of :any :any]]]))
 
 (def TransactResponseBody
   (m/schema [:and
@@ -287,6 +289,8 @@
           ;; Content-Type header takes precedence over other ways of specifying query format
           format        (cond (-> headers (get "content-type") (= "application/sparql-query"))
                               :sparql
+                              (-> headers (get "content-type") (= "application/sparql-update"))
+                              :sparql
 
                               (= format "sparql") :sparql
                               (= output "fql")    :fql
@@ -343,6 +347,16 @@
                     {::query  (String. (.readAllBytes ^InputStream data)
                                        ^String charset)
                      ::format :sparql})))]}))
+
+(def sparql-update-format
+  (mf/map->Format
+   {:name "application/sparql-update"
+    :decoder [(fn [_]
+                (reify
+                  mf/Decode
+                  (decode [_ data charset]
+                    (String. (.readAllBytes ^InputStream data)
+                             ^String charset))))]}))
 
 (def jwt-format
   "Turn a JWT from an InputStream into a string that will be found on :body-params in the
@@ -489,6 +503,7 @@
                     (-> muuntaja/default-options
                         (assoc-in [:formats "application/json"] json-format)
                         (assoc-in [:formats "application/sparql-query"] sparql-format)
+                        (assoc-in [:formats "application/sparql-update"] sparql-update-format)
                         (assoc-in [:formats "application/jwt"] jwt-format)))
         middleware [swagger/swagger-feature
                     muuntaja-mw/format-negotiate-middleware
