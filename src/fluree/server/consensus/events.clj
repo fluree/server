@@ -76,3 +76,9 @@
 (defn error?
   [evt]
   (type? evt :error))
+
+(defn outcome?
+  [evt]
+  (or (transaction-committed? evt)
+      (ledger-created? evt)
+      (error? evt)))
