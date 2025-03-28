@@ -41,12 +41,19 @@
                        :connection      (ig/ref ::db/connection)
                        :consensus       (ig/ref ::server/consensus)
                        :watcher         (ig/ref ::server/watcher)
-                       :subscriptions   (ig/ref ::server/subscriptions)
-                       :broadcaster     (ig/ref ::server/broadcast)}}))
+                       :subscriptions   (ig/ref ::server/subscriptions)}}))
 
 (defmethod ig/expand-key ::consensus/standalone
   [k config]
-  {k (assoc config :watcher (ig/ref ::server/watcher))})
+  {k (assoc config
+            :watcher (ig/ref ::server/watcher)
+            :broadcaster (ig/ref ::server/broadcast))})
+
+(defmethod ig/expand-key ::consensus/raft
+  [k config]
+  {k (assoc config
+            :watcher (ig/ref ::server/watcher)
+            :broadcaster (ig/ref ::server/broadcast))})
 
 (defmethod ig/init-key ::server/subscriptions
   [_ _]
@@ -67,7 +74,7 @@
   (watcher/stop watcher))
 
 (defmethod ig/init-key ::consensus/raft
-  [_ config]
+  [_ {:keys [watcher broadcaster] :as config}]
   (let [log-history      (conn-config/get-first-integer config server-vocab/log-history)
         entries-max      (conn-config/get-first-integer config server-vocab/entries-max)
         catch-up-rounds  (conn-config/get-first-integer config server-vocab/catch-up-rounds)
@@ -75,23 +82,25 @@
         this-server      (conn-config/get-first-string config server-vocab/this-server)
         log-directory    (conn-config/get-first-string config server-vocab/log-directory)
         ledger-directory (conn-config/get-first-string config server-vocab/ledger-directory)]
-    (raft/start {:log-history      log-history
-                 :entries-max      entries-max
-                 :catch-up-rounds  catch-up-rounds
-                 :servers          servers
-                 :this-server      this-server
-                 :log-directory    log-directory
-                 :ledger-directory ledger-directory})))
+    (raft/start {:log-history        log-history
+                 :entries-max        entries-max
+                 :catch-up-rounds    catch-up-rounds
+                 :servers            servers
+                 :this-server        this-server
+                 :log-directory      log-directory
+                 :ledger-directory   ledger-directory
+                 :fluree/watcher     watcher
+                 :fluree/broadcaster broadcaster})))
 
 (defmethod ig/halt-key! ::consensus/raft
   [_ {:keys [close] :as _raft-group}]
   (close))
 
 (defmethod ig/init-key ::consensus/standalone
-  [_ {:keys [watcher] :as config}]
+  [_ {:keys [watcher broadcaster] :as config}]
   (let [max-pending-txns (conn-config/get-first-integer config server-vocab/max-pending-txns)
         conn             (get-first config conn-vocab/connection)]
-    (standalone/start conn watcher max-pending-txns)))
+    (standalone/start conn watcher broadcaster max-pending-txns)))
 
 (defmethod ig/halt-key! ::consensus/standalone
   [_ transactor]
@@ -100,8 +109,7 @@
 (defmethod ig/init-key ::server/handler
   [_ config]
   (-> config
-      (select-keys [:connection :consensus :watcher :subscriptions :broadcaster :root-identities
-                    :closed-mode])
+      (select-keys [:connection :consensus :watcher :subscriptions :root-identities :closed-mode])
       handler/app))
 
 (defmethod ig/init-key ::http/jetty

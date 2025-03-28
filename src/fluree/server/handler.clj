@@ -176,14 +176,13 @@
    :handler    #'ledger/history})
 
 (defn wrap-assoc-system
-  [conn consensus watcher subscriptions broadcaster handler]
+  [conn consensus watcher subscriptions handler]
   (fn [req]
     (-> req
         (assoc :fluree/conn conn
                :fluree/consensus consensus
                :fluree/watcher watcher
-               :fluree/subscriptions subscriptions
-               :fluree/broadcaster broadcaster)
+               :fluree/subscriptions subscriptions)
         handler)))
 
 (defn wrap-cors
@@ -386,9 +385,8 @@
          resp)))))
 
 (defn compose-app-middleware
-  [{:keys [connection consensus watcher subscriptions broadcaster
-           root-identities closed-mode]
-    :as _config}]
+  [{:keys [connection consensus watcher subscriptions root-identities closed-mode]
+    :as   _config}]
   (let [exception-middleware (exception/create-exception-middleware
                               (merge
                                exception/default-handlers
@@ -405,7 +403,7 @@
     (sort-middleware-by-weight [[1 exception-middleware]
                                 [10 wrap-cors]
                                 [10 (partial wrap-assoc-system connection consensus
-                                             watcher subscriptions broadcaster)]
+                                             watcher subscriptions)]
                                 [50 unwrap-credential]
                                 [100 wrap-set-fuel-header]
                                 [200 coercion/coerce-exceptions-middleware]
@@ -421,6 +419,7 @@
            :parameters {:body CreateRequestBody}
            :responses  {201 {:body CreateResponseBody}
                         400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
                         500 {:body ErrorResponse}}
            :handler    #'create/default}}])
 
@@ -430,6 +429,7 @@
            :parameters {:body TransactRequestBody}
            :responses  {200 {:body TransactResponseBody}
                         400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
                         500 {:body ErrorResponse}}
            :handler    #'srv-tx/default}}])
 

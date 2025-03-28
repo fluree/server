@@ -7,15 +7,14 @@
   responsible server from a queue, processed, and then the results broadcast
   back out."
   (:require [clojure.core.async :as async :refer [<! go]]
-            [fluree.db.util.log :as log]
-            [fluree.server.consensus.events :as events]))
+            [fluree.db.util.log :as log]))
 
 (set! *warn-on-reflection* true)
 
 (defprotocol Watcher
   (create-watch [w id])
   (watching? [w id])
-  (-deliver-event [w id event]))
+  (deliver-event [w id event]))
 
 (defn new-watcher-atom
   "This atom maps a request's unique id (e.g. tx-id) to a promise that will be
@@ -60,25 +59,10 @@
     (create-watch-state state max-txn-wait-ms id))
   (watching? [_ id]
     (contains? @state id))
-  (-deliver-event [_ id event]
+  (deliver-event [_ id event]
     ;; note: this can have a race condition, but given it is a promise chan, the
     ;; second put! will be ignored
     (swap! state deliver-event-state id event)))
-
-(defn deliver-new-ledger
-  [w ledger-id tx-id commit-result]
-  (let [new-ledger-event (events/ledger-created ledger-id tx-id commit-result)]
-    (-deliver-event w tx-id new-ledger-event)))
-
-(defn deliver-commit
-  [w ledger-id tx-id commit-result]
-  (let [commit-event (events/transaction-committed ledger-id tx-id commit-result)]
-    (-deliver-event w tx-id commit-event)))
-
-(defn deliver-error
-  [w ledger-id tx-id ex]
-  (let [error-event (events/error ledger-id tx-id ex)]
-    (-deliver-event w tx-id error-event)))
 
 (defn start
   ([]

@@ -18,8 +18,11 @@
        (catch ExceptionInfo e#
          (if (-> e# ex-data (contains? :response))
            (throw e#)
-           (let [msg#   (ex-message e#)
-                 {status# :status :as data# :or {status# 500}} (ex-data e#)
+           (let [{status# :status
+                  :as     data#
+                  :or     {status# 500}} (ex-data e#)
+
+                 msg#   (ex-message e#)
                  error# (dissoc data# :status)]
              (throw (ex-info "Error in ledger handler"
                              {:response
