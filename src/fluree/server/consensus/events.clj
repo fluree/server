@@ -35,12 +35,13 @@
 (defn transaction-committed
   "Post-transaction, the message we will broadcast out and/or deliver
   to a client awaiting a response."
-  ([ledger-id tx-id {:keys [db address] :as _commit-result}]
+  ([ledger-id tx-id {:keys [db address hash] :as _commit-result}]
    {:type      :transaction-committed
     :ledger-id ledger-id
     :t         (:t db)
     :tx-id     tx-id
-    :commit    address})
+    :commit    {:address address
+                :hash    hash}})
   ([processing-server ledger-id tx-id commit-result]
    (-> (transaction-committed ledger-id tx-id commit-result)
        (assoc :server processing-server))))

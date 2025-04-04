@@ -51,6 +51,17 @@
 (def DID
   (m/schema [:string {:min 1}]))
 
+(def CommitAddress
+  (m/schema [:string {:min 1}]))
+
+(def CommitHash
+  (m/schema [:string {:min 1}]))
+
+(def CommitResultMessage
+  (m/schema [:map
+             [:address CommitAddress]
+             [:hash CommitHash]]))
+
 (def CreateResponseBody
   (m/schema [:and
              [:map-of :keyword :any]
@@ -58,7 +69,7 @@
               [:ledger LedgerAlias]
               [:t TValue]
               [:tx-id DID]
-              [:commit LedgerAddress]]]))
+              [:commit CommitResultMessage]]]))
 
 (def SubscriptionRequestBody
   (m/schema [:fn {:error/message {:en "Invalid websocket upgrade request"}}
@@ -76,7 +87,7 @@
               [:ledger LedgerAlias]
               [:t TValue]
               [:tx-id DID]
-              [:commit  LedgerAddress]]]))
+              [:commit CommitResultMessage]]]))
 
 (def FqlQuery (m/schema (-> (fql/query-schema [])
                             ;; hack to make query schema open instead of closed
