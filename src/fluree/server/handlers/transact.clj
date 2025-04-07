@@ -2,7 +2,7 @@
   (:require [clojure.core.async :as async :refer [<! go]]
             [fluree.crypto :as crypto]
             [fluree.db.api :as fluree]
-            [fluree.db.api.transact :as transact-api]
+            [fluree.db.query.fql.parse :as parse]
             [fluree.db.query.sparql :as sparql]
             [fluree.db.util.context :as ctx-util]
             [fluree.db.util.core :as util]
@@ -100,6 +100,13 @@
                     {:response {:status 409
                                 :body   {:error err-message}}}))))
 
+(defn extract-ledger-id
+  "Extracts ledger-id from expanded json-ld transaction"
+  [txn]
+  (or (parse/get-named txn "ledger")
+      (throw (ex-info "Invalid transaction, missing required key: ledger."
+                      {:status 400 :error :db/invalid-transaction}))))
+
 (defhandler default
   [{:keys [fluree/conn fluree/consensus fluree/watcher credential/did fluree/opts raw-txn]
     {:keys [body]} :parameters}]
@@ -107,7 +114,7 @@
                          (sparql/->fql body)
                          body)
         txn-context    (ctx-util/txn-context txn)
-        ledger-id      (transact-api/extract-ledger-id txn)]
+        ledger-id      (extract-ledger-id txn)]
     (if (deref! (fluree/exists? conn ledger-id))
       (let [opts (cond-> (merge opts {:context txn-context :raw-txn raw-txn :format :fql})
                    did (assoc :did did))

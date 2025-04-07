@@ -1,12 +1,11 @@
 (ns fluree.server.handlers.create
   (:require
    [fluree.db.api :as fluree]
-   [fluree.db.api.transact :as transact-api]
    [fluree.db.util.context :as ctx-util]
    [fluree.db.util.log :as log]
    [fluree.server.consensus :as consensus]
    [fluree.server.handlers.shared :refer [deref! defhandler]]
-   [fluree.server.handlers.transact :refer [derive-tx-id monitor-consensus-persistence
+   [fluree.server.handlers.transact :refer [derive-tx-id extract-ledger-id monitor-consensus-persistence
                                             monitor-commit]]
    [fluree.server.watcher :as watcher]))
 
@@ -39,7 +38,7 @@
     {:keys [body]} :parameters}]
   (log/debug "create body:" body)
   (let [txn-context    (ctx-util/txn-context body)
-        ledger-id      (transact-api/extract-ledger-id body)]
+        ledger-id      (extract-ledger-id body)]
     (if-not (deref! (fluree/exists? conn ledger-id))
       (let [resp-p (create-ledger consensus watcher ledger-id body
                                   {:context txn-context})]
