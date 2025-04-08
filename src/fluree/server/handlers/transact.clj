@@ -105,7 +105,7 @@
   [txn]
   (or (parse/get-named txn "ledger")
       (throw (ex-info "Invalid transaction, missing required key: ledger."
-                      {:status 400 :error :db/invalid-transaction}))))
+                      {:status 400, :error :db/invalid-transaction}))))
 
 (defhandler default
   [{:keys [fluree/conn fluree/consensus fluree/watcher credential/did fluree/opts raw-txn]
