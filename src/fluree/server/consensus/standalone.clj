@@ -1,9 +1,8 @@
 (ns fluree.server.consensus.standalone
   (:require [clojure.core.async :as async :refer [<! >! go go-loop]]
             [fluree.db.api :as fluree]
-            [fluree.db.constants :as const]
             [fluree.db.util.async :refer [go-try]]
-            [fluree.db.util.core :refer [exception? get-first-value]]
+            [fluree.db.util.core :refer [exception?]]
             [fluree.db.util.log :as log]
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.events :as events]
@@ -12,25 +11,17 @@
 
 (set! *warn-on-reflection* true)
 
-(defn parse-opts
-  "Extract the opts from the transaction and keywordify the top level keys."
-  [expanded-txn]
-  (let [string-opts (get-first-value expanded-txn const/iri-opts)]
-    (reduce-kv (fn [opts k v]
-                 (assoc opts (keyword k) v))
-               {} string-opts)))
+(defn ensure-file-reports
+  [meta]
+  (if (true? meta)
+    meta
+    (assoc meta :file true)))
 
 (defn create-ledger!
   [conn watcher broadcaster {:keys [ledger-id tx-id txn opts] :as _params}]
   (go-try
-    (let [create-opts   (parse-opts txn)
-          ledger        (deref!
-                         (fluree/create conn ledger-id create-opts))
-          staged-db     (-> ledger
-                            fluree/db
-                            (fluree/stage txn opts)
-                            deref!)
-          commit-result (deref! (fluree/apply-stage! ledger staged-db))]
+    (let [opts*         (update opts :meta ensure-file-reports)
+          commit-result (deref! (fluree/create-with-txn conn txn opts*))]
       (response/announce-new-ledger watcher broadcaster ledger-id tx-id commit-result))))
 
 (defn transact!
@@ -40,14 +31,8 @@
           _             (log/debug "Starting transaction processing for ledger:" ledger-id
                                    "with tx-id" tx-id ". Transaction sat in queue for"
                                    (- start-time (:instant params)) "milliseconds.")
-          ledger        (if (deref! (fluree/exists? conn ledger-id))
-                          (deref! (fluree/load conn ledger-id))
-                          (throw (ex-info "Ledger does not exist" {:ledger ledger-id})))
-          staged-db     (-> ledger
-                            fluree/db
-                            (fluree/stage txn opts)
-                            deref!)
-          commit-result (deref! (fluree/apply-stage! ledger staged-db))]
+          opts*         (update opts :meta ensure-file-reports)
+          commit-result (deref! (fluree/transact! conn txn opts*))]
       (response/announce-commit watcher broadcaster ledger-id tx-id commit-result))))
 
 (defn process-event
