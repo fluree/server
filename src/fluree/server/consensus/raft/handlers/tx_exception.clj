@@ -1,6 +1,6 @@
 (ns fluree.server.consensus.raft.handlers.tx-exception
   (:require [fluree.db.util.log :as log]
-            [fluree.server.watcher :as watcher]))
+            [fluree.server.consensus.response :as response]))
 
 (defn update-ledger-state
   "Updates the latest commit in the ledger, and removes the processed transaction in the queue"
@@ -27,8 +27,8 @@
                  e)))))
 
 (defn deliver!
-  [{:keys [fluree/watcher] :as _config} exception]
-  (watcher/deliver-error watcher nil nil exception))
+  [{:keys [fluree/watcher fluree/broadcaster] :as _config} exception]
+  (response/announce-error watcher broadcaster nil nil exception))
 
 (defn handler
   "Handles transaction exceptions and broadcasts them to network."
