@@ -108,16 +108,16 @@
                       {:status 400, :error :db/invalid-transaction}))))
 
 (defhandler default
-  [{:keys [fluree/conn fluree/consensus fluree/watcher credential/did fluree/opts raw-txn]
+  [{:keys          [fluree/conn fluree/consensus fluree/watcher credential/did fluree/opts raw-txn]
     {:keys [body]} :parameters}]
-  (let [txn            (if (sparql/sparql-format? opts)
-                         (sparql/->fql body)
-                         body)
-        txn-context    (ctx-util/txn-context txn)
-        ledger-id      (extract-ledger-id txn)]
+  (let [txn         (if (sparql/sparql-format? opts)
+                      (sparql/->fql body)
+                      body)
+        txn-context (ctx-util/txn-context txn)
+        ledger-id   (extract-ledger-id txn)]
     (if (deref! (fluree/exists? conn ledger-id))
-      (let [opts (cond-> (merge opts {:context txn-context :raw-txn raw-txn :format :fql})
-                   did (assoc :did did))
+      (let [opts   (cond-> (merge opts {:context txn-context :raw-txn raw-txn :format :fql})
+                     did (assoc :did did))
             resp-p (transact! consensus watcher ledger-id txn opts)]
         {:status 200, :body (deref! resp-p)})
       (throw-ledger-doesnt-exist ledger-id))))

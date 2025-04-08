@@ -34,11 +34,11 @@
                                 :body   {:error err-message}}}))))
 
 (defhandler default
-  [{:keys [fluree/conn fluree/consensus fluree/watcher]
+  [{:keys          [fluree/conn fluree/consensus fluree/watcher]
     {:keys [body]} :parameters}]
   (log/debug "create body:" body)
-  (let [txn-context    (ctx-util/txn-context body)
-        ledger-id      (extract-ledger-id body)]
+  (let [txn-context (ctx-util/txn-context body)
+        ledger-id   (extract-ledger-id body)]
     (if-not (deref! (fluree/exists? conn ledger-id))
       (let [resp-p (create-ledger consensus watcher ledger-id body
                                   {:context txn-context})]

@@ -62,6 +62,12 @@
   (or (= result ::error)
       (nil? result)))
 
+(defn put-and-close!
+  [ch x]
+  (async/put! ch x (fn [closed?]
+                     (when-not closed?
+                       (async/close! ch)))))
+
 (defn new-transaction-queue
   ([conn watcher broadcaster]
    (new-transaction-queue conn watcher broadcaster nil))
@@ -91,17 +97,9 @@
                  i*             (inc i)]
              (log/trace "Processed transaction #" i* ". Result:" result)
              (when-not (error? result)
-               (async/put! out-ch result (fn [closed?]
-                                           (when-not closed?
-                                             (async/close! out-ch)))))
+               (put-and-close! out-ch result))
              (recur i*)))))
      tx-queue)))
-
-(defn put-and-close!
-  [ch x]
-  (doto ch
-    (async/put! x)
-    async/close!))
 
 (def overloaded-error
   (ex-info "Too many pending transactions. Please try again later."
