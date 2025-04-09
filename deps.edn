@@ -1,7 +1,7 @@
 {:deps {org.clojure/clojure    {:mvn/version "1.11.3"}
         org.clojure/core.async {:mvn/version "1.6.681"}
         com.fluree/db          {:git/url "https://github.com/fluree/db.git"
-                                :git/sha "d79f127e0d9cc8e8aa95d0120fd00bd9683a341b"}
+                                :git/sha "ae525a92b847f2239ce1d294432151a247281788"}
         com.fluree/json-ld     {:git/url "https://github.com/fluree/json-ld.git"
                                 :git/sha "73a990a4b803d0b4cfbbbe4dc16275b39a3add4e"}
 
@@ -57,7 +57,9 @@
   :test
   {:extra-paths ["test"]
    :extra-deps  {lambdaisland/kaocha {:mvn/version "1.88.1376"}
-                 clj-http/clj-http   {:mvn/version "3.13.0"}}
+                 clj-http/clj-http   {:mvn/version "3.13.0"}
+                 io.github.cap10morgan/test-with-files {:git/tag "v1.0.1"
+                                                        :git/sha "a48d6d0"}}
    :exec-fn     kaocha.runner/exec-fn
    :exec-args   {:kaocha.filter/skip-meta [:pending]}}
 
