@@ -3,8 +3,6 @@
             [fluree.crypto :as crypto]
             [fluree.db.api :as fluree]
             [fluree.db.query.fql.parse :as parse]
-            [fluree.db.query.sparql :as sparql]
-            [fluree.db.util.context :as ctx-util]
             [fluree.db.util.core :as util]
             [fluree.db.util.log :as log]
             [fluree.json-ld :as json-ld]
@@ -26,8 +24,9 @@
   [watcher ledger tx-id persist-resp-ch]
   (go
     (let [persist-resp (<! persist-resp-ch)]
-      ;; check for exception trying to put txn in consensus, if so we must deliver the
-      ;; watch here, but if successful the consensus process will deliver the watch downstream
+      ;; check for exception trying to put txn in consensus, if so we must
+      ;; deliver the watch here, but if successful the consensus process will
+      ;; deliver the watch downstream
       (when (util/exception? persist-resp)
         (let [error-event (events/error ledger tx-id persist-resp)]
           (watcher/deliver-event watcher tx-id error-event))))))
@@ -93,13 +92,6 @@
     (monitor-commit p ledger-id tx-id result-ch)
     p))
 
-(defn throw-ledger-doesnt-exist
-  [ledger]
-  (let [err-message (str "Ledger " ledger " does not exist!")]
-    (throw (ex-info err-message
-                    {:response {:status 409
-                                :body   {:error err-message}}}))))
-
 (defn extract-ledger-id
   "Extracts ledger-id from expanded json-ld transaction"
   [txn]
@@ -108,16 +100,11 @@
                       {:status 400, :error :db/invalid-transaction}))))
 
 (defhandler default
-  [{:keys          [fluree/conn fluree/consensus fluree/watcher credential/did fluree/opts raw-txn]
+  [{:keys          [fluree/consensus fluree/watcher credential/did fluree/opts raw-txn]
     {:keys [body]} :parameters}]
-  (let [txn         (if (sparql/sparql-format? opts)
-                      (sparql/->fql body)
-                      body)
-        txn-context (ctx-util/txn-context txn)
-        ledger-id   (extract-ledger-id txn)]
-    (if (deref! (fluree/exists? conn ledger-id))
-      (let [opts   (cond-> (merge opts {:context txn-context :raw-txn raw-txn :format :fql})
-                     did (assoc :did did))
-            resp-p (transact! consensus watcher ledger-id txn opts)]
-        {:status 200, :body (deref! resp-p)})
-      (throw-ledger-doesnt-exist ledger-id))))
+  (let [txn       (fluree/format-txn body opts)
+        ledger-id (extract-ledger-id txn)
+        opts*     (cond-> (assoc opts :raw-txn raw-txn, :format :fql)
+                    did (assoc :did did))
+        resp-p    (transact! consensus watcher ledger-id txn opts*)]
+    {:status 200, :body (deref! resp-p)}))
