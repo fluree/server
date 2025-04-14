@@ -57,7 +57,9 @@
   :test
   {:extra-paths ["test"]
    :extra-deps  {lambdaisland/kaocha {:mvn/version "1.88.1376"}
-                 clj-http/clj-http   {:mvn/version "3.13.0"}}
+                 clj-http/clj-http   {:mvn/version "3.13.0"}
+                 io.github.cap10morgan/test-with-files {:git/tag "v1.0.1"
+                                                        :git/sha "a48d6d0"}}
    :exec-fn     kaocha.runner/exec-fn
    :exec-args   {:kaocha.filter/skip-meta [:pending]}}
 
