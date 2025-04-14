@@ -5,7 +5,6 @@
             [fluree.db.util.log :as log]
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.events :as events]
-            [fluree.server.consensus.events.transaction :as txn]
             [fluree.server.consensus.response :as response]
             [fluree.server.handlers.shared :refer [deref!]]))
 
@@ -39,8 +38,8 @@
   [conn watcher broadcaster event]
   (go
     (try
-      (let [event*     (if (txn/resolve-txn? event)
-                         (<? (txn/resolve-txn conn event))
+      (let [event*     (if (events/resolve-txn? event)
+                         (<? (events/resolve-txn conn event))
                          event)
             event-type (events/event-type event*)]
         (cond
