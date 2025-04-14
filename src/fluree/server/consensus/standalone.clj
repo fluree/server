@@ -1,11 +1,11 @@
 (ns fluree.server.consensus.standalone
   (:require [clojure.core.async :as async :refer [<! >! go go-loop]]
             [fluree.db.api :as fluree]
-            [fluree.db.util.async :refer [go-try]]
-            [fluree.db.util.core :refer [exception?]]
+            [fluree.db.util.async :refer [<? go-try]]
             [fluree.db.util.log :as log]
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.events :as events]
+            [fluree.server.consensus.events.transaction :as txn]
             [fluree.server.consensus.response :as response]
             [fluree.server.handlers.shared :refer [deref!]]))
 
@@ -38,24 +38,28 @@
 (defn process-event
   [conn watcher broadcaster event]
   (go
-    (let [event-type (events/event-type event)
-          result     (try
-                       (<! (case event-type
-                             :ledger-create (create-ledger! conn watcher broadcaster event)
-                             :tx-queue      (transact! conn watcher broadcaster event)))
-                       (catch Exception e
-                         (log/error e
-                                    "Unexpected event message - expected a map with a supported "
-                                    "event type. Received:" event)
-                         (ex-info (str "Unexpected event message - expected a map with a supported "
-                                       "event type.")
-                                  {:status 500, :error :consensus/unexpected-event}
-                                  e)))]
-      (if (exception? result)
+    (try
+      (let [event*     (if (txn/resolve-txn? event)
+                         (<? (txn/resolve-txn conn event))
+                         event)
+            event-type (events/event-type event*)]
+        (cond
+          (= :ledger-create event-type)
+          (<? (create-ledger! conn watcher broadcaster event*))
+
+          (= :tx-queue event-type)
+          (<? (transact! conn watcher broadcaster event*))
+
+          :else
+          (do (log/error "Unexpected event message - expected a map with a supported "
+                         "event type. Received:" event*)
+              (throw (ex-info (str "Unexpected event message: event type '" event-type "' not"
+                                   " one of (':ledger-create', ':tx-queue')")
+                              {:status 500, :error :consensus/unexpected-event})))))
+      (catch Exception e
         (let [{:keys [ledger-id tx-id]} event]
-          (log/debug result "Delivering tx-exception to watcher")
-          (response/announce-error watcher broadcaster ledger-id tx-id result))
-        result))))
+          (log/debug e "Delivering tx-exception to watcher")
+          (response/announce-error watcher broadcaster ledger-id tx-id e))))))
 
 (defn error?
   [result]
