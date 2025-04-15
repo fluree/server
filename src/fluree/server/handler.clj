@@ -226,7 +226,10 @@
             (throw (ex-info "Invalid credential"
                             {:response {:status 400
                                         :body   {:error "Invalid credential"}}})))
-          req*     (assoc req :body-params subject :credential/did did :raw-txn body-params)]
+          req*     (assoc req
+                          :body-params subject
+                          :credential/did did
+                          :raw-txn body-params)]
       (log/debug "Unwrapped credential with did:" did)
       (handler req*))))
 
