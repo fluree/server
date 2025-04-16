@@ -42,7 +42,6 @@
                          (<? (events/resolve-txn conn event))
                          event)
             event-type (events/event-type event*)]
-        (log/info "Standalone transactor processing event:" event "transalted:" event*)
         (cond
           (= :ledger-create event-type)
           (<? (create-ledger! conn watcher broadcaster event*))

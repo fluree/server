@@ -13,46 +13,77 @@
   [evt type]
   (-> evt event-type (= type)))
 
+(defn txn-address?
+  [x]
+  (string? x))
+
+(defn txn?
+  [x]
+  (map? x))
+
+(defn with-txn
+  [evt txn]
+  (cond (txn-address? txn)
+        (assoc evt :txn-address txn)
+
+        (txn? evt)
+        (assoc evt :txn txn)
+
+        :else
+        (throw (ex-info "Unrecognized transaction format"
+                        {:status 400, :error :server/unrecognized-transaction}))))
+
 (defn create-ledger
-  "Create a new event message to create a new ledger"
+  "Create a new event message to create a new ledger. The `txn` argument may
+  either be a transaction document map or an address for where the document is
+  stored"
   [ledger-id tx-id txn opts]
-  {:type      :ledger-create
-   :txn       txn
-   :size      (count txn)
-   :tx-id     tx-id
-   :ledger-id ledger-id
-   :opts      opts
-   :instant   (System/currentTimeMillis)})
+  (let [evt {:type      :ledger-create
+             :tx-id     tx-id
+             :ledger-id ledger-id
+             :opts      opts
+             :instant   (System/currentTimeMillis)}]
+    (with-txn evt txn)))
 
 (defn commit-transaction
-  "Create a new event message to commit a new transaction"
+  "Create a new event message to commit a new transaction. The `txn` argument may
+  either be a transaction document map or an address for where the document is
+  stored"
   [ledger-id tx-id txn opts]
-  {:type      :tx-queue
-   :txn       txn
-   :size      (count txn)
-   :tx-id     tx-id
-   :ledger-id ledger-id
-   :opts      opts
-   :instant   (System/currentTimeMillis)})
+  (let [evt {:type      :tx-queue
+             :tx-id     tx-id
+             :ledger-id ledger-id
+             :opts      opts
+             :instant   (System/currentTimeMillis)}]
+    (with-txn evt txn)))
 
 (defn get-txn
-  "Gets the transaction value from the event message `evt`."
+  "Gets the transaction value, either a transaction document or the storage
+  address for the transaction from the event message `evt`."
   [evt]
-  (:txn evt))
+  (or (:txn evt)
+      (:txn-address evt)))
 
 (defn save-txn!
+  "Saves the transaction document found within the event message `event` to the
+  commit storage accessible to the connection `conn`. Returns a new event
+  message with the transaction document replaced by the address the document was
+  stored under."
   [conn event]
   (go-try
-    (if-let [txn (get-txn event)]
+    (if-let [txn (:txn event)]
       (let [{:keys [ledger-id]} event
             {:keys [address]}   (<? (connection/save-txn! conn ledger-id txn))]
         (-> event
             (assoc :txn-address address)
             (dissoc :txn)))
-      (do (log/warn "Error saving transaction. No transaction found for event" event)
+      (do (when-not (:txn-address event)
+            (log/warn "Error saving transaction. No transaction found for event" event))
           event))))
 
 (defn resolve-txn?
+  "Returns true if `event` only contains an address reference to a transaction
+  document without the document itself."
   [event]
   (and (:txn-address event)
        (not (:txn event))))
