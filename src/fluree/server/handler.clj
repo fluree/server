@@ -265,31 +265,39 @@
 
 (def fluree-header-opts
   ["fluree-meta" "fluree-max-fuel" "fluree-identity" "fluree-policy-identity"
-   "fluree-policy" "fluree-policy-class" "fluree-policy-values"
-   "fluree-format" "fluree-output"])
+   "fluree-policy" "fluree-policy-class" "fluree-policy-values" "fluree-format"
+   "fluree-output" "fluree-fuel"])
+
+(defn parse-boolean-header
+  [header name]
+  (case (str/lower-case header)
+    "false" false
+    "true"  true
+    (throw (ex-info (format "Invalid Fluree-%s header: must be boolean." name)
+                    {:status 400, :error :server/invalid-header}))))
 
 (defn wrap-header-opts
-  "Extract options from headers, parse and validate them where necessary, and attach to
-  request. Opts set in the header override those specified within the transaction or
-  query."
+  "Extract options from headers, parse and validate them where necessary, and
+  attach to request. Opts set in the header override those specified within the
+  transaction or query."
   [handler]
   (fn [{:keys [headers credential/did] :as req}]
-    (let [{:keys [meta max-fuel identity policy-identity policy policy-class policy-values format output]}
+    (let [prefix-count (count "fluree-")
+          {:keys [meta max-fuel fuel identity policy-identity policy
+                  policy-class policy-values format output]}
           (-> headers
               (select-keys fluree-header-opts)
-              (update-keys (fn [k] (keyword (subs k (count "fluree-"))))))
+              (update-keys (fn [k] (keyword (subs k prefix-count)))))
 
-          meta     (when meta
-                     (case (str/lower-case meta)
-                       "false" false
-                       "true"  true
-                       (throw (ex-info "Invalid Fluree-Meta header: must be boolean."
-                                       {:status 400}))))
           max-fuel (when max-fuel
                      (try (Integer/parseInt max-fuel)
                           (catch Exception _
                             (throw (ex-info "Invalid Fluree-Max-Fuel header: must be integer."
                                             {:status 400})))))
+          fuel     (or (some-> fuel (parse-boolean-header "fuel"))
+                       (some? max-fuel))
+          meta     (or (some-> meta (parse-boolean-header "meta"))
+                       (and fuel {:fuel true}))
           ;; Accept header takes precedence over other ways of specifying query output
           output   (cond (-> headers (get "accept") (= "application/sparql-results+json"))
                          :sparql
@@ -298,14 +306,14 @@
                          (= output "fql")    :fql
                          :else               :fql)
           ;; Content-Type header takes precedence over other ways of specifying query format
-          format        (cond (-> headers (get "content-type") (= "application/sparql-query"))
-                              :sparql
-                              (-> headers (get "content-type") (= "application/sparql-update"))
-                              :sparql
+          format (cond (-> headers (get "content-type") (= "application/sparql-query"))
+                       :sparql
+                       (-> headers (get "content-type") (= "application/sparql-update"))
+                       :sparql
 
-                              (= format "sparql") :sparql
-                              (= output "fql")    :fql
-                              :else               :fql)
+                       (= format "sparql") :sparql
+                       (= output "fql")    :fql
+                       :else               :fql)
           policy        (when policy
                           (try (json/parse policy false)
                                (catch Exception _
@@ -322,13 +330,13 @@
                                                  {:status 400})))))
 
           opts (cond-> {}
-                 meta            (assoc :meta meta)
-                 max-fuel        (assoc :max-fuel max-fuel)
-                 format          (assoc :format format)
-                 output          (assoc :output output)
-                 policy          (assoc :policy policy)
-                 policy-class    (assoc :policy-class policy-class)
-                 policy-values   (assoc :policy-values policy-values)
+                 meta          (assoc :meta meta)
+                 max-fuel      (assoc :max-fuel max-fuel)
+                 format        (assoc :format format)
+                 output        (assoc :output output)
+                 policy        (assoc :policy policy)
+                 policy-class  (assoc :policy-class policy-class)
+                 policy-values (assoc :policy-values policy-values)
 
                  policy-identity (assoc :identity identity)
                  ;; Fluree-Identity overrides Fluree-Policy-Identity
