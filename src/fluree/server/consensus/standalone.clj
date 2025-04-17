@@ -39,7 +39,7 @@
   (go
     (try
       (let [event*     (if (events/resolve-txn? event)
-                         (<? (events/resolve-txn conn event))
+                         (<? (events/resolve-txns conn event))
                          event)
             event-type (events/event-type event*)]
         (cond
