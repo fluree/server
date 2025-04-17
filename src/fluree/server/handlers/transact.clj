@@ -14,10 +14,10 @@
 (set! *warn-on-reflection* true)
 
 (defn derive-tx-id
-  [raw-txn]
-  (if (string? raw-txn)
-    (crypto/sha2-256 raw-txn :hex :string)
-    (-> (json-ld/normalize-data raw-txn)
+  [txn]
+  (if (string? txn)
+    (crypto/sha2-256 txn :hex :string)
+    (-> (json-ld/normalize-data txn)
         (crypto/sha2-256 :hex :string))))
 
 (defn monitor-consensus-persistence
@@ -104,7 +104,8 @@
     {:keys [body]} :parameters}]
   (let [txn       (fluree/format-txn body opts)
         ledger-id (extract-ledger-id txn)
-        opts*     (cond-> (assoc opts :raw-txn raw-txn, :format :fql)
-                    did (assoc :did did))
+        opts*     (cond-> (assoc opts :format :fql)
+                    raw-txn (assoc :raw-txn raw-txn)
+                    did     (assoc :did did))
         resp-p    (transact! consensus watcher ledger-id txn opts*)]
     {:status 200, :body (deref! resp-p)}))
