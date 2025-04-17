@@ -4,7 +4,6 @@
             [fluree.db.json-ld.credential :as cred]
             [fluree.db.query.fql.syntax :as fql]
             [fluree.db.query.history.parse :as fqh]
-            [fluree.db.util.core :as util]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [fluree.db.validation :as v]
@@ -211,27 +210,21 @@
   [handler]
   (fn [{:keys [body-params] :as req}]
     (log/trace "unwrap-credential body-params:" body-params)
-    (let [verified (<!! (cred/verify body-params))
-          _        (log/trace "unwrap-credential verified:" verified)
-          {:keys [subject did]}
-          (cond
-            (:subject verified) ; valid credential
-            verified
-
-            (and (util/exception? verified)
-                 (not= 400 (-> verified ex-data :status))) ; no credential
-            {:subject body-params}
-
-            :else ; invalid credential
-            (throw (ex-info "Invalid credential"
-                            {:response {:status 400
-                                        :body   {:error "Invalid credential"}}})))
-          req*     (assoc req
-                          :body-params subject
-                          :credential/did did
-                          :raw-txn body-params)]
-      (log/debug "Unwrapped credential with did:" did)
-      (handler req*))))
+    (if (cred/signed? body-params)
+      (let [verified (<!! (cred/verify body-params))]
+        (if-let [subject (:subject verified)]
+          (let [did (:did verified)]
+            (log/debug "Unwrapped credential with did:" did)
+            (-> req
+                (assoc :body-params subject
+                       :credential/did did
+                       :raw-txn body-params)
+                handler))
+          (throw (ex-info "Invalid credential"
+                          {:response {:status 400
+                                      :body   {:error "Invalid credential"}}}))))
+      (do (log/trace "Request was not signed:" body-params)
+          (handler req)))))
 
 (def root-only-routes
   #{"/fluree/create"})
