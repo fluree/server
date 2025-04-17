@@ -64,19 +64,41 @@
   (or (:txn evt)
       (:txn-address evt)))
 
-(defn save-txn!
-  "Saves the transaction document found within the event message `event` to the
-  commit storage accessible to the connection `conn`. Returns a new event
-  message with the transaction document replaced by the address the document was
+(defn raw-txn-opt?
+  [event]
+  (-> event :opts :raw-txn some?))
+
+(defn save-raw-txn!
+  "Saves the value of the `:raw-txn` option found within the event message `event`
+  to the commit storage accessible to the connection `conn`. Returns a new event
+  message with the `:raw-txn` option replaced by the address the document was
   stored under."
+  [conn event]
+  (go-try
+    (if-let [raw-txn (-> event :opts :raw-txn)]
+      (let [{:keys [ledger-id]} event
+            {:keys [address]}   (<? (connection/save-txn! conn ledger-id raw-txn))]
+        (-> event
+            (assoc-in [:opts :raw-txn-address] address)
+            (update :opts dissoc :raw-txn)))
+      event)))
+
+(defn save-txns!
+  "Saves the transaction documents found within the event message `event` to the
+  commit storage accessible to the connection `conn`. Returns a new event
+  message with the transaction documents replaced by the address the document
+  was stored under."
   [conn event]
   (go-try
     (if-let [txn (:txn event)]
       (let [{:keys [ledger-id]} event
-            {:keys [address]}   (<? (connection/save-txn! conn ledger-id txn))]
-        (-> event
-            (assoc :txn-address address)
-            (dissoc :txn)))
+            {:keys [address]}   (<? (connection/save-txn! conn ledger-id txn))
+            event* (-> event
+                       (assoc :txn-address address)
+                       (dissoc :txn))]
+        (if (raw-txn-opt? event*)
+          (<? (save-raw-txn! conn event*))
+          event*))
       (do (when-not (:txn-address event)
             (log/warn "Error saving transaction. No transaction found for event" event))
           event))))
@@ -88,14 +110,31 @@
   (and (:txn-address event)
        (not (:txn event))))
 
-(defn resolve-txn
+(defn resolve-raw-txn-opt?
+  [event]
+  (-> event :opts :raw-txn-address some?))
+
+(defn resolve-raw-txn
+  [conn event]
+  (go-try
+    (if-let [address (-> event :opts :raw-txn-address)]
+      (let [raw-txn (<? (connection/resolve-txn conn address))]
+        (-> event
+            (assoc-in [:opts :raw-txn] raw-txn)
+            (update :opts dissoc :raw-txn-address)))
+      event)))
+
+(defn resolve-txns
   [conn event]
   (go-try
     (if-let [address (:txn-address event)]
-      (let [txn (<? (connection/resolve-txn conn address))]
-        (-> event
-            (assoc :txn txn)
-            (dissoc :txn-address)))
+      (let [txn    (<? (connection/resolve-txn conn address))
+            event* (-> event
+                       (assoc :txn txn)
+                       (dissoc :txn-address))]
+        (if (resolve-raw-txn-opt? event*)
+          (<? (resolve-raw-txn conn event*))
+          event*))
       (do (log/warn "Error resolving transaction. No transaction address found for event" event)
           event))))
 
