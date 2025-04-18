@@ -21,6 +21,7 @@ jobs:
      with:
       cache-from: type=gha
       cache-to: type=gha,mode=max
+      build-args: VERSION=${{ env.VERSION }}
       tags: fluree/server
       target: builder
       load: true
