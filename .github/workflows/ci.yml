@@ -1,81 +1,154 @@
 name: CI
 on:
-  push:
-  schedule:
-    - cron: 13 21 * * *
+ push:
+  branches:
+   - "**"
+  tags:
+   - "v*.*.*"
+ schedule:
+  - cron: 13 21 * * *
 
 jobs:
-  docker-build-cache:
-    name: docker build cache
-    runs-on: ci-cd
-    steps:
-      - uses: docker/setup-buildx-action@v3
-        with:
-          install: true
-      - uses: docker/build-push-action@v5
-        id: build
-        with:
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          tags: fluree/server
-          target: builder
-          load: true
+ docker-build-cache:
+  name: docker build cache
+  runs-on: ci-cd
+  steps:
+   - uses: docker/setup-buildx-action@v3
+     with:
+      install: true
+   - uses: docker/build-push-action@v5
+     id: build
+     with:
+      cache-from: type=gha
+      cache-to: type=gha,mode=max
+      tags: fluree/server
+      target: builder
+      load: true
 
-  cljfmt-check:
-    name: cljfmt check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-      - uses: DeLaGuardo/setup-clojure@12.5
-        with:
-          cli: 'latest'
-          cljfmt: 'latest'
-      - run: make cljfmt-check
+ cljfmt-check:
+  name: cljfmt check
+  runs-on: ubuntu-latest
+  steps:
+   - uses: actions/checkout@v4
+   - uses: actions/setup-java@v4
+     with:
+      distribution: "temurin"
+      java-version: "21"
+   - uses: DeLaGuardo/setup-clojure@12.5
+     with:
+      cli: "latest"
+      cljfmt: "latest"
+   - run: make cljfmt-check
 
-  clj-kondo-lint:
-    name: clj-kondo lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: DeLaGuardo/setup-clojure@12.5
-        with:
-          cli: 'latest'
-          clj-kondo: 'latest'
-      - run: make clj-kondo-lint-ci
+ clj-kondo-lint:
+  name: clj-kondo lint
+  runs-on: ubuntu-latest
+  steps:
+   - uses: actions/checkout@v4
+   - uses: DeLaGuardo/setup-clojure@12.5
+     with:
+      cli: "latest"
+      clj-kondo: "latest"
+   - run: make clj-kondo-lint-ci
 
-  test:
-    name: run tests
-    needs: docker-build-cache
-    runs-on: ci-cd
-    steps:
-      - uses: docker/setup-buildx-action@v3
-        with:
-          install: true
-      - uses: docker/build-push-action@v5
-        with:
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          tags: fluree/server
-          target: builder
-          load: true
-      - name: Run tests
-        run: docker run fluree/server make test
+ test:
+  name: run tests
+  needs: docker-build-cache
+  runs-on: ci-cd
+  steps:
+   - uses: docker/setup-buildx-action@v3
+     with:
+      install: true
+   - uses: docker/build-push-action@v5
+     with:
+      cache-from: type=gha
+      cache-to: type=gha,mode=max
+      tags: fluree/server
+      target: builder
+      load: true
+   - name: Run tests
+     run: docker run fluree/server make test
 
-  notifications:
-    name: send notifications
-    if: always()
-    runs-on: ubuntu-latest
-    needs: [test]
-    steps:
-      - if: github.ref == 'refs/heads/main' && failure()
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-        uses: voxmedia/github-action-slack-notify-build@v2
-        with:
-          channel: development
-          status: FAILED
-          color: danger
+ release:
+  name: create release
+  if: startsWith(github.ref, 'refs/tags/v')
+  needs: test
+  runs-on: ubuntu-latest
+  env:
+   VERSION: ${{ github.ref_name }}
+   IS_PRERELEASE: ${{ contains(github.ref_name, '-') }}
+  steps:
+   - uses: actions/checkout@v4
+     with:
+      fetch-depth: 0 # ensure full history for branch detection
+
+   - name: Log release version
+     run: |
+      echo "VERSION=${{ env.VERSION }}"
+
+   - name: Set up Docker
+     uses: docker/setup-buildx-action@v3
+
+   - name: Check if commit is on main
+     run: |
+      git fetch origin main --depth=1
+      if git branch --contains $GITHUB_SHA | grep -q 'main'; then
+        echo "IS_MAINLINE=true" >> $GITHUB_ENV
+      else
+        echo "IS_MAINLINE=false" >> $GITHUB_ENV
+      fi
+
+   - name: Set tag variables
+     id: tag_vars
+     run: |
+      echo "VERSION_TAG=fluree/server:${{ env.VERSION }}" >> $GITHUB_ENV
+      if [[ "${IS_MAINLINE}" == "true" && "${{ env.IS_PRERELEASE }}" == "false" ]]; then
+        echo "LATEST_TAG_IF_MAINLINE=fluree/server:latest" >> $GITHUB_ENV
+      else
+        echo "LATEST_TAG_IF_MAINLINE=" >> $GITHUB_ENV
+      fi
+
+   - uses: docker/login-action@v3
+     with:
+      username: ${{ vars.DOCKER_HUB_USER }}
+      password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+   - name: Build and push Docker image
+     uses: docker/build-push-action@v5
+     with:
+      context: .
+      push: true
+      tags: |
+       ${{ env.VERSION_TAG }}
+       ${{ env.LATEST_TAG_IF_MAINLINE }}
+      platforms: linux/amd64,linux/arm64
+      build-args: VERSION=${{ env.VERSION }}
+      cache-from: type=gha
+      cache-to: type=gha,mode=max
+
+   - name: Create GitHub release
+     uses: softprops/action-gh-release@v1
+     env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+     with:
+      tag_name: ${{ github.ref_name }}
+      draft: false
+      prerelease: ${{ env.IS_PRERELEASE }}
+      generate_release_notes: true
+      body: |
+       Docker image: https://hub.docker.com/r/fluree/server/tags?name=${{ github.ref_name }}
+
+ notifications:
+  name: send notifications
+  if: always()
+  runs-on: ubuntu-latest
+  needs: [test, release]
+  steps:
+   - if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && failure()
+     env:
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+     uses: voxmedia/github-action-slack-notify-build@v2
+     with:
+      channel: development
+      status: FAILED
+      color: danger
