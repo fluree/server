@@ -1,5 +1,8 @@
 FROM --platform=$BUILDPLATFORM clojure:temurin-17-tools-deps-1.11.1.1413-bullseye-slim AS builder
 
+ARG VERSION
+ENV VERSION=$VERSION
+
 RUN mkdir -p /usr/src/fluree-server
 WORKDIR /usr/src/fluree-server
 
