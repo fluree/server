@@ -76,8 +76,8 @@
 
         :else
         (let [{:keys [ledger-id commit t tx-id]} result]
-          (log/info "Transaction completed for:" ledger-id "tx-id:" tx-id
-                    "commit head:" commit)
+          (log/debug "Transaction completed for:" ledger-id "tx-id:" tx-id
+                     "commit head:" commit)
           (deliver out-p {:ledger ledger-id
                           :commit commit
                           :t      t
