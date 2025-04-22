@@ -31,6 +31,7 @@
     {:keys [body]} :parameters}]
   (log/debug "create body:" body)
   (let [txn       (fluree/format-txn body opts)
-        ledger-id (extract-ledger-id txn)
+        ledger-id (or (:ledger opts)
+                      (extract-ledger-id txn))
         resp-p    (create-ledger consensus watcher ledger-id txn {})]
     {:status 201, :body (deref! resp-p)}))

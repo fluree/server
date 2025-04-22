@@ -273,7 +273,8 @@
 (def fluree-header-keys
   ["fluree-track-meta" "fluree-max-fuel" "fluree-identity" "fluree-policy-identity"
    "fluree-policy" "fluree-policy-class" "fluree-policy-values" "fluree-format"
-   "fluree-output" "fluree-track-fuel" "fluree-track-policy" "fluree-track-file"])
+   "fluree-output" "fluree-track-fuel" "fluree-track-policy" "fluree-track-file"
+   "fluree-ledger"])
 
 (defn parse-boolean-header
   [header name]
@@ -291,7 +292,7 @@
   (fn [{:keys [headers credential/did] :as req}]
     (let [prefix-count (count "fluree-")
           {:keys [track-meta max-fuel track-fuel track-file identity policy-identity
-                  policy policy-class policy-values track-policy format output]}
+                  policy policy-class policy-values track-policy format output ledger]}
           (-> headers
               (select-keys fluree-header-keys)
               (update-keys (fn [k] (keyword (subs k prefix-count)))))
@@ -355,6 +356,7 @@
                  max-fuel      (assoc :max-fuel max-fuel)
                  format        (assoc :format format)
                  output        (assoc :output output)
+                 ledger        (assoc :ledger ledger)
                  policy        (assoc :policy policy)
                  policy-class  (assoc :policy-class policy-class)
                  policy-values (assoc :policy-values policy-values)

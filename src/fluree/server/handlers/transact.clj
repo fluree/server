@@ -103,7 +103,8 @@
   [{:keys          [fluree/consensus fluree/watcher credential/did fluree/opts raw-txn]
     {:keys [body]} :parameters}]
   (let [txn       (fluree/format-txn body opts)
-        ledger-id (extract-ledger-id txn)
+        ledger-id (or (:ledger opts)
+                      (extract-ledger-id txn))
         opts*     (cond-> (assoc opts :format :fql)
                     raw-txn (assoc :raw-txn raw-txn)
                     did     (assoc :did did))
