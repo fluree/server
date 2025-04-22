@@ -270,16 +270,6 @@
 (def wrap-set-policy-header
   (partial set-track-header ::track/policy))
 
-(defn wrap-set-policy-header
-  [handler]
-  (fn [req]
-    (let [resp (handler req)]
-      (if-let [policy (-> resp :body ::track/policy)]
-        (-> resp
-            (assoc-in [:headers "x-fdb-policy"] policy)
-            (update :body dissoc ::track/policy))
-        resp))))
-
 (def fluree-header-keys
   ["fluree-track-meta" "fluree-max-fuel" "fluree-identity" "fluree-policy-identity"
    "fluree-policy" "fluree-policy-class" "fluree-policy-values" "fluree-format"
