@@ -259,10 +259,10 @@
           fuel 1000] ; TODO: get this for real
       (assoc-in resp [:headers "x-fdb-fuel"] (str fuel)))))
 
-(def fluree-header-opts
+(def fluree-header-keys
   ["fluree-track-meta" "fluree-max-fuel" "fluree-identity" "fluree-policy-identity"
    "fluree-policy" "fluree-policy-class" "fluree-policy-values" "fluree-format"
-   "fluree-output" "fluree-track-fuel" "fluree-track-policy"])
+   "fluree-output" "fluree-track-fuel" "fluree-track-policy" "fluree-track-file"])
 
 (defn parse-boolean-header
   [header name]
@@ -279,25 +279,35 @@
   [handler]
   (fn [{:keys [headers credential/did] :as req}]
     (let [prefix-count (count "fluree-")
-          {:keys [track-meta max-fuel track-fuel identity policy-identity policy
-                  policy-class policy-values track-policy format output]}
+          {:keys [track-meta max-fuel track-fuel track-file identity policy-identity
+                  policy policy-class policy-values track-policy format output]}
           (-> headers
-              (select-keys fluree-header-opts)
+              (select-keys fluree-header-keys)
               (update-keys (fn [k] (keyword (subs k prefix-count)))))
 
           max-fuel     (when max-fuel
                          (try (Integer/parseInt max-fuel)
-                              (catch Exception _
+                              (catch Exception e
                                 (throw (ex-info "Invalid Fluree-Max-Fuel header: must be integer."
-                                                {:status 400})))))
-          track-fuel   (or (some-> track-fuel (parse-boolean-header "track-fuel"))
-                           (some? max-fuel))
+                                                {:status 400, :error :server/invalid-header}
+                                                e)))))
+          track-fuel   (some-> track-fuel (parse-boolean-header "track-fuel"))
           track-policy (some-> track-policy (parse-boolean-header "track-policy"))
-          meta         (or (some-> track-meta (parse-boolean-header "track-meta"))
+          track-meta   (some-> track-meta (parse-boolean-header "track-meta"))
+          track-file   (some-> track-file (parse-boolean-header "track-file"))
+          meta         (if track-meta
+                         (if (and track-fuel track-policy track-file)
+                           true
                            (cond-> {}
-                             track-fuel   (assoc :fuel true)
-                             track-policy (assoc :policy true)
-                             true         not-empty))
+                             (not (false? track-fuel))   (assoc :fuel true)
+                             (not (false? track-policy)) (assoc :policy true)
+                             (not (false? track-file))   (assoc :file true)
+                             true                        not-empty))
+                         (cond-> {}
+                           track-fuel   (assoc :fuel true)
+                           track-policy (assoc :policy true)
+                           track-file   (assoc :file true)
+                           true         not-empty))
           ;; Accept header takes precedence over other ways of specifying query output
           output       (cond (-> headers (get "accept") (= "application/sparql-results+json"))
                              :sparql
