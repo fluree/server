@@ -2,6 +2,7 @@
   "Common namespace for defining consensus event messages shared across consensus
   protocols"
   (:require [fluree.db.connection :as connection]
+            [fluree.db.track :as-alias track]
             [fluree.db.util.async :refer [<? go-try]]
             [fluree.db.util.log :as log]))
 
@@ -141,13 +142,15 @@
 (defn transaction-committed
   "Post-transaction, the message we will broadcast out and/or deliver
   to a client awaiting a response."
-  ([ledger-id tx-id {:keys [db address hash] :as _commit-result}]
-   {:type      :transaction-committed
-    :ledger-id ledger-id
-    :t         (:t db)
-    :tx-id     tx-id
-    :commit    {:address address
-                :hash    hash}})
+  ([ledger-id tx-id {:keys [db address hash fuel policy] :as _commit-result}]
+   (cond-> {:type      :transaction-committed
+            :ledger-id ledger-id
+            :t         (:t db)
+            :tx-id     tx-id
+            :commit    {:address address
+                        :hash    hash}}
+     fuel   (assoc ::track/fuel fuel)
+     policy (assoc ::track/policy policy)))
   ([processing-server ledger-id tx-id commit-result]
    (-> (transaction-committed ledger-id tx-id commit-result)
        (assoc :server processing-server))))
