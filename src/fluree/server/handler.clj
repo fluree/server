@@ -4,6 +4,7 @@
             [fluree.db.json-ld.credential :as cred]
             [fluree.db.query.fql.syntax :as fql]
             [fluree.db.query.history.parse :as fqh]
+            [fluree.db.track :as-alias track]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [fluree.db.validation :as v]
@@ -252,12 +253,32 @@
                   (handler req*))))
         (handler req)))))
 
-(defn wrap-set-fuel-header
+(defn set-track-header
+  [track-opt handler]
+  (fn [req]
+    (let [resp (handler req)]
+      (if-let [header-val (-> resp :body (get track-opt))]
+        (let [opt-name (str "x-fdb-" (name track-opt))]
+          (-> resp
+              (assoc-in [:headers opt-name] (str header-val))
+              (update :body dissoc track-opt)))
+        resp))))
+
+(def wrap-set-fuel-header
+  (partial set-track-header ::track/fuel))
+
+(def wrap-set-policy-header
+  (partial set-track-header ::track/policy))
+
+(defn wrap-set-policy-header
   [handler]
   (fn [req]
-    (let [resp (handler req)
-          fuel 1000] ; TODO: get this for real
-      (assoc-in resp [:headers "x-fdb-fuel"] (str fuel)))))
+    (let [resp (handler req)]
+      (if-let [policy (-> resp :body ::track/policy)]
+        (-> resp
+            (assoc-in [:headers "x-fdb-policy"] policy)
+            (update :body dissoc ::track/policy))
+        resp))))
 
 (def fluree-header-keys
   ["fluree-track-meta" "fluree-max-fuel" "fluree-identity" "fluree-policy-identity"
