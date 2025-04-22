@@ -260,9 +260,9 @@
       (assoc-in resp [:headers "x-fdb-fuel"] (str fuel)))))
 
 (def fluree-header-opts
-  ["fluree-meta" "fluree-max-fuel" "fluree-identity" "fluree-policy-identity"
+  ["fluree-track-meta" "fluree-max-fuel" "fluree-identity" "fluree-policy-identity"
    "fluree-policy" "fluree-policy-class" "fluree-policy-values" "fluree-format"
-   "fluree-output" "fluree-fuel"])
+   "fluree-output" "fluree-track-fuel" "fluree-track-policy"])
 
 (defn parse-boolean-header
   [header name]
@@ -279,28 +279,32 @@
   [handler]
   (fn [{:keys [headers credential/did] :as req}]
     (let [prefix-count (count "fluree-")
-          {:keys [meta max-fuel fuel identity policy-identity policy
-                  policy-class policy-values format output]}
+          {:keys [track-meta max-fuel track-fuel identity policy-identity policy
+                  policy-class policy-values track-policy format output]}
           (-> headers
               (select-keys fluree-header-opts)
               (update-keys (fn [k] (keyword (subs k prefix-count)))))
 
-          max-fuel (when max-fuel
-                     (try (Integer/parseInt max-fuel)
-                          (catch Exception _
-                            (throw (ex-info "Invalid Fluree-Max-Fuel header: must be integer."
-                                            {:status 400})))))
-          fuel     (or (some-> fuel (parse-boolean-header "fuel"))
-                       (some? max-fuel))
-          meta     (or (some-> meta (parse-boolean-header "meta"))
-                       (and fuel {:fuel true}))
+          max-fuel     (when max-fuel
+                         (try (Integer/parseInt max-fuel)
+                              (catch Exception _
+                                (throw (ex-info "Invalid Fluree-Max-Fuel header: must be integer."
+                                                {:status 400})))))
+          track-fuel   (or (some-> track-fuel (parse-boolean-header "track-fuel"))
+                           (some? max-fuel))
+          track-policy (some-> track-policy (parse-boolean-header "track-policy"))
+          meta         (or (some-> track-meta (parse-boolean-header "track-meta"))
+                           (cond-> {}
+                             track-fuel   (assoc :fuel true)
+                             track-policy (assoc :policy true)
+                             true         not-empty))
           ;; Accept header takes precedence over other ways of specifying query output
-          output   (cond (-> headers (get "accept") (= "application/sparql-results+json"))
-                         :sparql
+          output       (cond (-> headers (get "accept") (= "application/sparql-results+json"))
+                             :sparql
 
-                         (= output "sparql") :sparql
-                         (= output "fql")    :fql
-                         :else               :fql)
+                             (= output "sparql") :sparql
+                             (= output "fql")    :fql
+                             :else               :fql)
           ;; Content-Type header takes precedence over other ways of specifying query format
           format (cond (-> headers (get "content-type") (= "application/sparql-query"))
                        :sparql

@@ -33,7 +33,7 @@
 
           meta-res    (api-post :query {:body    query
                                         :headers (assoc sparql-results-headers
-                                                        "Fluree-Meta" true)})
+                                                        "Fluree-Track-Meta" true)})
 
           construct   (str "PREFIX ex: <http://example.org/>
                             PREFIX schema: <http://schema.org/>
