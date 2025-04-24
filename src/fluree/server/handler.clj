@@ -4,7 +4,7 @@
             [fluree.db.json-ld.credential :as cred]
             [fluree.db.query.fql.syntax :as fql]
             [fluree.db.query.history.parse :as fqh]
-            [fluree.db.util.core :as util]
+            [fluree.db.track :as-alias track]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [fluree.db.validation :as v]
@@ -211,24 +211,21 @@
   [handler]
   (fn [{:keys [body-params] :as req}]
     (log/trace "unwrap-credential body-params:" body-params)
-    (let [verified (<!! (cred/verify body-params))
-          _        (log/trace "unwrap-credential verified:" verified)
-          {:keys [subject did]}
-          (cond
-            (:subject verified) ; valid credential
-            verified
-
-            (and (util/exception? verified)
-                 (not= 400 (-> verified ex-data :status))) ; no credential
-            {:subject body-params}
-
-            :else ; invalid credential
-            (throw (ex-info "Invalid credential"
-                            {:response {:status 400
-                                        :body   {:error "Invalid credential"}}})))
-          req*     (assoc req :body-params subject :credential/did did :raw-txn body-params)]
-      (log/debug "Unwrapped credential with did:" did)
-      (handler req*))))
+    (if (cred/signed? body-params)
+      (let [verified (<!! (cred/verify body-params))]
+        (if-let [subject (:subject verified)]
+          (let [did (:did verified)]
+            (log/debug "Unwrapped credential with did:" did)
+            (-> req
+                (assoc :body-params subject
+                       :credential/did did
+                       :raw-txn body-params)
+                handler))
+          (throw (ex-info "Invalid credential"
+                          {:response {:status 400
+                                      :body   {:error "Invalid credential"}}}))))
+      (do (log/trace "Request was not signed:" body-params)
+          (handler req)))))
 
 (def root-only-routes
   #{"/fluree/create"})
@@ -256,17 +253,28 @@
                   (handler req*))))
         (handler req)))))
 
-(defn wrap-set-fuel-header
-  [handler]
+(defn set-track-header
+  [track-opt handler]
   (fn [req]
-    (let [resp (handler req)
-          fuel 1000] ; TODO: get this for real
-      (assoc-in resp [:headers "x-fdb-fuel"] (str fuel)))))
+    (let [resp (handler req)]
+      (if-let [header-val (-> resp :body (get track-opt))]
+        (let [opt-name (str "x-fdb-" (name track-opt))]
+          (-> resp
+              (assoc-in [:headers opt-name] (str header-val))
+              (update :body dissoc track-opt)))
+        resp))))
 
-(def fluree-header-opts
-  ["fluree-meta" "fluree-max-fuel" "fluree-identity" "fluree-policy-identity"
+(def wrap-set-fuel-header
+  (partial set-track-header ::track/fuel))
+
+(def wrap-set-policy-header
+  (partial set-track-header ::track/policy))
+
+(def fluree-header-keys
+  ["fluree-track-meta" "fluree-max-fuel" "fluree-identity" "fluree-policy-identity"
    "fluree-policy" "fluree-policy-class" "fluree-policy-values" "fluree-format"
-   "fluree-output" "fluree-fuel"])
+   "fluree-output" "fluree-track-fuel" "fluree-track-policy" "fluree-track-file"
+   "fluree-ledger"])
 
 (defn parse-boolean-header
   [header name]
@@ -283,28 +291,42 @@
   [handler]
   (fn [{:keys [headers credential/did] :as req}]
     (let [prefix-count (count "fluree-")
-          {:keys [meta max-fuel fuel identity policy-identity policy
-                  policy-class policy-values format output]}
+          {:keys [track-meta max-fuel track-fuel track-file identity policy-identity
+                  policy policy-class policy-values track-policy format output ledger]}
           (-> headers
-              (select-keys fluree-header-opts)
+              (select-keys fluree-header-keys)
               (update-keys (fn [k] (keyword (subs k prefix-count)))))
 
-          max-fuel (when max-fuel
-                     (try (Integer/parseInt max-fuel)
-                          (catch Exception _
-                            (throw (ex-info "Invalid Fluree-Max-Fuel header: must be integer."
-                                            {:status 400})))))
-          fuel     (or (some-> fuel (parse-boolean-header "fuel"))
-                       (some? max-fuel))
-          meta     (or (some-> meta (parse-boolean-header "meta"))
-                       (and fuel {:fuel true}))
+          max-fuel     (when max-fuel
+                         (try (Integer/parseInt max-fuel)
+                              (catch Exception e
+                                (throw (ex-info "Invalid Fluree-Max-Fuel header: must be integer."
+                                                {:status 400, :error :server/invalid-header}
+                                                e)))))
+          track-fuel   (some-> track-fuel (parse-boolean-header "track-fuel"))
+          track-policy (some-> track-policy (parse-boolean-header "track-policy"))
+          track-meta   (some-> track-meta (parse-boolean-header "track-meta"))
+          track-file   (some-> track-file (parse-boolean-header "track-file"))
+          meta         (if track-meta
+                         (if (and track-fuel track-policy track-file)
+                           true
+                           (cond-> {}
+                             (not (false? track-fuel))   (assoc :fuel true)
+                             (not (false? track-policy)) (assoc :policy true)
+                             (not (false? track-file))   (assoc :file true)
+                             true                        not-empty))
+                         (cond-> {}
+                           track-fuel   (assoc :fuel true)
+                           track-policy (assoc :policy true)
+                           track-file   (assoc :file true)
+                           true         not-empty))
           ;; Accept header takes precedence over other ways of specifying query output
-          output   (cond (-> headers (get "accept") (= "application/sparql-results+json"))
-                         :sparql
+          output       (cond (-> headers (get "accept") (= "application/sparql-results+json"))
+                             :sparql
 
-                         (= output "sparql") :sparql
-                         (= output "fql")    :fql
-                         :else               :fql)
+                             (= output "sparql") :sparql
+                             (= output "fql")    :fql
+                             :else               :fql)
           ;; Content-Type header takes precedence over other ways of specifying query format
           format (cond (-> headers (get "content-type") (= "application/sparql-query"))
                        :sparql
@@ -334,6 +356,7 @@
                  max-fuel      (assoc :max-fuel max-fuel)
                  format        (assoc :format format)
                  output        (assoc :output output)
+                 ledger        (assoc :ledger ledger)
                  policy        (assoc :policy policy)
                  policy-class  (assoc :policy-class policy-class)
                  policy-values (assoc :policy-values policy-values)

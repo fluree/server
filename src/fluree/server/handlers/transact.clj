@@ -14,10 +14,10 @@
 (set! *warn-on-reflection* true)
 
 (defn derive-tx-id
-  [raw-txn]
-  (if (string? raw-txn)
-    (crypto/sha2-256 raw-txn :hex :string)
-    (-> (json-ld/normalize-data raw-txn)
+  [txn]
+  (if (string? txn)
+    (crypto/sha2-256 txn :hex :string)
+    (-> (json-ld/normalize-data txn)
         (crypto/sha2-256 :hex :string))))
 
 (defn monitor-consensus-persistence
@@ -76,8 +76,8 @@
 
         :else
         (let [{:keys [ledger-id commit t tx-id]} result]
-          (log/info "Transaction completed for:" ledger-id "tx-id:" tx-id
-                    "commit head:" commit)
+          (log/debug "Transaction completed for:" ledger-id "tx-id:" tx-id
+                     "commit head:" commit)
           (deliver out-p {:ledger ledger-id
                           :commit commit
                           :t      t
@@ -103,8 +103,10 @@
   [{:keys          [fluree/consensus fluree/watcher credential/did fluree/opts raw-txn]
     {:keys [body]} :parameters}]
   (let [txn       (fluree/format-txn body opts)
-        ledger-id (extract-ledger-id txn)
-        opts*     (cond-> (assoc opts :raw-txn raw-txn, :format :fql)
-                    did (assoc :did did))
+        ledger-id (or (:ledger opts)
+                      (extract-ledger-id txn))
+        opts*     (cond-> (assoc opts :format :fql)
+                    raw-txn (assoc :raw-txn raw-txn)
+                    did     (assoc :did did))
         resp-p    (transact! consensus watcher ledger-id txn opts*)]
     {:status 200, :body (deref! resp-p)}))
