@@ -176,7 +176,6 @@
    (-> {:type          :error
         :ledger-id     ledger-id
         :tx-id         tx-id
-        :error         exception
         :error-message (ex-message exception)
         :error-data    (ex-data exception)}))
   ([processing-server ledger-id tx-id exception]
