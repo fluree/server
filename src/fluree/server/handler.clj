@@ -265,10 +265,10 @@
         resp))))
 
 (def wrap-set-fuel-header
-  (partial set-track-header ::track/fuel))
+  (partial set-track-header :fuel))
 
 (def wrap-set-policy-header
-  (partial set-track-header ::track/policy))
+  (partial set-track-header :policy))
 
 (def fluree-header-keys
   ["fluree-track-meta" "fluree-max-fuel" "fluree-identity" "fluree-policy-identity"
