@@ -50,14 +50,12 @@
           (<? (transact! conn watcher broadcaster event*))
 
           :else
-          (do (log/error "Unexpected event message - expected a map with a supported "
-                         "event type. Received:" event*)
-              (throw (ex-info (str "Unexpected event message: event type '" event-type "' not"
-                                   " one of (':ledger-create', ':tx-queue')")
-                              {:status 500, :error :consensus/unexpected-event})))))
+          (throw (ex-info (str "Unexpected event message: event type '" event-type "' not"
+                               " one of (':ledger-create', ':tx-queue')")
+                          {:status 500, :error :consensus/unexpected-event}))))
       (catch Exception e
         (let [{:keys [ledger-id tx-id]} event]
-          (log/debug e "Delivering tx-exception to watcher")
+          (log/warn e "Error processing consensus event")
           (response/announce-error watcher broadcaster ledger-id tx-id e))))))
 
 (defn error?

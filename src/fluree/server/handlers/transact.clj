@@ -28,6 +28,7 @@
       ;; deliver the watch here, but if successful the consensus process will
       ;; deliver the watch downstream
       (when (util/exception? persist-resp)
+        (log/warn persist-resp "Error submitting transaction")
         (let [error-event (events/error ledger tx-id persist-resp)]
           (watcher/deliver-event watcher tx-id error-event))))))
 
@@ -71,7 +72,7 @@
         (deliver out-p result)
 
         (events/error? result)
-        (let [ex (:error result)]
+        (let [ex (ex-info (:error-message result) (:error-data result))]
           (deliver out-p ex))
 
         :else

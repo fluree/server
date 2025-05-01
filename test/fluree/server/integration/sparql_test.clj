@@ -52,14 +52,14 @@
              (-> query-res :body json/read-value)))
 
       (is (= 200 (:status meta-res)))
-      (is (= {"fuel" 2,
-              "status" 200,
+      (is (= {"status" 200,
               "result"
               {"results"
                {"bindings"
                 [{"name" {"value" "query-sparql-test", "type" "literal"}}]},
                "head" {"vars" ["name"]}}}
              (-> meta-res :body json/read-value (dissoc "time"))))
+      (is (= 2 (-> meta-res :headers (get "x-fdb-fuel") Integer/parseInt)))
       (is (= 200 (:status rdf-res)))
       (is (= {"@context" {"ex" "http://example.org/" "schema" "http://schema.org/"},
               "@graph" [{"@id" "ex:query-sparql-test"
