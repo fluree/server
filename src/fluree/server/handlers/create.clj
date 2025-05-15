@@ -33,5 +33,10 @@
   (let [txn       (fluree/format-txn body opts)
         ledger-id (or (:ledger opts)
                       (extract-ledger-id txn))
-        resp-p    (create-ledger consensus watcher ledger-id txn opts)]
+        opts*     (dissoc opts :identity) ; Remove identity option because the
+                                          ; request should have been validated
+                                          ; upstream, and there are no policies
+                                          ; in an empty ledger to allow any
+                                          ; actions
+        resp-p    (create-ledger consensus watcher ledger-id txn opts*)]
     {:status 201, :body (deref! resp-p)}))

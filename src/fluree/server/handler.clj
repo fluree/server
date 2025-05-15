@@ -337,6 +337,7 @@
                        (= format "sparql") :sparql
                        (= output "fql")    :fql
                        :else               :fql)
+
           policy        (when policy
                           (try (json/parse policy false)
                                (catch Exception _
