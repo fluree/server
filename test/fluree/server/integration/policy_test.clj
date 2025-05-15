@@ -6,7 +6,7 @@
             [fluree.server.integration.test-system
              :as test-system
              :refer [api-post auth create-rand-ledger json-headers sparql-headers run-test-server]]
-            [jsonista.core :as json]))
+            [fluree.db.util.json :as json]))
 
 (use-fixtures :once run-test-server)
 
@@ -15,7 +15,7 @@
     (let [ledger-name  (create-rand-ledger "policy-opts-test")
           alice-did    (:id auth)
           txn-req      {:body
-                        (json/write-value-as-string
+                        (json/stringify
                          {"ledger"   ledger-name
                           "@context" {"ex"     "http://example.org/ns/"
                                       "schema" "http://schema.org/"
@@ -67,7 +67,7 @@
                                     "@type"      "ex:User"
                                     "schema:ssn" "?ssn"}}
           query-req    {:body
-                        (json/write-value-as-string
+                        (json/stringify
                          (assoc secret-query
                                 "opts" {"did" alice-did}))
                         :headers json-headers}
@@ -77,11 +77,11 @@
           (str "policy-enforced query response was: " (pr-str query-res)))
 
       (is (= [["ex:alice" "111-11-1111"]]
-             (-> query-res :body json/read-value))
+             (-> query-res :body (json/parse false)))
           "query policy opts should prevent seeing john's ssn")
 
       (let [txn-req   {:body
-                       (json/write-value-as-string
+                       (json/stringify
                         {"@context" {"ex"     "http://example.org/ns/"
                                      "schema" "http://schema.org/"
                                      "f"      "https://ns.flur.ee/ledger#"}
@@ -95,7 +95,7 @@
             txn-res   (api-post :transact txn-req)
             _         (assert (= 200 (:status txn-res)))
             query-req {:body
-                       (json/write-value-as-string
+                       (json/stringify
                         (assoc secret-query
                                "opts" {"did" alice-did}))
                        :headers json-headers}
@@ -103,12 +103,12 @@
             _         (assert (= 200 (:status query-res)))]
 
         (is (= [["ex:alice" "222-22-2222"]]
-               (-> query-res :body json/read-value))
+               (-> query-res :body (json/parse false)))
             "alice's secret should be modified")
 
         (testing "plain requests"
           (let [txn-req {:body
-                         (json/write-value-as-string
+                         (json/stringify
                           {"@context" {"ex"     "http://example.org/ns/"
                                        "schema" "http://schema.org/"
                                        "f"      "https://ns.flur.ee/ledger#"}
@@ -123,7 +123,7 @@
                 "transaction policy opts prevented modification")
 
             (let [query-req {:body
-                             (json/write-value-as-string
+                             (json/stringify
                               {"@context" {"ex"     "http://example.org/ns/"
                                            "schema" "http://schema.org/"
                                            "f"      "https://ns.flur.ee/ledger#"}
@@ -141,7 +141,7 @@
                        "schema:birthDate" "2021-08-17"
                        "schema:email"     "john@flur.ee"
                        "schema:name"      "John"}]
-                     (-> query-res :body json/read-value first (get "f:assert")))
+                     (-> query-res :body (json/parse false) first (get "f:assert")))
                   "policy opts prevented seeing john's ssn"))))
 
         (testing "credential requests"
@@ -153,7 +153,7 @@
                                "insert"   [{"@id"        "ex:john"
                                             "schema:ssn" "999-99-9999"}]}
                               (:private auth)))
-                txn-res (api-post :transact {:body    (json/write-value-as-string txn-req)
+                txn-res (api-post :transact {:body    (json/stringify txn-req)
                                              :headers json-headers})]
 
             (is (not= 200 (:status txn-res))
@@ -167,7 +167,7 @@
                                    "history"  "ex:john"
                                    "t"        {"from" 1}}
                                   (:private auth)))
-                  query-res (api-post :history {:body    (json/write-value-as-string query-req)
+                  query-res (api-post :history {:body    (json/stringify query-req)
                                                 :headers json-headers})]
 
               (is (= 200 (:status query-res)))
@@ -177,7 +177,7 @@
                        "schema:birthDate" "2021-08-17"
                        "schema:email"     "john@flur.ee"
                        "schema:name"      "John"}]
-                     (-> query-res :body json/read-value first (get "f:assert")))
+                     (-> query-res :body (json/parse false) first (get "f:assert")))
                   "policy opts prevented seeing john's ssn"))))
 
         (testing "JWS requests"
@@ -189,7 +189,7 @@
                            "insert"   {"@id"        "ex:alice"
                                        "schema:ssn" "444-44-4444"}}
                   txn-res (api-post :transact {:body    (crypto/create-jws
-                                                         (json/write-value-as-string txn-req)
+                                                         (json/stringify txn-req)
                                                          (:private auth))
                                                :headers {"Content-Type" "application/jwt"}})]
 
@@ -205,7 +205,7 @@
                            "insert"   [{"@id"        "ex:john"
                                         "schema:ssn" "333-33-3333"}]}
                   txn-res (api-post :transact {:body    (crypto/create-jws
-                                                         (json/write-value-as-string txn-req)
+                                                         (json/stringify txn-req)
                                                          (:private auth))
                                                :headers {"Content-Type" "application/jwt"}})]
 
@@ -223,7 +223,7 @@
                              "history"  "ex:john"
                              "t"        {"from" 1}}
                   query-res (api-post :history {:body    (crypto/create-jws
-                                                          (json/write-value-as-string query-req)
+                                                          (json/stringify query-req)
                                                           (:private auth))
                                                 :headers {"Content-Type" "application/jwt"}})]
 
@@ -234,7 +234,7 @@
                        "schema:birthDate" "2021-08-17"
                        "schema:email"     "john@flur.ee"
                        "schema:name"      "John"}]
-                     (-> query-res :body json/read-value first (get "f:assert")))
+                     (-> query-res :body (json/parse false) first (get "f:assert")))
                   "policy opts prevented seeing john's secret"))))))))
 
 (deftest ^:integration ^:json policy-class-opts-test
@@ -242,7 +242,7 @@
     (let [ledger-name  (create-rand-ledger "policy-class-opts-test")
           alice-did    (:id auth)
           txn-req      {:body
-                        (json/write-value-as-string
+                        (json/stringify
                          {"ledger"   ledger-name
                           "@context" {"ex"     "http://example.org/ns/"
                                       "schema" "http://schema.org/"
@@ -294,7 +294,7 @@
                                     "@type"      "ex:User"
                                     "schema:ssn" "?ssn"}}
           query-req    {:body
-                        (json/write-value-as-string
+                        (json/stringify
                          (assoc secret-query
                                 "opts" {"policyClass"  "ex:EmployeePolicy"
                                         "policyValues" ["?$identity" [alice-did]]}))
@@ -305,7 +305,7 @@
           (str "policy-enforced query response was: " (pr-str query-res)))
 
       (is (= [["ex:alice" "111-11-1111"]]
-             (-> query-res :body json/read-value))
+             (-> query-res :body (json/parse false)))
           "query policy opts should prevent seeing john's ssn")
 
       (testing "same query but with SPARQL and policy headers"
@@ -317,11 +317,11 @@
                                                    schema:ssn ?ssn.}")
                          :headers (assoc sparql-headers
                                          "Fluree-Policy-Class" "ex:EmployeePolicy"
-                                         "Fluree-Policy-Values" (json/write-value-as-string ["?$identity" [alice-did]]))}
+                                         "Fluree-Policy-Values" (json/stringify ["?$identity" [alice-did]]))}
               query-res (api-post :query query-req)]
 
           (is (= [["ex:alice" "111-11-1111"]]
-                 (-> query-res :body json/read-value))
+                 (-> query-res :body (json/parse false)))
               "query policy opts should prevent seeing john's ssn"))))))
 
 (deftest ^:integration ^:json policy-json-ld-opts-test
@@ -329,7 +329,7 @@
     (let [ledger-name   (create-rand-ledger "policy-json-ld-opts-test")
           alice-did     (:id auth)
           txn-req       {:body
-                         (json/write-value-as-string
+                         (json/stringify
                           {"ledger"   ledger-name
                            "@context" {"ex"     "http://example.org/ns/"
                                        "schema" "http://schema.org/"
@@ -383,7 +383,7 @@
                                                   "@value" {}}}]}
           policy-values ["?$identity" [alice-did]]
           query-req     {:body
-                         (json/write-value-as-string
+                         (json/stringify
                           (assoc secret-query
                                  "opts" {"policy"       policy
                                          "policyValues" policy-values}))
@@ -394,7 +394,7 @@
           (str "policy-enforced query response was: " (pr-str query-res)))
 
       (is (= [["ex:alice" "111-11-1111"]]
-             (-> query-res :body json/read-value))
+             (-> query-res :body (json/parse false)))
           "query policy opts should prevent seeing john's ssn")
 
       (testing "Same query but in SPARQL with policy http headers"
@@ -405,10 +405,10 @@
                                         WHERE  {?s a ex:User;
                                                    schema:ssn ?ssn.}")
                          :headers (assoc sparql-headers
-                                         "Fluree-Policy" (json/write-value-as-string policy)
-                                         "Fluree-Policy-Values" (json/write-value-as-string policy-values))}
+                                         "Fluree-Policy" (json/stringify policy)
+                                         "Fluree-Policy-Values" (json/stringify policy-values))}
               query-res (api-post :query query-req)]
 
           (is (= [["ex:alice" "111-11-1111"]]
-                 (-> query-res :body json/read-value))
+                 (-> query-res :body (json/parse false)))
               "query policy opts should prevent seeing john's ssn"))))))
