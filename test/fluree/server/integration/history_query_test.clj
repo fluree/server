@@ -1,9 +1,9 @@
 (ns fluree.server.integration.history-query-test
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
+            [fluree.db.util.json :as json]
             [fluree.server.integration.test-system
              :as test-system
-             :refer [api-post json-headers run-test-server]]
-            [fluree.db.util.json :as json]))
+             :refer [api-post json-headers run-test-server]]))
 
 (use-fixtures :once run-test-server)
 

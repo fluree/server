@@ -1,9 +1,9 @@
 (ns fluree.server.integration.closed-mode-test
   (:require [clojure.test :as test :refer [deftest testing is]]
             [fluree.crypto :as crypto]
+            [fluree.db.util.json :as json]
             [fluree.server.integration.test-system
-             :refer [api-post auth json-headers jwt-headers run-closed-test-server]]
-            [fluree.db.util.json :as json]))
+             :refer [api-post auth json-headers jwt-headers run-closed-test-server]]))
 
 (test/use-fixtures :once run-closed-test-server)
 

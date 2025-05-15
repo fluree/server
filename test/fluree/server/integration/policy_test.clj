@@ -3,10 +3,10 @@
             [clojure.test :refer [deftest is testing use-fixtures]]
             [fluree.crypto :as crypto]
             [fluree.db.json-ld.credential :as cred]
+            [fluree.db.util.json :as json]
             [fluree.server.integration.test-system
              :as test-system
-             :refer [api-post auth create-rand-ledger json-headers sparql-headers run-test-server]]
-            [fluree.db.util.json :as json]))
+             :refer [api-post auth create-rand-ledger json-headers sparql-headers run-test-server]]))
 
 (use-fixtures :once run-test-server)
 

@@ -2,11 +2,11 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [is testing]]
+            [fluree.db.util.json :as json]
             [fluree.server.integration.test-system
              :refer [api-post create-rand-ledger json-headers set-server-ports api-port]
              :as test-system]
-            [fluree.server.system :as system]
-            [fluree.db.util.json :as json])
+            [fluree.server.system :as system])
   (:import (java.time Instant)))
 
 (def ^:private mb-size (* 1024 1024)) ; 1 MB in bytes

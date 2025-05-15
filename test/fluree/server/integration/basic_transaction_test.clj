@@ -1,9 +1,9 @@
 (ns fluree.server.integration.basic-transaction-test
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
+            [fluree.db.util.json :as json]
             [fluree.server.integration.test-system
              :refer [api-post create-rand-ledger json-headers run-test-server]
-             :as test-system]
-            [fluree.db.util.json :as json]))
+             :as test-system]))
 
 (use-fixtures :once run-test-server)
 
@@ -130,8 +130,8 @@
                                               "from"     ledger-name
                                               "where"    {"id" "?t", "type" "schema:Test"}})
                                    :headers json-headers})
-                  :body
-                  (json/parse false)))))))
+                 :body
+                 (json/parse false)))))))
 
 (deftest ^:integration ^:json transaction-with-ordered-list
   (testing ""

@@ -1,10 +1,10 @@
 (ns fluree.server.integration.sparql-test
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing use-fixtures]]
+            [fluree.db.util.json :as json]
             [fluree.server.integration.test-system
              :refer [api-post create-rand-ledger run-test-server sparql-headers
-                     sparql-results-headers sparql-update-headers]]
-            [fluree.db.util.json :as json]))
+                     sparql-results-headers sparql-update-headers]]))
 
 (use-fixtures :once run-test-server)
 

@@ -2,9 +2,9 @@
   (:require [clojure.core.async :refer [<!!]]
             [clojure.test :as test :refer [deftest testing is]]
             [fluree.db.json-ld.credential :as cred]
+            [fluree.db.util.json :as json]
             [fluree.server.integration.test-system
-             :refer [api-post auth json-headers run-test-server]]
-            [fluree.db.util.json :as json]))
+             :refer [api-post auth json-headers run-test-server]]))
 
 (test/use-fixtures :once run-test-server)
 

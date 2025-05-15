@@ -1,8 +1,8 @@
 (ns fluree.server.integration.load-state-test
   (:require [clojure.test :refer [deftest is testing]]
+            [fluree.db.util.json :as json]
             [fluree.server.integration.test-system :refer [api-post json-headers] :as test-system]
             [fluree.server.system :as system]
-            [fluree.db.util.json :as json]
             [test-with-files.tools :refer [with-tmp-dir] :as twf]))
 
 (deftest ^:integration shacl-test
