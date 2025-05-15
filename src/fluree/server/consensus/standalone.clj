@@ -10,17 +10,10 @@
 
 (set! *warn-on-reflection* true)
 
-(defn ensure-file-reports
-  [meta]
-  (if (true? meta)
-    meta
-    (assoc meta :file true)))
-
 (defn create-ledger!
   [conn watcher broadcaster {:keys [ledger-id tx-id txn opts] :as _params}]
   (go-try
-    (let [opts*         (update opts :meta ensure-file-reports)
-          commit-result (deref! (fluree/create-with-txn conn txn opts*))]
+    (let [commit-result (deref! (fluree/create-with-txn conn txn opts))]
       (response/announce-new-ledger watcher broadcaster ledger-id tx-id commit-result))))
 
 (defn transact!
@@ -30,8 +23,7 @@
           _             (log/debug "Starting transaction processing for ledger:" ledger-id
                                    "with tx-id" tx-id ". Transaction sat in queue for"
                                    (- start-time (:instant params)) "milliseconds.")
-          opts*         (update opts :meta ensure-file-reports)
-          commit-result (deref! (fluree/transact! conn txn opts*))]
+          commit-result (deref! (fluree/transact! conn txn opts))]
       (response/announce-commit watcher broadcaster ledger-id tx-id commit-result))))
 
 (defn process-event
