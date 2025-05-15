@@ -33,5 +33,6 @@
   (let [txn       (fluree/format-txn body opts)
         ledger-id (or (:ledger opts)
                       (extract-ledger-id txn))
-        resp-p    (create-ledger consensus watcher ledger-id txn {})]
+        opts*     (dissoc opts :identity opts) ; FIXME
+        resp-p    (create-ledger consensus watcher ledger-id txn opts*)]
     {:status 201, :body (deref! resp-p)}))

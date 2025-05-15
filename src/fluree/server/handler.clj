@@ -367,7 +367,9 @@
                  identity        (assoc :identity identity)
                  ;; credential (signed) identity overrides all else
                  did             (assoc :identity did))]
-      (handler (assoc req :fluree/opts opts)))))
+      (-> req
+          (assoc :fluree/opts opts)
+          handler))))
 
 (defn sort-middleware-by-weight
   [weighted-middleware]
