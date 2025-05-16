@@ -253,7 +253,7 @@
                   (handler req*))))
         (handler req)))))
 
-(defn set-track-header
+(defn set-track-response-header
   [track-opt handler]
   (fn [req]
     (let [resp (handler req)]
@@ -264,17 +264,20 @@
               (update :body dissoc track-opt)))
         resp))))
 
-(def wrap-set-fuel-header
-  (partial set-track-header :fuel))
+(def wrap-set-fuel-response-header
+  (partial set-track-response-header :fuel))
 
-(def wrap-set-policy-header
-  (partial set-track-header :policy))
+(def wrap-set-policy-response-header
+  (partial set-track-response-header :policy))
 
-(def fluree-header-keys
-  ["fluree-track-meta" "fluree-max-fuel" "fluree-identity" "fluree-policy-identity"
+(def wrap-set-time-response-header
+  (partial set-track-response-header :time))
+
+(def fluree-request-header-keys
+  ["fluree-track-meta" "fluree-track-time" "fluree-track-fuel" "fluree-track-policy"
+   "fluree-ledger" "fluree-max-fuel" "fluree-identity" "fluree-policy-identity"
    "fluree-policy" "fluree-policy-class" "fluree-policy-values" "fluree-format"
-   "fluree-output" "fluree-track-time" "fluree-track-fuel" "fluree-track-policy"
-   "fluree-ledger"])
+   "fluree-output"])
 
 (defn parse-boolean-header
   [header name]
@@ -284,20 +287,21 @@
     (throw (ex-info (format "Invalid Fluree-%s header: must be boolean." name)
                     {:status 400, :error :server/invalid-header}))))
 
-(def header-prefix-count
+(def request-header-prefix-count
   (count "fluree-"))
 
-(defn wrap-header-opts
+(defn wrap-request-header-opts
   "Extract options from headers, parse and validate them where necessary, and
   attach to request. Opts set in the header override those specified within the
   transaction or query."
   [handler]
   (fn [{:keys [headers credential/did] :as req}]
-    (let [{:keys [track-meta max-fuel track-fuel identity policy-identity
-                  policy policy-class policy-values track-policy format output ledger]}
+    (let [{:keys [track-meta track-time track-fuel track-policy max-fuel
+                  identity policy-identity policy policy-class policy-values
+                  format output ledger]}
           (-> headers
-              (select-keys fluree-header-keys)
-              (update-keys (fn [k] (keyword (subs k header-prefix-count)))))
+              (select-keys fluree-request-header-keys)
+              (update-keys (fn [k] (keyword (subs k request-header-prefix-count)))))
 
           max-fuel     (when max-fuel
                          (try (Integer/parseInt max-fuel)
@@ -306,7 +310,7 @@
                                                 {:status 400, :error :server/invalid-header}
                                                 e)))))
           track-meta   (some-> track-meta (parse-boolean-header "track-meta"))
-          track-time   (some-> track-meta (parse-boolean-header "track-time"))
+          track-time   (some-> track-time (parse-boolean-header "track-time"))
           track-fuel   (some-> track-fuel (parse-boolean-header "track-fuel"))
           track-policy (some-> track-policy (parse-boolean-header "track-policy"))
           track-file   true ; File tracking is required for consensus components
@@ -455,11 +459,13 @@
                                 [10 (partial wrap-assoc-system connection consensus
                                              watcher subscriptions)]
                                 [50 unwrap-credential]
-                                [100 wrap-set-fuel-header]
+                                [100 wrap-set-fuel-response-header]
+                                [105 wrap-set-policy-response-header]
+                                [110 wrap-set-time-response-header]
                                 [200 coercion/coerce-exceptions-middleware]
                                 [300 coercion/coerce-response-middleware]
                                 [400 coercion/coerce-request-middleware]
-                                [500 wrap-header-opts]
+                                [500 wrap-request-header-opts]
                                 [600 (wrap-closed-mode root-identities closed-mode)]
                                 [1000 exception-middleware]])))
 
