@@ -149,8 +149,8 @@
             :tx-id     tx-id
             :commit    {:address address
                         :hash    hash}}
-     fuel   (assoc ::track/fuel fuel)
-     policy (assoc ::track/policy policy)))
+     fuel   (assoc :fuel fuel)
+     policy (assoc :policy policy)))
   ([processing-server ledger-id tx-id commit-result]
    (-> (transaction-committed ledger-id tx-id commit-result)
        (assoc :server processing-server))))
