@@ -311,8 +311,8 @@
                                                 e)))))
           track-meta   (some-> track-meta (parse-boolean-header "track-meta"))
           track-time   (some-> track-time (parse-boolean-header "track-time"))
-          track-fuel   (some-> track-fuel (parse-boolean-header "track-fuel"))
           track-policy (some-> track-policy (parse-boolean-header "track-policy"))
+          track-fuel   (some-> track-fuel (parse-boolean-header "track-fuel"))
           track-file   true ; File tracking is required for consensus components
           meta         (if track-meta
                          (if (and track-time track-fuel track-policy track-file)
@@ -459,13 +459,13 @@
                                 [10 (partial wrap-assoc-system connection consensus
                                              watcher subscriptions)]
                                 [50 unwrap-credential]
-                                [100 wrap-set-fuel-response-header]
-                                [105 wrap-set-policy-response-header]
-                                [110 wrap-set-time-response-header]
                                 [200 coercion/coerce-exceptions-middleware]
                                 [300 coercion/coerce-response-middleware]
                                 [400 coercion/coerce-request-middleware]
                                 [500 wrap-request-header-opts]
+                                [505 wrap-set-fuel-response-header]
+                                [510 wrap-set-policy-response-header]
+                                [515 wrap-set-time-response-header]
                                 [600 (wrap-closed-mode root-identities closed-mode)]
                                 [1000 exception-middleware]])))
 
