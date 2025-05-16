@@ -273,7 +273,8 @@
 (def fluree-header-keys
   ["fluree-track-meta" "fluree-max-fuel" "fluree-identity" "fluree-policy-identity"
    "fluree-policy" "fluree-policy-class" "fluree-policy-values" "fluree-format"
-   "fluree-output" "fluree-track-fuel" "fluree-track-policy" "fluree-ledger"])
+   "fluree-output" "fluree-track-time" "fluree-track-fuel" "fluree-track-policy"
+   "fluree-ledger"])
 
 (defn parse-boolean-header
   [header name]
@@ -305,18 +306,21 @@
                                                 {:status 400, :error :server/invalid-header}
                                                 e)))))
           track-meta   (some-> track-meta (parse-boolean-header "track-meta"))
+          track-time   (some-> track-meta (parse-boolean-header "track-time"))
           track-fuel   (some-> track-fuel (parse-boolean-header "track-fuel"))
           track-policy (some-> track-policy (parse-boolean-header "track-policy"))
           track-file   true ; File tracking is required for consensus components
           meta         (if track-meta
-                         (if (and track-fuel track-policy track-file)
+                         (if (and track-time track-fuel track-policy track-file)
                            true
                            (cond-> {}
+                             (not (false? track-time))   (assoc :time true)
                              (not (false? track-fuel))   (assoc :fuel true)
                              (not (false? track-policy)) (assoc :policy true)
                              (not (false? track-file))   (assoc :file true)
                              true                        not-empty))
                          (cond-> {}
+                           track-time   (assoc :time true)
                            track-fuel   (assoc :fuel true)
                            track-policy (assoc :policy true)
                            track-file   (assoc :file true)
