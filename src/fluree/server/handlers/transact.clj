@@ -52,7 +52,7 @@
         (let [ex (ex-info (str "Timeout waiting for transaction to complete for: "
                                ledger-id " with tx-id: " tx-id)
                           {:status 408
-                           :error  :db/response-timeout
+                           :error  :consensus/response-timeout
                            :ledger ledger-id
                            :tx-id  tx-id})]
           (deliver out-p ex))
@@ -63,7 +63,7 @@
                                ". Transaction may have processed, check ledger"
                                " for confirmation.")
                           {:status 500
-                           :error  :db/response-missing
+                           :error  :consensus/no-response
                            :ledger ledger-id
                            :tx-id  tx-id})]
           (deliver out-p ex))
