@@ -252,26 +252,6 @@
                   (handler req*))))
         (handler req)))))
 
-(defn set-track-response-header
-  [track-opt handler]
-  (fn [req]
-    (let [resp (handler req)]
-      (if-let [header-val (-> resp :body (get track-opt))]
-        (let [opt-name (str "x-fdb-" (name track-opt))]
-          (-> resp
-              (assoc-in [:headers opt-name] (str header-val))
-              (update :body dissoc track-opt)))
-        resp))))
-
-(def wrap-set-fuel-response-header
-  (partial set-track-response-header :fuel))
-
-(def wrap-set-policy-response-header
-  (partial set-track-response-header :policy))
-
-(def wrap-set-time-response-header
-  (partial set-track-response-header :time))
-
 (def fluree-request-header-keys
   ["fluree-track-meta" "fluree-track-fuel" "fluree-track-policy" "fluree-ledger"
    "fluree-max-fuel" "fluree-identity" "fluree-policy-identity" "fluree-policy"
@@ -461,9 +441,6 @@
                                 [300 coercion/coerce-response-middleware]
                                 [400 coercion/coerce-request-middleware]
                                 [500 wrap-request-header-opts]
-                                [505 wrap-set-fuel-response-header]
-                                [510 wrap-set-policy-response-header]
-                                [515 wrap-set-time-response-header]
                                 [600 (wrap-closed-mode root-identities closed-mode)]
                                 [1000 exception-middleware]])))
 
