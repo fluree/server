@@ -48,7 +48,7 @@
   (with-header response "x-fdb-fuel" (str fuel)))
 
 (defn with-tracking-headers
-  [response {:keys [time fuel policy]}]
+  [response {:keys [time fuel]}]
   (cond-> response
     time (with-time-header time)
     fuel (with-fuel-header fuel)))
