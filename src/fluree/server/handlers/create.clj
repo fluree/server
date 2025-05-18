@@ -17,7 +17,7 @@
         persist-resp-ch (consensus/queue-new-ledger consensus ledger tx-id txn opts)]
     (monitor-consensus-persistence watcher ledger tx-id persist-resp-ch)))
 
-(defn create-ledger
+(defn create-ledger!
   [consensus watcher ledger-id txn opts]
   (let [p         (promise)
         tx-id     (derive-tx-id txn)
@@ -38,5 +38,5 @@
                                           ; upstream, and there are no policies
                                           ; in an empty ledger to allow any
                                           ; actions
-        resp-p    (create-ledger consensus watcher ledger-id txn opts*)]
+        resp-p    (create-ledger! consensus watcher ledger-id txn opts*)]
     {:status 201, :body (deref! resp-p)}))

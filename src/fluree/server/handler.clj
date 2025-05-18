@@ -4,7 +4,6 @@
             [fluree.db.json-ld.credential :as cred]
             [fluree.db.query.fql.syntax :as fql]
             [fluree.db.query.history.parse :as fqh]
-            [fluree.db.track :as-alias track]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [fluree.db.validation :as v]
@@ -274,10 +273,9 @@
   (partial set-track-response-header :time))
 
 (def fluree-request-header-keys
-  ["fluree-track-meta" "fluree-track-time" "fluree-track-fuel" "fluree-track-policy"
-   "fluree-ledger" "fluree-max-fuel" "fluree-identity" "fluree-policy-identity"
-   "fluree-policy" "fluree-policy-class" "fluree-policy-values" "fluree-format"
-   "fluree-output"])
+  ["fluree-track-meta" "fluree-track-fuel" "fluree-track-policy" "fluree-ledger"
+   "fluree-max-fuel" "fluree-identity" "fluree-policy-identity" "fluree-policy"
+   "fluree-policy-class" "fluree-policy-values" "fluree-format" "fluree-output"])
 
 (defn parse-boolean-header
   [header name]
@@ -296,7 +294,7 @@
   transaction or query."
   [handler]
   (fn [{:keys [headers credential/did] :as req}]
-    (let [{:keys [track-meta track-time track-fuel track-policy max-fuel
+    (let [{:keys [track-meta track-fuel track-policy max-fuel
                   identity policy-identity policy policy-class policy-values
                   format output ledger]}
           (-> headers
@@ -310,9 +308,9 @@
                                                 {:status 400, :error :server/invalid-header}
                                                 e)))))
           track-meta   (some-> track-meta (parse-boolean-header "track-meta"))
-          track-time   (some-> track-time (parse-boolean-header "track-time"))
           track-policy (some-> track-policy (parse-boolean-header "track-policy"))
           track-fuel   (some-> track-fuel (parse-boolean-header "track-fuel"))
+          track-time   true
           track-file   true ; File tracking is required for consensus components
           meta         (if track-meta
                          (if (and track-time track-fuel track-policy track-file)
