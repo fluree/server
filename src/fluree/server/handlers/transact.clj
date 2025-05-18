@@ -8,7 +8,7 @@
             [fluree.json-ld :as json-ld]
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.events :as events]
-            [fluree.server.handlers.shared :refer [defhandler deref!]]
+            [fluree.server.handlers.shared :as shared :refer [defhandler deref!]]
             [fluree.server.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
@@ -109,5 +109,9 @@
         opts*     (cond-> (assoc opts :format :fql)
                     raw-txn (assoc :raw-txn raw-txn)
                     did     (assoc :did did))
-        resp-p    (transact! consensus watcher ledger-id txn opts*)]
-    {:status 200, :body (deref! resp-p)}))
+        {:keys [status] :as txn-resp}
+        (deref! (transact! consensus watcher ledger-id txn opts*))
+
+        body (select-keys txn-resp [:ledger :commit :t :tx-id])]
+    (shared/with-tracking-headers {:status status, :body body}
+      txn-resp)))

@@ -3,7 +3,7 @@
    [fluree.db.api :as fluree]
    [fluree.db.util.log :as log]
    [fluree.server.consensus :as consensus]
-   [fluree.server.handlers.shared :refer [deref! defhandler]]
+   [fluree.server.handlers.shared :as shared :refer [deref! defhandler]]
    [fluree.server.handlers.transact :refer [derive-tx-id extract-ledger-id
                                             monitor-consensus-persistence
                                             monitor-commit]]
@@ -38,5 +38,8 @@
                                           ; upstream, and there are no policies
                                           ; in an empty ledger to allow any
                                           ; actions
-        resp-p    (create-ledger! consensus watcher ledger-id txn opts*)]
-    {:status 201, :body (deref! resp-p)}))
+        txn-resp  (deref! (create-ledger! consensus watcher ledger-id txn opts*))
+
+        body (select-keys txn-resp [:ledger :commit :t :tx-id])]
+    (shared/with-tracking-headers {:status 201, :body body}
+      txn-resp)))
