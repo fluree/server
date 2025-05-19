@@ -1,5 +1,6 @@
 (ns fluree.server.handlers.transact
   (:require [clojure.core.async :as async :refer [<! go]]
+            [clojure.set :refer [rename-keys]]
             [fluree.crypto :as crypto]
             [fluree.db.api :as fluree]
             [fluree.db.query.fql.parse :as parse]
@@ -77,8 +78,8 @@
 
         :else
         (let [{:keys [ledger-id commit t tx-id]} result]
-          (log/debug "Transaction completed for:" ledger-id "tx-id:" tx-id
-                     "commit head:" commit)
+          (log/debug "Transaction completed for:" ledger-id "tx-id:" tx-id "at t:" t
+                     ". commit head:" commit)
           (deliver out-p {:ledger ledger-id
                           :commit commit
                           :t      t
@@ -100,6 +101,12 @@
       (throw (ex-info "Invalid transaction, missing required key: ledger."
                       {:status 400, :error :db/invalid-transaction}))))
 
+(defn commit-event->response-body
+  [commit-event]
+  (-> commit-event
+      (select-keys [:ledger-id :commit :t :tx-id])
+      (rename-keys {:ledger-id :ledger})))
+
 (defhandler default
   [{:keys          [fluree/consensus fluree/watcher credential/did fluree/opts raw-txn]
     {:keys [body]} :parameters}]
@@ -109,9 +116,9 @@
         opts*     (cond-> (assoc opts :format :fql)
                     raw-txn (assoc :raw-txn raw-txn)
                     did     (assoc :did did))
-        {:keys [status] :as txn-resp}
+        {:keys [status] :as commit-event}
         (deref! (transact! consensus watcher ledger-id txn opts*))
 
-        body (select-keys txn-resp [:ledger :commit :t :tx-id])]
+        body (commit-event->response-body commit-event)]
     (shared/with-tracking-headers {:status status, :body body}
-      txn-resp)))
+      commit-event)))
