@@ -77,13 +77,10 @@
           (deliver out-p ex))
 
         :else
-        (let [{:keys [ledger-id commit t tx-id]} result]
+        (let [{:keys [ledger-id commit t tx-id] :as commit-event} result]
           (log/debug "Transaction completed for:" ledger-id "tx-id:" tx-id "at t:" t
                      ". commit head:" commit)
-          (deliver out-p {:ledger ledger-id
-                          :commit commit
-                          :t      t
-                          :tx-id  tx-id}))))))
+          (deliver out-p commit-event))))))
 
 (defn transact!
   [consensus watcher ledger-id txn opts]
