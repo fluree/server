@@ -1,16 +1,16 @@
 (ns fluree.server.integration.basic-transaction-test
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
+            [fluree.db.util.json :as json]
             [fluree.server.integration.test-system
              :refer [api-post create-rand-ledger json-headers run-test-server]
-             :as test-system]
-            [jsonista.core :as json]))
+             :as test-system]))
 
 (use-fixtures :once run-test-server)
 
 (deftest ^:integration ^:json create-endpoint-json-test
   (testing "can create a new ledger w/ JSON"
     (let [ledger-name (str "create-endpoint-" (random-uuid))
-          req         (json/write-value-as-string
+          req         (json/stringify
                        {"ledger"   ledger-name
                         "@context" {"foo" "http://foobar.com/"}
                         "insert"   [{"id"      "ex:create-test"
@@ -20,7 +20,7 @@
       (is (= 201 (:status res)))
       (is (= {"ledger" ledger-name
               "t"      1}
-             (-> res :body json/read-value (select-keys ["ledger" "t"])))))))
+             (-> res :body (json/parse false) (select-keys ["ledger" "t"])))))))
 
 #_(deftest ^:integration ^:edn create-endpoint-edn-test
     (testing "can create a new ledger w/ EDN"
@@ -53,7 +53,7 @@
 (deftest ^:integration ^:json transaction-json-test
   (testing "can transact in JSON"
     (let [ledger-name (create-rand-ledger "transact-endpoint-json-test")
-          req         (json/write-value-as-string
+          req         (json/stringify
                        {"@context" test-system/default-context
                         "ledger" ledger-name
                         "insert" {"id"      "ex:transaction-test"
@@ -62,12 +62,12 @@
           res         (api-post :transact {:body req :headers json-headers})]
       (is (= 200 (:status res)))
       (is (= {"ledger" ledger-name, "t" 2}
-             (-> res :body json/read-value (select-keys ["ledger" "t"])))))))
+             (-> res :body (json/parse false) (select-keys ["ledger" "t"])))))))
 
 (deftest ^:integration ^:json transaction-with-where-clause-test
   (testing "can transact with a where clause"
     (let [ledger-name (create-rand-ledger "transact-endpoint-json-test")
-          req1        (json/write-value-as-string
+          req1        (json/stringify
                        {"@context" test-system/default-context
                         "ledger"   ledger-name
                         "insert"   {"id"      "ex:transaction-test"
@@ -75,7 +75,7 @@
                                     "ex:name" "transact-endpoint-json-test"}})
           res1        (api-post :transact {:body req1, :headers json-headers})
           _           (assert (= 200 (:status res1)))
-          req2        (json/write-value-as-string
+          req2        (json/stringify
                        {"@context" test-system/default-context
                         "ledger"   ledger-name
                         "insert"   {"id"      "?t"
@@ -88,17 +88,17 @@
       (is (= [{"id"      "ex:transaction-test"
                "type"    "schema:Test"
                "ex:name" "new-name"}]
-             (->> {:body    (json/write-value-as-string
-                             {"@context" test-system/default-context
-                              "select"   {"ex:transaction-test" ["*"]}
-                              "from"     ledger-name})
-                   :headers json-headers}
-                  (api-post :query)
-                  :body
-                  json/read-value)))))
+             (-> (api-post :query {:body    (json/stringify
+                                             {"@context" test-system/default-context
+                                              "select"   {"ex:transaction-test" ["*"]}
+                                              "from"     ledger-name})
+                                   :headers json-headers})
+
+                 :body
+                 (json/parse false))))))
   (testing "can transact with a where clause w/ optional"
     (let [ledger-name (create-rand-ledger "transact-endpoint-json-test")
-          req1        (json/write-value-as-string
+          req1        (json/stringify
                        {"@context" test-system/default-context
                         "ledger"   ledger-name
                         "insert"   {"id"          "ex:transaction-test"
@@ -106,7 +106,7 @@
                                     "schema:name" "transact-endpoint-json-test"}})
           res1        (api-post :transact {:body req1, :headers json-headers})
           _           (assert (= 200 (:status res1)))
-          req2        (json/write-value-as-string
+          req2        (json/stringify
                        {"@context" test-system/default-context
                         "ledger"   ledger-name
                         "insert"   {"id"          "?t"
@@ -124,15 +124,14 @@
       (is (= [{"id"          "ex:transaction-test"
                "type"        "schema:Test"
                "schema:name" "new-name"}]
-             (->> {:body    (json/write-value-as-string
-                             {"@context" test-system/default-context
-                              "select"   {"?t" ["*"]}
-                              "from"     ledger-name
-                              "where"    {"id" "?t", "type" "schema:Test"}})
-                   :headers json-headers}
-                  (api-post :query)
-                  :body
-                  json/read-value))))))
+             (-> (api-post :query {:body    (json/stringify
+                                             {"@context" test-system/default-context
+                                              "select"   {"?t" ["*"]}
+                                              "from"     ledger-name
+                                              "where"    {"id" "?t", "type" "schema:Test"}})
+                                   :headers json-headers})
+                 :body
+                 (json/parse false)))))))
 
 (deftest ^:integration ^:json transaction-with-ordered-list
   (testing ""
@@ -154,21 +153,21 @@
                             "ex:items1" "?items1"
                             "ex:items2" "?items2"}}]
       (is (= 200
-             (-> (api-post :transact {:body (json/write-value-as-string req1), :headers json-headers})
+             (-> (api-post :transact {:body (json/stringify req1), :headers json-headers})
                  :status)))
       (is (= [{"id" "ex:list-test",
                "ex:items1" ["zero" "one" "two" "three"]
                "ex:items2" ["four" "five" "six" "seven"]}]
-             (-> (api-post :query {:body (json/write-value-as-string q1) :headers json-headers})
+             (-> (api-post :query {:body (json/stringify q1) :headers json-headers})
                  :body
-                 json/read-value)))
+                 (json/parse false))))
       (is (= 200
-             (-> (api-post :transact {:body (json/write-value-as-string req2) :headers json-headers})
+             (-> (api-post :transact {:body (json/stringify req2) :headers json-headers})
                  :status)))
       (is (= [{"id" "ex:list-test"}]
-             (-> (api-post :query {:body (json/write-value-as-string q1) :headers json-headers})
+             (-> (api-post :query {:body (json/stringify q1) :headers json-headers})
                  :body
-                 json/read-value))))))
+                 (json/parse false)))))))
 
 #_(deftest ^:integration ^:edn transaction-edn-test
     (testing "can transact in EDN"

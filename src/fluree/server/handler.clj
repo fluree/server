@@ -4,7 +4,6 @@
             [fluree.db.json-ld.credential :as cred]
             [fluree.db.query.fql.syntax :as fql]
             [fluree.db.query.history.parse :as fqh]
-            [fluree.db.track :as-alias track]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [fluree.db.validation :as v]
@@ -253,28 +252,10 @@
                   (handler req*))))
         (handler req)))))
 
-(defn set-track-header
-  [track-opt handler]
-  (fn [req]
-    (let [resp (handler req)]
-      (if-let [header-val (-> resp :body (get track-opt))]
-        (let [opt-name (str "x-fdb-" (name track-opt))]
-          (-> resp
-              (assoc-in [:headers opt-name] (str header-val))
-              (update :body dissoc track-opt)))
-        resp))))
-
-(def wrap-set-fuel-header
-  (partial set-track-header :fuel))
-
-(def wrap-set-policy-header
-  (partial set-track-header :policy))
-
-(def fluree-header-keys
-  ["fluree-track-meta" "fluree-max-fuel" "fluree-identity" "fluree-policy-identity"
-   "fluree-policy" "fluree-policy-class" "fluree-policy-values" "fluree-format"
-   "fluree-output" "fluree-track-fuel" "fluree-track-policy" "fluree-track-file"
-   "fluree-ledger"])
+(def fluree-request-header-keys
+  ["fluree-track-meta" "fluree-track-fuel" "fluree-track-policy" "fluree-ledger"
+   "fluree-max-fuel" "fluree-identity" "fluree-policy-identity" "fluree-policy"
+   "fluree-policy-class" "fluree-policy-values" "fluree-format" "fluree-output"])
 
 (defn parse-boolean-header
   [header name]
@@ -284,18 +265,21 @@
     (throw (ex-info (format "Invalid Fluree-%s header: must be boolean." name)
                     {:status 400, :error :server/invalid-header}))))
 
-(defn wrap-header-opts
+(def request-header-prefix-count
+  (count "fluree-"))
+
+(defn wrap-request-header-opts
   "Extract options from headers, parse and validate them where necessary, and
   attach to request. Opts set in the header override those specified within the
   transaction or query."
   [handler]
   (fn [{:keys [headers credential/did] :as req}]
-    (let [prefix-count (count "fluree-")
-          {:keys [track-meta max-fuel track-fuel track-file identity policy-identity
-                  policy policy-class policy-values track-policy format output ledger]}
+    (let [{:keys [track-meta track-fuel track-policy max-fuel
+                  identity policy-identity policy policy-class policy-values
+                  format output ledger]}
           (-> headers
-              (select-keys fluree-header-keys)
-              (update-keys (fn [k] (keyword (subs k prefix-count)))))
+              (select-keys fluree-request-header-keys)
+              (update-keys (fn [k] (keyword (subs k request-header-prefix-count)))))
 
           max-fuel     (when max-fuel
                          (try (Integer/parseInt max-fuel)
@@ -303,19 +287,22 @@
                                 (throw (ex-info "Invalid Fluree-Max-Fuel header: must be integer."
                                                 {:status 400, :error :server/invalid-header}
                                                 e)))))
-          track-fuel   (some-> track-fuel (parse-boolean-header "track-fuel"))
-          track-policy (some-> track-policy (parse-boolean-header "track-policy"))
           track-meta   (some-> track-meta (parse-boolean-header "track-meta"))
-          track-file   (some-> track-file (parse-boolean-header "track-file"))
+          track-policy (some-> track-policy (parse-boolean-header "track-policy"))
+          track-fuel   (some-> track-fuel (parse-boolean-header "track-fuel"))
+          track-time   true
+          track-file   true ; File tracking is required for consensus components
           meta         (if track-meta
-                         (if (and track-fuel track-policy track-file)
+                         (if (and track-time track-fuel track-policy track-file)
                            true
                            (cond-> {}
+                             (not (false? track-time))   (assoc :time true)
                              (not (false? track-fuel))   (assoc :fuel true)
                              (not (false? track-policy)) (assoc :policy true)
                              (not (false? track-file))   (assoc :file true)
                              true                        not-empty))
                          (cond-> {}
+                           track-time   (assoc :time true)
                            track-fuel   (assoc :fuel true)
                            track-policy (assoc :policy true)
                            track-file   (assoc :file true)
@@ -336,6 +323,7 @@
                        (= format "sparql") :sparql
                        (= output "fql")    :fql
                        :else               :fql)
+
           policy        (when policy
                           (try (json/parse policy false)
                                (catch Exception _
@@ -366,7 +354,9 @@
                  identity        (assoc :identity identity)
                  ;; credential (signed) identity overrides all else
                  did             (assoc :identity did))]
-      (handler (assoc req :fluree/opts opts)))))
+      (-> req
+          (assoc :fluree/opts opts)
+          handler))))
 
 (defn sort-middleware-by-weight
   [weighted-middleware]
@@ -447,11 +437,10 @@
                                 [10 (partial wrap-assoc-system connection consensus
                                              watcher subscriptions)]
                                 [50 unwrap-credential]
-                                [100 wrap-set-fuel-header]
                                 [200 coercion/coerce-exceptions-middleware]
                                 [300 coercion/coerce-response-middleware]
                                 [400 coercion/coerce-request-middleware]
-                                [500 wrap-header-opts]
+                                [500 wrap-request-header-opts]
                                 [600 (wrap-closed-mode root-identities closed-mode)]
                                 [1000 exception-middleware]])))
 

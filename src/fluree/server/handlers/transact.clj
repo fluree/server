@@ -1,5 +1,6 @@
 (ns fluree.server.handlers.transact
   (:require [clojure.core.async :as async :refer [<! go]]
+            [clojure.set :refer [rename-keys]]
             [fluree.crypto :as crypto]
             [fluree.db.api :as fluree]
             [fluree.db.query.fql.parse :as parse]
@@ -8,7 +9,7 @@
             [fluree.json-ld :as json-ld]
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.events :as events]
-            [fluree.server.handlers.shared :refer [defhandler deref!]]
+            [fluree.server.handlers.shared :as shared :refer [defhandler deref!]]
             [fluree.server.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
@@ -52,7 +53,7 @@
         (let [ex (ex-info (str "Timeout waiting for transaction to complete for: "
                                ledger-id " with tx-id: " tx-id)
                           {:status 408
-                           :error  :db/response-timeout
+                           :error  :consensus/response-timeout
                            :ledger ledger-id
                            :tx-id  tx-id})]
           (deliver out-p ex))
@@ -63,7 +64,7 @@
                                ". Transaction may have processed, check ledger"
                                " for confirmation.")
                           {:status 500
-                           :error  :db/response-missing
+                           :error  :consensus/no-response
                            :ledger ledger-id
                            :tx-id  tx-id})]
           (deliver out-p ex))
@@ -76,13 +77,10 @@
           (deliver out-p ex))
 
         :else
-        (let [{:keys [ledger-id commit t tx-id]} result]
-          (log/debug "Transaction completed for:" ledger-id "tx-id:" tx-id
-                     "commit head:" commit)
-          (deliver out-p {:ledger ledger-id
-                          :commit commit
-                          :t      t
-                          :tx-id  tx-id}))))))
+        (let [{:keys [ledger-id commit t tx-id] :as commit-event} result]
+          (log/debug "Transaction completed for:" ledger-id "tx-id:" tx-id "at t:" t
+                     ". commit head:" commit)
+          (deliver out-p commit-event))))))
 
 (defn transact!
   [consensus watcher ledger-id txn opts]
@@ -100,6 +98,12 @@
       (throw (ex-info "Invalid transaction, missing required key: ledger."
                       {:status 400, :error :db/invalid-transaction}))))
 
+(defn commit-event->response-body
+  [commit-event]
+  (-> commit-event
+      (select-keys [:ledger-id :commit :t :tx-id])
+      (rename-keys {:ledger-id :ledger})))
+
 (defhandler default
   [{:keys          [fluree/consensus fluree/watcher credential/did fluree/opts raw-txn]
     {:keys [body]} :parameters}]
@@ -109,5 +113,9 @@
         opts*     (cond-> (assoc opts :format :fql)
                     raw-txn (assoc :raw-txn raw-txn)
                     did     (assoc :did did))
-        resp-p    (transact! consensus watcher ledger-id txn opts*)]
-    {:status 200, :body (deref! resp-p)}))
+        {:keys [status] :as commit-event}
+        (deref! (transact! consensus watcher ledger-id txn opts*))
+
+        body (commit-event->response-body commit-event)]
+    (shared/with-tracking-headers {:status status, :body body}
+      commit-event)))

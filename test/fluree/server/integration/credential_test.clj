@@ -2,9 +2,9 @@
   (:require [clojure.core.async :refer [<!!]]
             [clojure.test :as test :refer [deftest testing is]]
             [fluree.db.json-ld.credential :as cred]
+            [fluree.db.util.json :as json]
             [fluree.server.integration.test-system
-             :refer [api-post auth json-headers run-test-server]]
-            [jsonista.core :as json]))
+             :refer [api-post auth json-headers run-test-server]]))
 
 (test/use-fixtures :once run-test-server)
 
@@ -38,12 +38,12 @@
                                       "f:query"  {"@type"  "@json"
                                                   "@value" {}}}]}}
             create-res (api-post :create
-                                 {:body    (json/write-value-as-string create-req)
+                                 {:body    (json/stringify create-req)
                                   :headers json-headers})]
         (is (= 201 (:status create-res)))
         (is (= {"ledger" "credential-test"
                 "t"      1}
-               (-> create-res :body json/read-value (select-keys ["ledger" "t"]))))))
+               (-> create-res :body (json/parse false) (select-keys ["ledger" "t"]))))))
     (testing "transact"
       (let [txn-req (<!! (cred/generate
                           {"ledger"   ledger-name
@@ -54,12 +54,12 @@
                                         "ex:foo"  1}]}
                           (:private auth)))
             txn-res (api-post :transact
-                              {:body    (json/write-value-as-string txn-req)
+                              {:body    (json/stringify txn-req)
                                :headers json-headers})]
         (is (= 200 (:status txn-res)))
         (is (= {"ledger" "credential-test"
                 "t"      2}
-               (-> txn-res :body json/read-value (select-keys ["ledger" "t"]))))))
+               (-> txn-res :body (json/parse false) (select-keys ["ledger" "t"]))))))
     (testing "query"
       (let [query-req (<!! (cred/generate
                             {"@context" default-context
@@ -69,14 +69,14 @@
                                          "type" "schema:Test"}}
                             (:private auth)))
             query-res (api-post :query
-                                {:body    (json/write-value-as-string query-req)
+                                {:body    (json/stringify query-req)
                                  :headers json-headers})]
         (is (= 200 (:status query-res)))
         (is (= [{"ex:name" "cred test",
                  "ex:foo"  1,
                  "id"      "ex:cred-test"
                  "type"    "schema:Test"}]
-               (-> query-res :body json/read-value)))))
+               (-> query-res :body (json/parse false))))))
 
     (testing "history"
       (let [history-req (<!! (cred/generate
@@ -87,7 +87,7 @@
                               (:private auth)))
 
             history-res (api-post :history
-                                  {:body    (json/write-value-as-string history-req)
+                                  {:body    (json/stringify history-req)
                                    :headers json-headers})]
         (is (= 200 (:status history-res)))
         (is (= [{"f:retract" [],
@@ -97,7 +97,7 @@
                    "id"      "ex:cred-test",
                    "type"    "schema:Test"}],
                  "f:t"       2}]
-               (-> history-res :body json/read-value)))))
+               (-> history-res :body (json/parse false))))))
 
     (testing "invalid credential"
       (let [valid-tx    (<!!
@@ -111,8 +111,8 @@
                                   "ALTEREDVALUE")
 
             invalid-res (api-post :transact
-                                  {:body    (json/write-value-as-string invalid-tx)
+                                  {:body    (json/stringify invalid-tx)
                                    :headers json-headers})]
         (is (= 400 (:status invalid-res)))
         (is (= {"error" "Invalid credential"}
-               (-> invalid-res :body json/read-value)))))))
+               (-> invalid-res :body (json/parse false))))))))

@@ -1,10 +1,10 @@
 (ns fluree.server.integration.sparql-test
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing use-fixtures]]
+            [fluree.db.util.json :as json]
             [fluree.server.integration.test-system
              :refer [api-post create-rand-ledger run-test-server sparql-headers
-                     sparql-results-headers sparql-update-headers]]
-            [jsonista.core :as json]))
+                     sparql-results-headers sparql-update-headers]]))
 
 (use-fixtures :once run-test-server)
 
@@ -49,19 +49,17 @@
               "results"
               {"bindings"
                [{"name" {"value" "query-sparql-test", "type" "literal"}}]}}
-             (-> query-res :body json/read-value)))
+             (-> query-res :body (json/parse false))))
 
       (is (= 200 (:status meta-res)))
-      (is (= {"status" 200,
-              "result"
-              {"results"
-               {"bindings"
-                [{"name" {"value" "query-sparql-test", "type" "literal"}}]},
-               "head" {"vars" ["name"]}}}
-             (-> meta-res :body json/read-value (dissoc "time"))))
+      (is (= {"results"
+              {"bindings"
+               [{"name" {"value" "query-sparql-test", "type" "literal"}}]},
+              "head" {"vars" ["name"]}}
+             (-> meta-res :body (json/parse false))))
       (is (= 2 (-> meta-res :headers (get "x-fdb-fuel") Integer/parseInt)))
       (is (= 200 (:status rdf-res)))
       (is (= {"@context" {"ex" "http://example.org/" "schema" "http://schema.org/"},
               "@graph" [{"@id" "ex:query-sparql-test"
                          "foo:name" ["query-sparql-test"]}]}
-             (-> rdf-res :body json/read-value))))))
+             (-> rdf-res :body (json/parse false)))))))

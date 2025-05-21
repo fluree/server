@@ -1,9 +1,9 @@
 (ns fluree.server.integration.history-query-test
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
+            [fluree.db.util.json :as json]
             [fluree.server.integration.test-system
              :as test-system
-             :refer [api-post json-headers run-test-server]]
-            [jsonista.core :as json]))
+             :refer [api-post json-headers run-test-server]]))
 
 (use-fixtures :once run-test-server)
 
@@ -20,7 +20,7 @@
   (testing "basic JSON history query works"
     (let [ledger-name   "history-query-json-test"
           txn-req       {:body
-                         (json/write-value-as-string
+                         (json/stringify
                           {"ledger"   ledger-name
                            "@context" test-system/default-context
                            "insert"   [{"id"      "ex:query-test"
@@ -30,7 +30,7 @@
           txn-res       (api-post :create txn-req)
           _             (assert (= 201 (:status txn-res)))
           txn2-req      {:body
-                         (json/write-value-as-string
+                         (json/stringify
                           {"ledger"   ledger-name
                            "@context" test-system/default-context
                            "insert"   [{"id"           "ex:query-test"
@@ -39,14 +39,14 @@
           txn2-res      (api-post :transact txn2-req)
           _             (assert (= 200 (:status txn2-res)))
           query-req     {:body
-                         (json/write-value-as-string
+                         (json/stringify
                           {"@context"       test-system/default-context
                            "from"           ledger-name
                            "commit-details" true
                            "t"              {"at" "latest"}})
                          :headers json-headers}
           query-res     (api-post :history query-req)
-          query-results (-> query-res :body json/read-value)]
+          query-results (-> query-res :body (json/parse false))]
       (is (= 200 (:status query-res))
           (str "History query response was: " (pr-str query-res)))
       (let [history-expectations

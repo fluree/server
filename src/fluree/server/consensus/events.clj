@@ -142,15 +142,16 @@
 (defn transaction-committed
   "Post-transaction, the message we will broadcast out and/or deliver
   to a client awaiting a response."
-  ([ledger-id tx-id {:keys [db address hash fuel policy] :as _commit-result}]
+  ([ledger-id tx-id {:keys [db address hash fuel policy time] :as _commit-result}]
    (cond-> {:type      :transaction-committed
             :ledger-id ledger-id
             :t         (:t db)
             :tx-id     tx-id
             :commit    {:address address
                         :hash    hash}}
-     fuel   (assoc ::track/fuel fuel)
-     policy (assoc ::track/policy policy)))
+     time   (assoc :time time)
+     fuel   (assoc :fuel fuel)
+     policy (assoc :policy policy)))
   ([processing-server ledger-id tx-id commit-result]
    (-> (transaction-committed ledger-id tx-id commit-result)
        (assoc :server processing-server))))

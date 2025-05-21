@@ -1,13 +1,14 @@
 (ns fluree.server.handlers.create
-  (:require
-   [fluree.db.api :as fluree]
-   [fluree.db.util.log :as log]
-   [fluree.server.consensus :as consensus]
-   [fluree.server.handlers.shared :refer [deref! defhandler]]
-   [fluree.server.handlers.transact :refer [derive-tx-id extract-ledger-id
-                                            monitor-consensus-persistence
-                                            monitor-commit]]
-   [fluree.server.watcher :as watcher]))
+  (:require [fluree.db.api :as fluree]
+            [fluree.db.util.log :as log]
+            [fluree.server.consensus :as consensus]
+            [fluree.server.handlers.shared :as shared :refer [deref! defhandler]]
+            [fluree.server.handlers.transact :refer [derive-tx-id
+                                                     commit-event->response-body
+                                                     extract-ledger-id
+                                                     monitor-consensus-persistence
+                                                     monitor-commit]]
+            [fluree.server.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
 
@@ -17,7 +18,7 @@
         persist-resp-ch (consensus/queue-new-ledger consensus ledger tx-id txn opts)]
     (monitor-consensus-persistence watcher ledger tx-id persist-resp-ch)))
 
-(defn create-ledger
+(defn create-ledger!
   [consensus watcher ledger-id txn opts]
   (let [p         (promise)
         tx-id     (derive-tx-id txn)
@@ -30,8 +31,16 @@
   [{:keys          [fluree/opts fluree/consensus fluree/watcher]
     {:keys [body]} :parameters}]
   (log/debug "create body:" body)
-  (let [txn       (fluree/format-txn body opts)
-        ledger-id (or (:ledger opts)
-                      (extract-ledger-id txn))
-        resp-p    (create-ledger consensus watcher ledger-id txn {})]
-    {:status 201, :body (deref! resp-p)}))
+  (let [txn          (fluree/format-txn body opts)
+        ledger-id    (or (:ledger opts)
+                         (extract-ledger-id txn))
+        opts*        (dissoc opts :identity) ; Remove identity option because the
+                                             ; request should have been validated
+                                             ; upstream, and there are no policies
+                                             ; in an empty ledger to allow any
+                                             ; actions
+        commit-event (deref! (create-ledger! consensus watcher ledger-id txn opts*))
+
+        body (commit-event->response-body commit-event)]
+    (shared/with-tracking-headers {:status 201, :body body}
+      commit-event)))

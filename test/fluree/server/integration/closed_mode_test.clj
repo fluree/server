@@ -1,9 +1,9 @@
 (ns fluree.server.integration.closed-mode-test
   (:require [clojure.test :as test :refer [deftest testing is]]
             [fluree.crypto :as crypto]
+            [fluree.db.util.json :as json]
             [fluree.server.integration.test-system
-             :refer [api-post auth json-headers jwt-headers run-closed-test-server]]
-            [jsonista.core :as json]))
+             :refer [api-post auth json-headers jwt-headers run-closed-test-server]]))
 
 (test/use-fixtures :once run-closed-test-server)
 
@@ -43,7 +43,7 @@
                                     "f:action" [{"@id" "f:view"} {"@id" "f:modify"}]
                                     "f:query" {"@type" "@json"
                                                "@value" {}}}]}}
-            resp (api-post :create {:body    (crypto/create-jws (json/write-value-as-string create-req)
+            resp (api-post :create {:body    (crypto/create-jws (json/stringify create-req)
                                                                 (:private root-auth))
                                     :headers jwt-headers})]
         (testing "is accepted"
@@ -52,7 +52,7 @@
       (let [transact-req {"ledger" "closed-test"
                           "@context" default-context
                           "insert" [{"@id" "ex:coin" "ex:name" "nickel"}]}
-            resp (api-post :transact {:body (crypto/create-jws (json/write-value-as-string transact-req)
+            resp (api-post :transact {:body (crypto/create-jws (json/stringify transact-req)
                                                                (:private root-auth))
                                       :headers jwt-headers})]
         (testing "is accepted"
@@ -62,19 +62,19 @@
                        "@context" default-context
                        "where" [{"@id" "?s" "ex:name" "?name"}]
                        "select" "?s"}
-            resp (api-post :query {:body (crypto/create-jws (json/write-value-as-string query-req)
+            resp (api-post :query {:body (crypto/create-jws (json/stringify query-req)
                                                             (:private root-auth))
                                    :headers jwt-headers})]
         (testing "is accepted"
           (is (= 200 (:status resp)))
           (is (= ["did:fluree:TfHgFTQQiJMHaK1r1qxVPZ3Ridj9pCozqnh" "ex:coin"]
-                 (-> resp :body json/read-value))))))
+                 (-> resp :body (json/parse false)))))))
     (testing "to query history"
       (let [history-req {"from" "closed-test"
                          "@context" default-context
                          "history" "ex:coin"
                          "t" {"from" 1 "to" "latest"}}
-            resp (api-post :history {:body (crypto/create-jws (json/write-value-as-string history-req)
+            resp (api-post :history {:body (crypto/create-jws (json/stringify history-req)
                                                               (:private root-auth))
                                      :headers jwt-headers})]
         (testing "is accepted"
@@ -82,7 +82,7 @@
           (is (= [{"f:retract" [],
                    "f:assert" [{"ex:name" "nickel", "id" "ex:coin"}],
                    "f:t" 2}]
-                 (-> resp :body json/read-value)))))))
+                 (-> resp :body (json/parse false))))))))
 
   (testing "non-root request"
     (testing "to create"
@@ -98,17 +98,17 @@
                                     "f:action" [{"@id" "f:view"} {"@id" "f:modify"}]
                                     "f:query" {"@type" "@json"
                                                "@value" {}}}]}}
-            resp (api-post :create {:body    (crypto/create-jws (json/write-value-as-string create-req)
+            resp (api-post :create {:body    (crypto/create-jws (json/stringify create-req)
                                                                 (:private non-root-auth))
                                     :headers jwt-headers})]
         (testing "is rejected"
           (is (= 403 (:status resp)))
-          (is (= {"error" "Untrusted credential."} (-> resp :body json/read-value))))))
+          (is (= {"error" "Untrusted credential."} (-> resp :body (json/parse false)))))))
     (testing "to transact"
       (let [create-req {"ledger" "closed-test"
                         "@context" default-context
                         "insert" [{"@id" "ex:coin" "ex:name" "nickel"}]}
-            resp (api-post :transact {:body (crypto/create-jws (json/write-value-as-string create-req)
+            resp (api-post :transact {:body (crypto/create-jws (json/stringify create-req)
                                                                (:private non-root-auth))
                                       :headers jwt-headers})]
         (testing "is rejected"
@@ -118,23 +118,23 @@
                         "@context" default-context
                         "where" [{"@id" "?s" "ex:name" "?name"}]
                         "select" ["?s" "?name"]}
-            resp (api-post :query {:body (crypto/create-jws (json/write-value-as-string create-req)
+            resp (api-post :query {:body (crypto/create-jws (json/stringify create-req)
                                                             (:private non-root-auth))
                                    :headers jwt-headers})]
         (testing "is accepted"
           (is (= 200 (:status resp)))
-          (is (= [] (-> resp :body json/read-value))))))
+          (is (= [] (-> resp :body (json/parse false)))))))
     (testing "to query history"
       (let [create-req {"@context" default-context
                         "from" "closed-test"
                         "history" "ex:coin"
                         "t" {"from" 1}}
-            resp (api-post :history {:body (crypto/create-jws (json/write-value-as-string create-req)
+            resp (api-post :history {:body (crypto/create-jws (json/stringify create-req)
                                                               (:private non-root-auth))
                                      :headers jwt-headers})]
         (testing "is accepted"
           (is (= 200 (:status resp)))
-          (is (= [] (-> resp :body json/read-value))))))
+          (is (= [] (-> resp :body (json/parse false)))))))
     (testing "to claim more authority"
       (let [create-req {"from" "closed-test"
                         "@context" default-context
@@ -142,12 +142,12 @@
                         "select" ["?s" "?name"]
                         ;; claiming root-auth identity in opts
                         "opts" {"did" (:id root-auth)}}
-            resp (api-post :query {:body (crypto/create-jws (json/write-value-as-string create-req)
+            resp (api-post :query {:body (crypto/create-jws (json/stringify create-req)
                                                             (:private non-root-auth))
                                    :headers jwt-headers})]
         (testing "is silently demoted"
           (is (= 200 (:status resp)))
-          (is (= [] (-> resp :body json/read-value)))))))
+          (is (= [] (-> resp :body (json/parse false))))))))
 
   (testing "unsigned request"
     (testing "to create"
@@ -163,37 +163,37 @@
                                     "f:action" [{"@id" "f:view"} {"@id" "f:modify"}]
                                     "f:query" {"@type" "@json"
                                                "@value" {}}}]}}
-            resp (api-post :create {:body    (json/write-value-as-string create-req)
+            resp (api-post :create {:body    (json/stringify create-req)
                                     :headers json-headers})]
         (testing "is rejected"
           (is (= 400 (:status resp)))
-          (is (= {"error" "Missing credential."} (-> resp :body json/read-value))))))
+          (is (= {"error" "Missing credential."} (-> resp :body (json/parse false)))))))
     (testing "to transact"
       (let [transact-req {"ledger" "closed-test3"
                           "@context" default-context
                           "insert" [{"@id" "ex:coin" "ex:name" "nickel"}]}
-            resp (api-post :transact {:body (json/write-value-as-string transact-req)
+            resp (api-post :transact {:body (json/stringify transact-req)
                                       :headers json-headers})]
         (testing "is rejected"
           (is (= 400 (:status resp)))
-          (is (= {"error" "Missing credential."} (-> resp :body json/read-value))))))
+          (is (= {"error" "Missing credential."} (-> resp :body (json/parse false)))))))
     (testing "to query"
       (let [query-req {"from" "closed-test3"
                        "@context" default-context
                        "where" [{"@id" "?s" "ex:name" "?name"}]
                        "select" ["?s" "?name"]}
-            resp (api-post :query {:body (json/write-value-as-string query-req)
+            resp (api-post :query {:body (json/stringify query-req)
                                    :headers json-headers})]
         (testing "is accepted"
           (is (= 400 (:status resp)))
-          (is (= {"error" "Missing credential."} (-> resp :body json/read-value))))))
+          (is (= {"error" "Missing credential."} (-> resp :body (json/parse false)))))))
     (testing "to query history"
       (let [history-req {"from" "closed-test3"
                          "@context" default-context
                          "commit" true
                          "t" {"from" 1 "to" "latest"}}
-            resp (api-post :history {:body (json/write-value-as-string history-req)
+            resp (api-post :history {:body (json/stringify history-req)
                                      :headers json-headers})]
         (testing "is rejected"
           (is (= 400 (:status resp)))
-          (is (= {"error" "Missing credential."} (-> resp :body json/read-value))))))))
+          (is (= {"error" "Missing credential."} (-> resp :body (json/parse false)))))))))

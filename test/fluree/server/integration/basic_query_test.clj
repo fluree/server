@@ -1,9 +1,9 @@
 (ns fluree.server.integration.basic-query-test
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
+            [fluree.db.util.json :as json]
             [fluree.server.integration.test-system
              :as test-system
-             :refer [api-post create-rand-ledger json-headers run-test-server]]
-            [jsonista.core :as json]))
+             :refer [api-post create-rand-ledger json-headers run-test-server]]))
 
 (use-fixtures :once run-test-server)
 
@@ -11,7 +11,7 @@
   (testing "can query a basic entity w/ JSON"
     (let [ledger-name (create-rand-ledger "query-endpoint-basic-entity-test")
           txn-req     {:body
-                       (json/write-value-as-string
+                       (json/stringify
                         {"ledger"   ledger-name
                          "@context" test-system/default-context
                          "insert"   [{"id"      "ex:query-test"
@@ -21,7 +21,7 @@
           txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
           query-req   {:body
-                       (json/write-value-as-string
+                       (json/stringify
                         {"@context" test-system/default-context
                          "from"     ledger-name
                          "select"   '{?t ["*"]}
@@ -32,12 +32,12 @@
       (is (= [{"id"      "ex:query-test"
                "type"    "schema:Test"
                "ex:name" "query-test"}]
-             (-> query-res :body json/read-value)))))
+             (-> query-res :body (json/parse false))))))
 
   (testing "union query works"
     (let [ledger-name (create-rand-ledger "query-endpoint-union-test")
           txn-req     {:body
-                       (json/write-value-as-string
+                       (json/stringify
                         {"ledger"   ledger-name
                          "@context" test-system/default-context
                          "insert"   {"@graph"
@@ -51,7 +51,7 @@
           txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
           query-req   {:body
-                       (json/write-value-as-string
+                       (json/stringify
                         {"@context" test-system/default-context
                          "from"     ledger-name
                          "select"   "?n"
@@ -62,12 +62,12 @@
           query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res)))
       (is (= ["query-test" "Wes"]
-             (-> query-res :body json/read-value)))))
+             (-> query-res :body (json/parse false))))))
 
   (testing "optional query works"
     (let [ledger-name (create-rand-ledger "query-endpoint-optional-test")
           txn-req     {:body
-                       (json/write-value-as-string
+                       (json/stringify
                         {"ledger"   ledger-name
                          "@context" test-system/default-context
                          "insert"   {"@graph"
@@ -97,7 +97,7 @@
                                      "schema:name" ?name}
                                     ["optional" {"id" ?s, "ex:favColor" ?favColor}]]}
           query-req   {:body
-                       (json/write-value-as-string query)
+                       (json/stringify query)
                        :headers json-headers}
           query-res   (api-post :query query-req)]
       (is (= 200 (:status query-res))
@@ -105,13 +105,13 @@
       (is (= #{["Cam" nil]
                ["Alice" "Green"]
                ["Brian" nil]}
-             (-> query-res :body json/read-value set))
+             (-> query-res :body (json/parse false) set))
           (str "Response was: " (pr-str query-res)))))
 
   (testing "selectOne query works"
     (let [ledger-name (create-rand-ledger "query-endpoint-selectOne-test")
           txn-req     {:body
-                       (json/write-value-as-string
+                       (json/stringify
                         {"ledger"   ledger-name
                          "@context" test-system/default-context
                          "insert"   [{"id"      "ex:query-test"
@@ -121,7 +121,7 @@
           txn-res     (api-post :transact txn-req)
           _           (assert (= 200 (:status txn-res)))
           query-req   {:body
-                       (json/write-value-as-string
+                       (json/stringify
                         {"@context"  test-system/default-context
                          "from"      ledger-name
                          "selectOne" '{?t ["*"]}
@@ -132,7 +132,7 @@
       (is (= {"id"      "ex:query-test"
               "type"    "schema:Test"
               "ex:name" "query-test"}
-             (-> query-res :body json/read-value)))))
+             (-> query-res :body (json/parse false))))))
 
   (testing "bind query works"
     (let [ledger-name (create-rand-ledger "query-endpoint-bind-test")
@@ -149,7 +149,7 @@
                        "ex"     "http://example.org/"}
           txn-req     {:headers json-headers
                        :body
-                       (json/write-value-as-string
+                       (json/stringify
                         {"ledger"   ledger-name
                          "@context" context
                          "insert"
@@ -183,7 +183,7 @@
           txn-res   (api-post :transact txn-req)
           _         (assert (= 200 (:status txn-res)))
           query-req {:body
-                     (json/write-value-as-string
+                     (json/stringify
                       {"@context" context
                        "from"     ledger-name
                        "select"   ["?name" "?age" "?canVote"]
@@ -199,7 +199,7 @@
               ["Betty" 82 true]
               ["Freddy" 4 false]
               ["Leticia" 2 false]]
-             (-> query-res :body json/read-value))))))
+             (-> query-res :body (json/parse false)))))))
 
 #_(deftest ^:integration ^:edn query-edn-test
     (testing "can query a basic entity w/ EDN"

@@ -2,11 +2,11 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [is testing]]
+            [fluree.db.util.json :as json]
             [fluree.server.integration.test-system
              :refer [api-post create-rand-ledger json-headers set-server-ports api-port]
              :as test-system]
-            [fluree.server.system :as system]
-            [jsonista.core :as json])
+            [fluree.server.system :as system])
   (:import (java.time Instant)))
 
 (def ^:private mb-size (* 1024 1024)) ; 1 MB in bytes
@@ -33,9 +33,7 @@
   "Runs all benchmark tests with the specified configuration file."
   [config-file run-tests]
   (set-server-ports)
-  (let [config (-> (io/resource config-file)
-                   slurp
-                   json/read-value)
+  (let [config (-> config-file io/resource slurp (json/parse false))
         ; Find the API server config and update its port
         updated-port-config (update config "@graph"
                                     (fn [nodes]
@@ -120,8 +118,9 @@
                        (for [batch (range num-batches)]
                          (let [batch-data (generate-transaction-data batch-size-mb)
                                _         (println (format "Processing batch %d of %.0f" (inc batch) num-batches))
-                               req      (json/write-value-as-string
-                                         (assoc batch-data "ledger" ledger-name))
+                               req      (-> batch-data
+                                            (assoc :ledger ledger-name)
+                                            json/stringify)
                                res      (api-post :transact {:body req :headers json-headers})]
                            (when-not (= 200 (:status res))
                              (throw (ex-info "Transaction failed"

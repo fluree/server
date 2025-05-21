@@ -1,9 +1,9 @@
 (ns fluree.server.integration.remote-system-test
   (:require [clojure.test :refer [are deftest testing use-fixtures]]
+            [fluree.db.util.json :as json]
             [fluree.server.integration.test-system :as test-system
              :refer [api-post create-rand-ledger json-headers]]
-            [fluree.server.system :as system]
-            [jsonista.core :as json]))
+            [fluree.server.system :as system]))
 
 (def all-ports (test-system/find-open-ports 3))
 (def authors-port (nth all-ports 0))
@@ -165,7 +165,7 @@
                      "xsd"    "http://www.w3.org/2001/XMLSchema#"}
 
             authors-ledger      (create-rand-ledger "test/authors" authors-port)
-            authors-insert-req  {:body    (json/write-value-as-string
+            authors-insert-req  {:body    (json/stringify
                                            {"@context" [context "https://schema.org"]
                                             "ledger"   authors-ledger
                                             "insert"   [{"@id"   "https://www.wikidata.org/wiki/Q42"
@@ -178,7 +178,7 @@
             authors-insert-resp (api-post :transact authors-insert-req authors-port)
 
             books-ledger      (create-rand-ledger "test/books" books-port)
-            books-insert-req  {:body    (json/write-value-as-string
+            books-insert-req  {:body    (json/stringify
                                          {"@context" [context "https://schema.org"]
                                           "ledger"   books-ledger
                                           "insert"   [{"id"     "https://www.wikidata.org/wiki/Q3107329",
@@ -195,7 +195,7 @@
             books-insert-resp (api-post :transact books-insert-req books-port)
 
             movies-ledger      (create-rand-ledger "test/movies" movies-port)
-            movies-insert-req  {:body    (json/write-value-as-string
+            movies-insert-req  {:body    (json/stringify
                                           {"@context" [context "https://schema.org"]
                                            "ledger"   movies-ledger
                                            "insert"   [{"id"                        "https://www.wikidata.org/wiki/Q836821",
@@ -233,7 +233,7 @@
           authors-insert-resp books-insert-resp movies-insert-resp)
 
         (testing "can be queried for their combined data set no matter which system the query originates"
-          (let [query-req         {:body    (json/write-value-as-string
+          (let [query-req         {:body    (json/stringify
                                              {"@context" "https://schema.org"
                                               "from"     [authors-ledger books-ledger movies-ledger]
                                               "select"   ["?movieName" "?bookIsbn" "?authorName"]
@@ -254,5 +254,5 @@
               author-query-resp book-query-resp movie-query-resp)
 
             ;; Each system returned the same and correct answer when queired
-            (are [resp] (-> resp :body json/read-value (= correct-answer))
+            (are [resp] (-> resp :body (json/parse false) (= correct-answer))
               author-query-resp book-query-resp movie-query-resp)))))))
