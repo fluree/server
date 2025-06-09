@@ -67,31 +67,33 @@
    "f"      "https://ns.flur.ee/ledger#"})
 
 (defn file-server-config
-  [file-path]
-  {"@context" {"@base"    "https://ns.flur.ee/dev/config/",
-               "@vocab"   "https://ns.flur.ee/system#",
-               "profiles" {"@container" ["@graph", "@id"]}}
-   "@id"      "testSystem"
-   "@graph"   [{"@id"   "fileStorage"
-                "@type" "Storage"
-                "filePath" file-path}
-               {"@id"              "testConnection"
-                "@type"            "Connection"
-                "parallelism"      1
-                "cacheMaxMb"       100
-                "commitStorage"    {"@id" "fileStorage"}
-                "indexStorage"     {"@id" "fileStorage"}
-                "primaryPublisher" {"@type"   "Publisher"
-                                    "storage" {"@id" "fileStorage"}}}
-               {"@id"               "testConsensus"
-                "@type"             "Consensus"
-                "consensusProtocol" "standalone"
-                "connection"        {"@id" "testConnection"}
-                "maxPendingTxns"    16}
-               {"@id"          "testApiServer"
-                "@type"        "API"
-                "httpPort"     @api-port
-                "maxTxnWaitMs" 45000}]})
+  ([file-path]
+   (file-server-config file-path @api-port))
+  ([file-path server-port]
+   {"@context" {"@base"    "https://ns.flur.ee/dev/config/",
+                "@vocab"   "https://ns.flur.ee/system#",
+                "profiles" {"@container" ["@graph", "@id"]}}
+    "@id"      "testSystem"
+    "@graph"   [{"@id"      "fileStorage"
+                 "@type"    "Storage"
+                 "filePath" file-path}
+                {"@id"              "testConnection"
+                 "@type"            "Connection"
+                 "parallelism"      1
+                 "cacheMaxMb"       100
+                 "commitStorage"    {"@id" "fileStorage"}
+                 "indexStorage"     {"@id" "fileStorage"}
+                 "primaryPublisher" {"@type"   "Publisher"
+                                     "storage" {"@id" "fileStorage"}}}
+                {"@id"               "testConsensus"
+                 "@type"             "Consensus"
+                 "consensusProtocol" "standalone"
+                 "connection"        {"@id" "testConnection"}
+                 "maxPendingTxns"    16}
+                {"@id"          "testApiServer"
+                 "@type"        "API"
+                 "httpPort"     server-port
+                 "maxTxnWaitMs" 45000}]}))
 
 (defn default-memory-server-config
   []
