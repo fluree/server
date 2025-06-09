@@ -1,7 +1,7 @@
 {:deps {org.clojure/clojure    {:mvn/version "1.11.3"}
         org.clojure/core.async {:mvn/version "1.6.681"}
         com.fluree/db          {:git/url "https://github.com/fluree/db.git"
-                                :git/sha "a519625dfb5422d001852873df8f09a4d01d02d7"}
+                                :git/sha "7f7011be1f3f9481640078550ad83735c5c99597"}
         com.fluree/json-ld     {:git/url "https://github.com/fluree/json-ld.git"
                                 :git/sha "73a990a4b803d0b4cfbbbe4dc16275b39a3add4e"}
 
@@ -23,6 +23,10 @@
         ;; logging
         ch.qos.logback/logback-classic {:mvn/version "1.5.6"}
         org.slf4j/slf4j-api            {:mvn/version "2.0.13"}
+
+        ;; distributed tracing
+        io.opentelemetry.instrumentation/opentelemetry-logback-mdc-1.0 {:mvn/version "2.16.0-alpha"}
+        com.github.steffan-westcott/clj-otel-exporter-otlp {:mvn/version "0.2.8"}
 
         ;; http
         ;; ring-jetty9-adapter 0.30.x+ uses Jetty 12 & requires JDK 17+
@@ -53,6 +57,11 @@
   :run-dev
   {:exec-fn   fluree.server/start
    :exec-args {:profile :dev}}
+
+  :otel {:jvm-opts ["-javaagent:opentelemetry-javaagent.jar"
+                    "-Dotel.traces.exporter=none"
+                    "-Dotel.metrics.exporter=none"
+                    "-Dotel.logs.exporter=none"]}
 
   :test
   {:extra-paths ["test"]
