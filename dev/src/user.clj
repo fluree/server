@@ -3,16 +3,15 @@
             [clojure.string :as str]
             [fluree.db.api :as fluree]
             [fluree.db.connection.system :as conn-system]
-            [fluree.server.handlers.transact :as tx-handler]
-            [fluree.server.handlers.create :as create-handler]
-            [fluree.server.consensus.raft.handler :as consensus-handler]
-            [fluree.server.consensus.raft]
-            [fluree.server.system :as system]
             [fluree.db.util.log :as log]
             [fluree.server.config :as config]
+            [fluree.server.consensus.raft]
+            [fluree.server.consensus.raft.handler :as consensus-handler]
+            [fluree.server.handlers.create :as create-handler]
+            [fluree.server.handlers.transact :as tx-handler]
+            [fluree.server.system :as system]
             [integrant.core :as ig]
             [integrant.repl :refer [clear go halt init reset reset-all]]))
-
 
 ;; Register dev-config as the default config
 (def sys-config (config/read-resource "file-config.jsonld"))

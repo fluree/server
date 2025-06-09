@@ -1,9 +1,10 @@
 (ns fluree.server.handler
   (:require [clojure.core.async :as async :refer [<!!]]
+            [clojure.string :as str]
             [fluree.db.json-ld.credential :as cred]
             [fluree.db.query.fql.syntax :as fql]
             [fluree.db.query.history.parse :as fqh]
-            [fluree.db.util.core :as util]
+            [fluree.db.track :as-alias track]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [fluree.db.validation :as v]
@@ -51,6 +52,17 @@
 (def DID
   (m/schema [:string {:min 1}]))
 
+(def CommitAddress
+  (m/schema [:string {:min 1}]))
+
+(def CommitHash
+  (m/schema [:string {:min 1}]))
+
+(def CommitResultMessage
+  (m/schema [:map
+             [:address CommitAddress]
+             [:hash CommitHash]]))
+
 (def CreateResponseBody
   (m/schema [:and
              [:map-of :keyword :any]
@@ -58,14 +70,16 @@
               [:ledger LedgerAlias]
               [:t TValue]
               [:tx-id DID]
-              [:commit LedgerAddress]]]))
+              [:commit CommitResultMessage]]]))
 
 (def SubscriptionRequestBody
   (m/schema [:fn {:error/message {:en "Invalid websocket upgrade request"}}
              http/ws-upgrade-request?]))
 
 (def TransactRequestBody
-  (m/schema [:map-of :any :any]))
+  (m/schema [:orn
+             [:sparql :string]
+             [:fql [:map-of :any :any]]]))
 
 (def TransactResponseBody
   (m/schema [:and
@@ -74,7 +88,7 @@
               [:ledger LedgerAlias]
               [:t TValue]
               [:tx-id DID]
-              [:commit  LedgerAddress]]]))
+              [:commit CommitResultMessage]]]))
 
 (def FqlQuery (m/schema (-> (fql/query-schema [])
                             ;; hack to make query schema open instead of closed
@@ -87,7 +101,8 @@
 (def QueryResponse
   (m/schema [:orn
              [:select [:sequential [:or coll? map?]]]
-             [:select-one [:or coll? map?]]]))
+             [:select-one [:or coll? map?]]
+             [:construct map?]]))
 
 (def HistoryQuery
   (m/schema (fqh/history-query-schema [[:from LedgerAlias]])
@@ -173,14 +188,13 @@
    :handler    #'ledger/history})
 
 (defn wrap-assoc-system
-  [conn consensus watcher subscriptions broadcaster handler]
+  [conn consensus watcher subscriptions handler]
   (fn [req]
     (-> req
         (assoc :fluree/conn conn
                :fluree/consensus consensus
                :fluree/watcher watcher
-               :fluree/subscriptions subscriptions
-               :fluree/broadcaster broadcaster)
+               :fluree/subscriptions subscriptions)
         handler)))
 
 (defn wrap-cors
@@ -198,24 +212,21 @@
   [handler]
   (fn [{:keys [body-params] :as req}]
     (log/trace "unwrap-credential body-params:" body-params)
-    (let [verified (<!! (cred/verify body-params))
-          _        (log/trace "unwrap-credential verified:" verified)
-          {:keys [subject did]}
-          (cond
-            (:subject verified) ; valid credential
-            verified
-
-            (and (util/exception? verified)
-                 (not= 400 (-> verified ex-data :status))) ; no credential
-            {:subject body-params}
-
-            :else ; invalid credential
-            (throw (ex-info "Invalid credential"
-                            {:response {:status 400
-                                        :body   {:error "Invalid credential"}}})))
-          req*     (assoc req :body-params subject :credential/did did :raw-txn body-params)]
-      (log/debug "Unwrapped credential with did:" did)
-      (handler req*))))
+    (if (cred/signed? body-params)
+      (let [verified (<!! (cred/verify body-params))]
+        (if-let [subject (:subject verified)]
+          (let [did (:did verified)]
+            (log/debug "Unwrapped credential with did:" did)
+            (-> req
+                (assoc :body-params subject
+                       :credential/did did
+                       :raw-txn body-params)
+                handler))
+          (throw (ex-info "Invalid credential"
+                          {:response {:status 400
+                                      :body   {:error "Invalid credential"}}}))))
+      (do (log/trace "Request was not signed:" body-params)
+          (handler req)))))
 
 (def root-only-routes
   #{"/fluree/create"})
@@ -243,45 +254,120 @@
                   (handler req*))))
         (handler req)))))
 
-(defn wrap-set-fuel-header
-  [handler]
+(defn set-track-header
+  [track-opt handler]
   (fn [req]
-    (let [resp (handler req)
-          fuel 1000] ; TODO: get this for real
-      (assoc-in resp [:headers "x-fdb-fuel"] (str fuel)))))
+    (let [resp (handler req)]
+      (if-let [header-val (-> resp :body (get track-opt))]
+        (let [opt-name (str "x-fdb-" (name track-opt))]
+          (-> resp
+              (assoc-in [:headers opt-name] (str header-val))
+              (update :body dissoc track-opt)))
+        resp))))
 
-(defn wrap-policy-metadata
-  "Both Fluree-Policy-Class and Fluree-Policy-Identity can be optionally
-  set in the header for non-credentialed queries/transactions. The primary
-  motivation is enforcing policy with SPARQL which doesn't have an opts
-  map option, although if set, it will also override policyClass/Identity
-  that might have otherwise been set in FlureeQL/JSON."
+(def wrap-set-fuel-header
+  (partial set-track-header :fuel))
+
+(def wrap-set-policy-header
+  (partial set-track-header :policy))
+
+(def fluree-header-keys
+  ["fluree-track-meta" "fluree-max-fuel" "fluree-identity" "fluree-policy-identity"
+   "fluree-policy" "fluree-policy-class" "fluree-policy-values" "fluree-format"
+   "fluree-output" "fluree-track-fuel" "fluree-track-policy" "fluree-track-file"
+   "fluree-ledger"])
+
+(defn parse-boolean-header
+  [header name]
+  (case (str/lower-case header)
+    "false" false
+    "true"  true
+    (throw (ex-info (format "Invalid Fluree-%s header: must be boolean." name)
+                    {:status 400, :error :server/invalid-header}))))
+
+(defn wrap-header-opts
+  "Extract options from headers, parse and validate them where necessary, and
+  attach to request. Opts set in the header override those specified within the
+  transaction or query."
   [handler]
-  (fn [req]
-    (let [policy-identity (get-in req [:headers "fluree-policy-identity"])
-          policy-class    (get-in req [:headers "fluree-policy-class"])
-          policy          (when-let [p (get-in req [:headers "fluree-policy"])]
-                            (try
-                              (json/parse p false)
-                              (catch Exception _
-                                (throw (ex-info "Invalid Fluree-Policy header: must be JSON."
-                                                {:status 400})))))
-          policy-values   (when-let [pv (get-in req [:headers "fluree-policy-values"])]
-                            (try
-                              (let [pv* (json/parse pv false)]
-                                (if (sequential? pv*)
-                                  pv*
-                                  (throw (ex-info "Invalid Fluree-Policy-Values header, it must be a valid values binding: [[\"?varA\" \"?varB\"] [[<a1> <b1>] [<a2> <b2>] ...]]"
-                                                  {:status 400}))))
-                              (catch Exception _
-                                (throw (ex-info "Invalid Fluree-Policy-Values header: must be JSON."
-                                                {:status 400})))))]
-      (handler
-       (cond-> req
-         policy-identity (assoc :policy/identity policy-identity)
-         policy-class (assoc :policy/class policy-class)
-         policy (assoc :policy/policy policy)
-         policy-values (assoc :policy/values policy-values))))))
+  (fn [{:keys [headers credential/did] :as req}]
+    (let [prefix-count (count "fluree-")
+          {:keys [track-meta max-fuel track-fuel track-file identity policy-identity
+                  policy policy-class policy-values track-policy format output ledger]}
+          (-> headers
+              (select-keys fluree-header-keys)
+              (update-keys (fn [k] (keyword (subs k prefix-count)))))
+
+          max-fuel     (when max-fuel
+                         (try (Integer/parseInt max-fuel)
+                              (catch Exception e
+                                (throw (ex-info "Invalid Fluree-Max-Fuel header: must be integer."
+                                                {:status 400, :error :server/invalid-header}
+                                                e)))))
+          track-fuel   (some-> track-fuel (parse-boolean-header "track-fuel"))
+          track-policy (some-> track-policy (parse-boolean-header "track-policy"))
+          track-meta   (some-> track-meta (parse-boolean-header "track-meta"))
+          track-file   (some-> track-file (parse-boolean-header "track-file"))
+          meta         (if track-meta
+                         (if (and track-fuel track-policy track-file)
+                           true
+                           (cond-> {}
+                             (not (false? track-fuel))   (assoc :fuel true)
+                             (not (false? track-policy)) (assoc :policy true)
+                             (not (false? track-file))   (assoc :file true)
+                             true                        not-empty))
+                         (cond-> {}
+                           track-fuel   (assoc :fuel true)
+                           track-policy (assoc :policy true)
+                           track-file   (assoc :file true)
+                           true         not-empty))
+          ;; Accept header takes precedence over other ways of specifying query output
+          output       (cond (-> headers (get "accept") (= "application/sparql-results+json"))
+                             :sparql
+
+                             (= output "sparql") :sparql
+                             (= output "fql")    :fql
+                             :else               :fql)
+          ;; Content-Type header takes precedence over other ways of specifying query format
+          format (cond (-> headers (get "content-type") (= "application/sparql-query"))
+                       :sparql
+                       (-> headers (get "content-type") (= "application/sparql-update"))
+                       :sparql
+
+                       (= format "sparql") :sparql
+                       (= output "fql")    :fql
+                       :else               :fql)
+          policy        (when policy
+                          (try (json/parse policy false)
+                               (catch Exception _
+                                 (throw (ex-info "Invalid Fluree-Policy header: must be JSON."
+                                                 {:status 400})))))
+          policy-values (when policy-values
+                          (try (let [pv (json/parse policy-values false)]
+                                 (if (sequential? pv)
+                                   pv
+                                   (throw (ex-info "Invalid Fluree-Policy-Values header, it must be a valid values binding: [[\"?varA\" \"?varB\"] [[<a1> <b1>] [<a2> <b2>] ...]]"
+                                                   {:status 400}))))
+                               (catch Exception _
+                                 (throw (ex-info "Invalid Fluree-Policy-Values header: must be JSON."
+                                                 {:status 400})))))
+
+          opts (cond-> {}
+                 meta          (assoc :meta meta)
+                 max-fuel      (assoc :max-fuel max-fuel)
+                 format        (assoc :format format)
+                 output        (assoc :output output)
+                 ledger        (assoc :ledger ledger)
+                 policy        (assoc :policy policy)
+                 policy-class  (assoc :policy-class policy-class)
+                 policy-values (assoc :policy-values policy-values)
+
+                 policy-identity (assoc :identity identity)
+                 ;; Fluree-Identity overrides Fluree-Policy-Identity
+                 identity        (assoc :identity identity)
+                 ;; credential (signed) identity overrides all else
+                 did             (assoc :identity did))]
+      (handler (assoc req :fluree/opts opts)))))
 
 (defn sort-middleware-by-weight
   [weighted-middleware]
@@ -304,6 +390,16 @@
                     {::query  (String. (.readAllBytes ^InputStream data)
                                        ^String charset)
                      ::format :sparql})))]}))
+
+(def sparql-update-format
+  (mf/map->Format
+   {:name "application/sparql-update"
+    :decoder [(fn [_]
+                (reify
+                  mf/Decode
+                  (decode [_ data charset]
+                    (String. (.readAllBytes ^InputStream data)
+                             ^String charset))))]}))
 
 (def jwt-format
   "Turn a JWT from an InputStream into a string that will be found on :body-params in the
@@ -332,9 +428,8 @@
          resp)))))
 
 (defn compose-app-middleware
-  [{:keys [connection consensus watcher subscriptions broadcaster
-           root-identities closed-mode]
-    :as _config}]
+  [{:keys [connection consensus watcher subscriptions root-identities closed-mode]
+    :as   _config}]
   (let [exception-middleware (exception/create-exception-middleware
                               (merge
                                exception/default-handlers
@@ -351,7 +446,7 @@
     (sort-middleware-by-weight [[1 exception-middleware]
                                 [10 wrap-cors]
                                 [10 (partial wrap-assoc-system connection consensus
-                                             watcher subscriptions broadcaster)]
+                                             watcher subscriptions)]
                                 [20 (partial trace-http/wrap-reitit-route)]
                                 [25 (partial trace-http/wrap-server-span)]
                                 [50 unwrap-credential]
@@ -359,7 +454,7 @@
                                 [200 coercion/coerce-exceptions-middleware]
                                 [300 coercion/coerce-response-middleware]
                                 [400 coercion/coerce-request-middleware]
-                                [500 wrap-policy-metadata]
+                                [500 wrap-header-opts]
                                 [600 (wrap-closed-mode root-identities closed-mode)]
                                 [1000 exception-middleware]])))
 
@@ -369,6 +464,7 @@
            :parameters {:body CreateRequestBody}
            :responses  {201 {:body CreateResponseBody}
                         400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
                         500 {:body ErrorResponse}}
            :handler    #'create/default}}])
 
@@ -378,6 +474,7 @@
            :parameters {:body TransactRequestBody}
            :responses  {200 {:body TransactResponseBody}
                         400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
                         500 {:body ErrorResponse}}
            :handler    #'srv-tx/default}}])
 
@@ -451,6 +548,7 @@
                     (-> muuntaja/default-options
                         (assoc-in [:formats "application/json"] json-format)
                         (assoc-in [:formats "application/sparql-query"] sparql-format)
+                        (assoc-in [:formats "application/sparql-update"] sparql-update-format)
                         (assoc-in [:formats "application/jwt"] jwt-format)))
         middleware [swagger/swagger-feature
                     muuntaja-mw/format-negotiate-middleware

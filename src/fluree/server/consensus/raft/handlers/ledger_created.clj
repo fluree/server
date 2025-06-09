@@ -3,9 +3,8 @@
             [clojure.java.io :as io]
             [fluree.db.util.filesystem :as fs]
             [fluree.db.util.log :as log]
-            [fluree.server.consensus.events :as events]
             [fluree.server.consensus.raft.handlers.new-commit :as new-commit]
-            [fluree.server.watcher :as watcher])
+            [fluree.server.consensus.response :as response])
   (:import (java.io File)))
 
 (set! *warn-on-reflection* true)
@@ -84,6 +83,5 @@
 
 (defn deliver!
   "Responsible for producing the event broadcast to connected peers."
-  [{:keys [fluree/watcher] :as _config} handler-result]
-  (let [new-ledger-event (events/ledger-created nil nil handler-result)]
-    (watcher/deliver-commit watcher nil nil new-ledger-event)))
+  [{:keys [fluree/watcher fluree/broadcaster] :as _config} {:keys [ledger-id tx-id] :as commit-result}]
+  (response/announce-new-ledger watcher broadcaster ledger-id tx-id commit-result))

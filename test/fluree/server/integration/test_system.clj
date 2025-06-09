@@ -17,6 +17,14 @@
   {"Content-Type" "application/sparql-query"
    "Accept"       "application/json"})
 
+(def sparql-results-headers
+  {"Content-Type" "application/sparql-query"
+   "Accept"       "application/sparql-results+json"})
+
+(def sparql-update-headers
+  {"Content-Type" "application/sparql-update"
+   "Accept"       "application/json"})
+
 (def jwt-headers
   {"Content-Type" "application/jwt"
    "Accept"       "application/json"})
@@ -58,33 +66,63 @@
    "rdf"    "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
    "f"      "https://ns.flur.ee/ledger#"})
 
+(defn file-server-config
+  [file-path]
+  {"@context" {"@base"    "https://ns.flur.ee/dev/config/",
+               "@vocab"   "https://ns.flur.ee/system#",
+               "profiles" {"@container" ["@graph", "@id"]}}
+   "@id"      "testSystem"
+   "@graph"   [{"@id"   "fileStorage"
+                "@type" "Storage"
+                "filePath" file-path}
+               {"@id"              "testConnection"
+                "@type"            "Connection"
+                "parallelism"      1
+                "cacheMaxMb"       100
+                "commitStorage"    {"@id" "fileStorage"}
+                "indexStorage"     {"@id" "fileStorage"}
+                "primaryPublisher" {"@type"   "Publisher"
+                                    "storage" {"@id" "fileStorage"}}}
+               {"@id"               "testConsensus"
+                "@type"             "Consensus"
+                "consensusProtocol" "standalone"
+                "connection"        {"@id" "testConnection"}
+                "maxPendingTxns"    16}
+               {"@id"          "testApiServer"
+                "@type"        "API"
+                "httpPort"     @api-port
+                "maxTxnWaitMs" 45000}]})
+
+(defn default-memory-server-config
+  []
+  {"@context" {"@base"    "https://ns.flur.ee/dev/config/",
+               "@vocab"   "https://ns.flur.ee/system#",
+               "profiles" {"@container" ["@graph", "@id"]}}
+   "@id"      "testSystem"
+   "@graph"   [{"@id"   "memoryStorage"
+                "@type" "Storage"}
+               {"@id"              "testConnection"
+                "@type"            "Connection"
+                "parallelism"      1
+                "cacheMaxMb"       100
+                "commitStorage"    {"@id" "memoryStorage"}
+                "indexStorage"     {"@id" "memoryStorage"}
+                "primaryPublisher" {"@type"   "Publisher"
+                                    "storage" {"@id" "memoryStorage"}}}
+               {"@id"               "testConsensus"
+                "@type"             "Consensus"
+                "consensusProtocol" "standalone"
+                "connection"        {"@id" "testConnection"}
+                "maxPendingTxns"    16}
+               {"@id"          "testApiServer"
+                "@type"        "API"
+                "httpPort"     @api-port
+                "maxTxnWaitMs" 45000}]})
+
 (defn run-test-server
   [run-tests]
   (set-server-ports)
-  (let [config  {"@context" {"@base"    "https://ns.flur.ee/dev/config/",
-                             "@vocab"   "https://ns.flur.ee/system#",
-                             "profiles" {"@container" ["@graph", "@id"]}}
-                 "@id"      "testSystem"
-                 "@graph"   [{"@id"   "memoryStorage"
-                              "@type" "Storage"}
-                             {"@id"              "testConnection"
-                              "@type"            "Connection"
-                              "parallelism"      1
-                              "cacheMaxMb"       100
-                              "commitStorage"    {"@id" "memoryStorage"}
-                              "indexStorage"     {"@id" "memoryStorage"}
-                              "primaryPublisher" {"@type"   "Publisher"
-                                                  "storage" {"@id" "memoryStorage"}}}
-                             {"@id"               "testConsensus"
-                              "@type"             "Consensus"
-                              "consensusProtocol" "standalone"
-                              "connection"        {"@id" "testConnection"}
-                              "maxPendingTxns"    16}
-                             {"@id"          "testApiServer"
-                              "@type"        "API"
-                              "httpPort"     @api-port
-                              "maxTxnWaitMs" 45000}]}
-        server (system/start-config config)]
+  (let [server (system/start-config (default-memory-server-config))]
     (run-tests)
     (system/stop server)))
 
