@@ -13,7 +13,6 @@
             [fluree.server.consensus.standalone :as standalone]
             [fluree.server.handler :as handler]
             [fluree.server.http :as-alias http]
-            [fluree.server.task.migrate-sid :as task.migrate-sid]
             [fluree.server.watcher :as watcher]
             [integrant.core :as ig]
             [ring.adapter.jetty9 :as jetty]))
@@ -120,10 +119,6 @@
 (defmethod ig/halt-key! ::http/jetty
   [_ http-server]
   (jetty/stop-server http-server))
-
-(defmethod ig/init-key ::server/sid-migration
-  [_ {:keys [conn ledgers force]}]
-  (task.migrate-sid/migrate conn ledgers force))
 
 (defmethod ig/init-key :default
   [_ config]
