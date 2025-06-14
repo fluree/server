@@ -3,6 +3,7 @@
   protocols"
   (:require [fluree.db.connection :as connection]
             [fluree.db.track :as-alias track]
+            [fluree.db.transact :as transact]
             [fluree.db.util.async :refer [<? go-try]]
             [fluree.db.util.log :as log]))
 
@@ -78,7 +79,7 @@
   (go-try
     (if-let [raw-txn (-> event :opts :raw-txn)]
       (let [{:keys [ledger-id]} event
-            {:keys [address]}   (<? (connection/save-txn! conn ledger-id raw-txn))]
+            {:keys [address]}   (<? (transact/save-txn! conn ledger-id raw-txn))]
         (-> event
             (assoc-in [:opts :raw-txn-address] address)
             (update :opts dissoc :raw-txn)))
@@ -93,7 +94,7 @@
   (go-try
     (if-let [txn (:txn event)]
       (let [{:keys [ledger-id]} event
-            {:keys [address]}   (<? (connection/save-txn! conn ledger-id txn))
+            {:keys [address]}   (<? (transact/save-txn! conn ledger-id txn))
             event* (-> event
                        (assoc :txn-address address)
                        (dissoc :txn))]
