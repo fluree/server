@@ -1,5 +1,5 @@
 (ns fluree.server.consensus.raft.handlers.new-commit
-  (:require [clojure.core.async :as async] 
+  (:require [clojure.core.async :as async]
             [fluree.db.storage :as storage]
             [fluree.db.storage.file :as file-storage]
             [fluree.db.transact :as transact]
