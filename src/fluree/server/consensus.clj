@@ -9,7 +9,8 @@
 
 (defprotocol Transactor
   (-queue-new-ledger [transactor new-ledger-params])
-  (-queue-new-transaction [transactor new-tx-params]))
+  (-queue-new-transaction [transactor new-tx-params])
+  (-queue-drop-ledger [transactor drop-ledger-params]))
 
 (defn queue-new-ledger
   [transactor ledger-id tx-id txn opts]
@@ -22,3 +23,8 @@
   (log/trace "queue-new-transaction:" txn)
   (let [event-params (events/commit-transaction ledger-id tx-id txn opts)]
     (-queue-new-transaction transactor event-params)))
+
+(defn queue-drop-ledger
+  [transactor ledger-id]
+  (let [event-params (events/drop-ledger ledger-id)]
+    (-queue-drop-ledger transactor event-params)))

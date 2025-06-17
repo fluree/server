@@ -47,6 +47,13 @@
              :instant   (System/currentTimeMillis)}]
     (with-txn evt txn)))
 
+(defn drop-ledger
+  "Create a new event message to drop an existing ledger."
+  [ledger-id]
+  {:type      :ledger-drop
+   :ledger-id ledger-id
+   :instant   (System/currentTimeMillis)})
+
 (defn commit-transaction
   "Create a new event message to commit a new transaction. The `txn` argument may
   either be a transaction document map or an address for where the document is
@@ -173,6 +180,22 @@
   [evt]
   (type? evt :ledger-created))
 
+(defn ledger-dropped
+  ([ledger-id _drop-result]
+   {:type :ledger-dropped
+    :ledger-id ledger-id})
+  ([processing-server ledger-id drop-result]
+   (-> (ledger-dropped ledger-id drop-result)
+       (assoc :server processing-server))))
+
+(defn drop-error
+  ([ledger-id exception]
+   {:type :drop-error
+    :ledger-id ledger-id})
+  ([processing-server ledger-id exception]
+   (-> (drop-error ledger-id exception)
+       (assoc :server processing-server))))
+
 (defn error
   ([ledger-id tx-id exception]
    (-> {:type          :error
@@ -186,7 +209,8 @@
 
 (defn error?
   [evt]
-  (type? evt :error))
+  (or (type? evt :error)
+      (type? evt :drop-error)))
 
 (defn outcome?
   [evt]
