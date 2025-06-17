@@ -191,7 +191,9 @@
 (defn drop-error
   ([ledger-id exception]
    {:type :drop-error
-    :ledger-id ledger-id})
+    :ledger-id ledger-id
+    :error-message (ex-message exception)
+    :error-data    (ex-data exception)})
   ([processing-server ledger-id exception]
    (-> (drop-error ledger-id exception)
        (assoc :server processing-server))))

@@ -29,9 +29,9 @@
     (let [result (async/<! result-ch)]
       (cond (= :timeout result)
             (deliver out-p (ex-info "Timeout waiting for ledger drop."
-                                {:status 408
-                                 :error :ledger/drop-timeout
-                                 :ledger ledger-id}))
+                                    {:status 408
+                                     :error :ledger/drop-timeout
+                                     :ledger ledger-id}))
 
             (util/exception? result)
             (deliver out-p result)
@@ -52,7 +52,7 @@
 
 (defhandler drop-handler
   [{:keys          [fluree/consensus fluree/watcher]
-    {:keys [body]} :parameters :as r}]
+    {:keys [body]} :parameters}]
   (log/debug "drop body:" body)
   (let [ledger-id (:ledger body)
         resp-p    (drop-ledger consensus watcher ledger-id)]

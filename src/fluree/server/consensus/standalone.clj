@@ -17,7 +17,7 @@
       (response/announce-new-ledger watcher broadcaster ledger-id tx-id commit-result))))
 
 (defn drop-ledger!
-  [conn watcher broadcaster {:keys [ledger-id] :as params}]
+  [conn watcher broadcaster {:keys [ledger-id] :as _params}]
   (go-try
     (let [drop-result (deref! (fluree/drop conn ledger-id))]
       (response/announce-dropped-ledger watcher broadcaster ledger-id drop-result))))
