@@ -8,6 +8,7 @@
             [fluree.db.util.log :as log]
             [fluree.db.validation :as v]
             [fluree.server.handlers.create :as create]
+            [fluree.server.handlers.drop :as drop]
             [fluree.server.handlers.ledger :as ledger]
             [fluree.server.handlers.remote-resource :as remote]
             [fluree.server.handlers.subscription :as subscription]
@@ -43,6 +44,12 @@
 
 (def CreateRequestBody
   (m/schema [:map-of [:orn [:string :string] [:keyword :keyword]] :any]))
+
+(def DropRequestBody
+  (m/schema [:map-of :keyword :string]))
+
+(def DropResponseBody
+  (m/schema [:map [:ledger LedgerAlias]]))
 
 (def TValue
   (m/schema pos-int?))
@@ -227,7 +234,8 @@
           (handler req)))))
 
 (def root-only-routes
-  #{"/fluree/create"})
+  #{"/fluree/create"
+    "/fluree/drop"})
 
 (defn wrap-closed-mode
   [root-identities closed-mode]
@@ -454,6 +462,17 @@
                         500 {:body ErrorResponse}}
            :handler    #'create/default}}])
 
+(def fluree-drop-route
+  ["/drop"
+   {:post {:summary    "Drop the specified ledger and delete all persisted artifacts."
+           :parameters {:body DropRequestBody}
+           :responses  {200 {:body DropResponseBody}
+                        400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+           :coercion   (rcm/create {:transformers {:body {:default rcm/json-transformer-provider}}})
+           :handler    #'drop/drop-handler}}])
+
 (def fluree-transact-routes
   ["/transact"
    {:post {:summary    "Endpoint for submitting transactions"
@@ -497,6 +516,7 @@
 
 (def default-fluree-route-map
   {:create       fluree-create-routes
+   :drop         fluree-drop-route
    :transact     fluree-transact-routes
    :query        fluree-query-routes
    :history      fluree-history-routes
