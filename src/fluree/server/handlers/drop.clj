@@ -9,19 +9,10 @@
 
 (set! *warn-on-reflection* true)
 
-(defn monitor-consensus
-  [watcher ledger-id drop-resp-chan]
-  (go
-    (let [drop-resp (<! drop-resp-chan)]
-      (when (util/exception? drop-resp)
-        (log/warn drop-resp "Error dropping ledger")
-        (let [error-event (events/error ledger-id drop-resp)]
-          (watcher/deliver-event watcher ledger-id error-event))))))
-
 (defn queue-consensus
   [consensus watcher ledger-id]
   (let [drop-resp-ch (consensus/queue-drop-ledger consensus ledger-id)]
-    (monitor-consensus watcher ledger-id drop-resp-ch)))
+    (consensus/monitor-consensus watcher ledger-id drop-resp-ch)))
 
 (defn monitor-watch
   [out-p ledger-id result-ch]
