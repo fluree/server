@@ -1,14 +1,10 @@
 (ns fluree.server.handlers.transact
-  (:require [clojure.core.async :as async :refer [<! go]]
-            [clojure.set :refer [rename-keys]]
+  (:require [clojure.set :refer [rename-keys]]
             [fluree.crypto :as crypto]
             [fluree.db.api :as fluree]
             [fluree.db.query.fql.parse :as parse]
-            [fluree.db.util.core :as util]
-            [fluree.db.util.log :as log]
             [fluree.json-ld :as json-ld]
             [fluree.server.consensus :as consensus]
-            [fluree.server.consensus.events :as events]
             [fluree.server.handlers.shared :as shared :refer [defhandler deref!]]
             [fluree.server.watcher :as watcher]))
 

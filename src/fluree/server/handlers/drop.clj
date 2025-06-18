@@ -1,9 +1,6 @@
 (ns fluree.server.handlers.drop
-  (:require [clojure.core.async :as async :refer [<! go]]
-            [fluree.db.util.core :as util]
-            [fluree.db.util.log :as log]
+  (:require [fluree.db.util.log :as log]
             [fluree.server.consensus :as consensus]
-            [fluree.server.consensus.events :as events]
             [fluree.server.handlers.shared :refer [deref! defhandler]]
             [fluree.server.watcher :as watcher]))
 
