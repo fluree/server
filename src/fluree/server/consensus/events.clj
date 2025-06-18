@@ -188,31 +188,20 @@
    (-> (ledger-dropped ledger-id drop-result)
        (assoc :server processing-server))))
 
-(defn drop-error
+(defn error
   ([ledger-id exception]
-   {:type :drop-error
+   {:type :error
     :ledger-id ledger-id
     :error-message (ex-message exception)
     :error-data    (ex-data exception)})
-  ([processing-server ledger-id exception]
-   (-> (drop-error ledger-id exception)
-       (assoc :server processing-server))))
-
-(defn error
-  ([ledger-id tx-id exception]
-   (-> {:type          :error
-        :ledger-id     ledger-id
-        :tx-id         tx-id
-        :error-message (ex-message exception)
-        :error-data    (ex-data exception)}))
-  ([processing-server ledger-id tx-id exception]
-   (-> (error ledger-id tx-id exception)
-       (assoc :server processing-server))))
+  ([ledger-id exception & {:keys [server tx-id]}]
+   (cond-> (error ledger-id exception)
+     tx-id (assoc :tx-id tx-id)
+     server (assoc :server server))))
 
 (defn error?
   [evt]
-  (or (type? evt :error)
-      (type? evt :drop-error)))
+  (type? evt :error))
 
 (defn outcome?
   [evt]

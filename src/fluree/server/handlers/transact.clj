@@ -30,13 +30,14 @@
       ;; deliver the watch downstream
       (when (util/exception? persist-resp)
         (log/warn persist-resp "Error submitting transaction")
-        (let [error-event (events/error ledger tx-id persist-resp)]
+        (let [error-event (events/error ledger persist-resp :tx-id tx-id)]
           (watcher/deliver-event watcher tx-id error-event))))))
+
 
 (defn queue-consensus
   "Register a new commit with consensus"
   [consensus watcher ledger tx-id expanded-txn opts]
-  (let [;; initial response is not completion, but acknowledgement of persistence
+  (let [ ;; initial response is not completion, but acknowledgement of persistence
         persist-resp-ch (consensus/queue-new-transaction consensus ledger tx-id
                                                          expanded-txn opts)]
     (monitor-consensus-persistence watcher ledger tx-id persist-resp-ch)))

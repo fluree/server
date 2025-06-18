@@ -15,7 +15,7 @@
     (let [drop-resp (<! drop-resp-chan)]
       (when (util/exception? drop-resp)
         (log/warn drop-resp "Error dropping ledger")
-        (let [error-event (events/drop-error ledger-id drop-resp)]
+        (let [error-event (events/error ledger-id drop-resp)]
           (watcher/deliver-event watcher ledger-id error-event))))))
 
 (defn queue-consensus

@@ -26,7 +26,7 @@
 
 (defn announce-error
   [watcher broadcaster ledger-id tx-id ex]
-  (let [error-event (events/error ledger-id tx-id ex)]
+  (let [error-event (events/error ledger-id ex :tx-id tx-id)]
     (broadcast/broadcast-error! broadcaster error-event)
     (watcher/deliver-event watcher tx-id error-event)
     ::error))
