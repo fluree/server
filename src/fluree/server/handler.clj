@@ -49,7 +49,7 @@
   (m/schema [:map-of :keyword :string]))
 
 (def DropResponseBody
-  (m/schema [:map [:ledger LedgerAlias]]))
+  (m/schema [:map-of :keyword :any]))
 
 (def TValue
   (m/schema pos-int?))

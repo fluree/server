@@ -20,7 +20,7 @@
         tx-id     (srv-tx/derive-tx-id txn)
         result-ch (watcher/create-watch watcher tx-id)]
     (queue-consensus consensus watcher ledger-id tx-id txn opts)
-    (srv-tx/monitor-commit p ledger-id tx-id result-ch)
+    (watcher/monitor p ledger-id result-ch :tx-id tx-id)
     p))
 
 (defhandler default

@@ -14,31 +14,12 @@
   (let [drop-resp-ch (consensus/queue-drop-ledger consensus ledger-id)]
     (consensus/monitor-consensus watcher ledger-id drop-resp-ch)))
 
-(defn monitor-watch
-  [out-p ledger-id result-ch]
-  (go
-    (let [result (async/<! result-ch)]
-      (cond (= :timeout result)
-            (deliver out-p (ex-info "Timeout waiting for ledger drop."
-                                    {:status 408
-                                     :error :ledger/drop-timeout
-                                     :ledger ledger-id}))
-
-            (util/exception? result)
-            (deliver out-p result)
-
-            (events/error? result)
-            (deliver out-p (ex-info (:error-message result) (:error-data result)))
-
-            :else
-            (deliver out-p {:ledger ledger-id})))))
-
 (defn drop-ledger
   [consensus watcher ledger-id]
   (let [p         (promise)
         result-ch (watcher/create-watch watcher ledger-id)]
     (queue-consensus consensus watcher ledger-id)
-    (monitor-watch p ledger-id result-ch)
+    (watcher/monitor p ledger-id result-ch)
     p))
 
 (defhandler drop-handler

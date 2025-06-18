@@ -29,54 +29,13 @@
                                                          expanded-txn opts)]
     (consensus/monitor-consensus watcher ledger-id persist-resp-ch :tx-id tx-id)))
 
-(defn monitor-commit
-  "Wait for final commit result from consensus on `result-ch`, broadcast to any
-  subscribers and deliver response to promise `out-p`"
-  [out-p ledger-id tx-id result-ch]
-  (go
-    (let [result (async/<! result-ch)]
-      (log/debug "HTTP API transaction final response: " result)
-      (cond
-        (= :timeout result)
-        (let [ex (ex-info (str "Timeout waiting for transaction to complete for: "
-                               ledger-id " with tx-id: " tx-id)
-                          {:status 408
-                           :error  :consensus/response-timeout
-                           :ledger ledger-id
-                           :tx-id  tx-id})]
-          (deliver out-p ex))
-
-        (nil? result)
-        (let [ex (ex-info (str "Missing transaction result for ledger: "
-                               ledger-id " with tx-id: " tx-id
-                               ". Transaction may have processed, check ledger"
-                               " for confirmation.")
-                          {:status 500
-                           :error  :consensus/no-response
-                           :ledger ledger-id
-                           :tx-id  tx-id})]
-          (deliver out-p ex))
-
-        (util/exception? result)
-        (deliver out-p result)
-
-        (events/error? result)
-        (let [ex (ex-info (:error-message result) (:error-data result))]
-          (deliver out-p ex))
-
-        :else
-        (let [{:keys [ledger-id commit t tx-id] :as commit-event} result]
-          (log/debug "Transaction completed for:" ledger-id "tx-id:" tx-id "at t:" t
-                     ". commit head:" commit)
-          (deliver out-p commit-event))))))
-
 (defn transact!
   [consensus watcher ledger-id txn opts]
   (let [p         (promise)
         tx-id     (derive-tx-id txn)
         result-ch (watcher/create-watch watcher tx-id)]
     (queue-consensus consensus watcher ledger-id tx-id txn opts)
-    (monitor-commit p ledger-id tx-id result-ch)
+    (watcher/monitor p ledger-id result-ch :tx-id tx-id)
     p))
 
 (defn extract-ledger-id
