@@ -22,7 +22,7 @@
         (crypto/sha2-256 :hex :string))))
 
 (defn monitor-consensus-persistence
-  [watcher ledger tx-id persist-resp-ch]
+  [watcher ledger-id tx-id persist-resp-ch]
   (go
     (let [persist-resp (<! persist-resp-ch)]
       ;; check for exception trying to put txn in consensus, if so we must
@@ -30,17 +30,17 @@
       ;; deliver the watch downstream
       (when (util/exception? persist-resp)
         (log/warn persist-resp "Error submitting transaction")
-        (let [error-event (events/error ledger persist-resp :tx-id tx-id)]
+        (let [error-event (events/error ledger-id persist-resp :tx-id tx-id)]
           (watcher/deliver-event watcher tx-id error-event))))))
 
 
 (defn queue-consensus
   "Register a new commit with consensus"
-  [consensus watcher ledger tx-id expanded-txn opts]
+  [consensus watcher ledger-id tx-id expanded-txn opts]
   (let [ ;; initial response is not completion, but acknowledgement of persistence
-        persist-resp-ch (consensus/queue-new-transaction consensus ledger tx-id
+        persist-resp-ch (consensus/queue-new-transaction consensus ledger-id tx-id
                                                          expanded-txn opts)]
-    (monitor-consensus-persistence watcher ledger tx-id persist-resp-ch)))
+    (monitor-consensus-persistence watcher ledger-id tx-id persist-resp-ch)))
 
 (defn monitor-commit
   "Wait for final commit result from consensus on `result-ch`, broadcast to any

@@ -9,10 +9,10 @@
 (set! *warn-on-reflection* true)
 
 (defn queue-consensus
-  [consensus watcher ledger tx-id txn opts]
+  [consensus watcher ledger-id tx-id txn opts]
   (let [;; initial response is not completion, but acknowledgement of persistence
-        persist-resp-ch (consensus/queue-new-ledger consensus ledger tx-id txn opts)]
-    (srv-tx/monitor-consensus-persistence watcher ledger tx-id persist-resp-ch)))
+        persist-resp-ch (consensus/queue-new-ledger consensus ledger-id tx-id txn opts)]
+    (srv-tx/monitor-consensus-persistence watcher ledger-id tx-id persist-resp-ch)))
 
 (defn create-ledger!
   [consensus watcher ledger-id txn opts]
