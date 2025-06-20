@@ -5,12 +5,18 @@
 
 (defprotocol Broadcaster
   (-broadcast-commit [b ledger-id event])
-  (-broadcast-error [b ledger-id error-event]))
+  (-broadcast-error [b ledger-id error-event])
+  (-broadcast-drop [b ledger-id event]))
 
 (defn broadcast-new-ledger!
   [broadcaster {:keys [ledger-id] :as ledger-created-event}]
   (-broadcast-commit broadcaster ledger-id ledger-created-event)
   ::new-ledger)
+
+(defn broadcast-dropped-ledger!
+  [broadcaster {:keys [ledger-id] :as ledger-dropped-event}]
+  (-broadcast-drop broadcaster ledger-id ledger-dropped-event)
+  ::drop-ledger)
 
 (defn broadcast-new-commit!
   [broadcaster {:keys [ledger-id] :as transaction-committed-event}]
@@ -27,4 +33,5 @@
   (case (events/event-type result)
     :transaction-committed (broadcast-new-commit! broadcaster result)
     :ledger-created        (broadcast-new-ledger! broadcaster result)
+    :ledger-dropped        (broadcast-dropped-ledger! broadcaster result)
     :error                 (broadcast-error! broadcaster result)))

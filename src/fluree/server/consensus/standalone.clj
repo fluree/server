@@ -16,6 +16,12 @@
     (let [commit-result (deref! (fluree/create-with-txn conn txn opts))]
       (response/announce-new-ledger watcher broadcaster ledger-id tx-id commit-result))))
 
+(defn drop-ledger!
+  [conn watcher broadcaster {:keys [ledger-id] :as _params}]
+  (go-try
+    (let [drop-result (deref! (fluree/drop conn ledger-id))]
+      (response/announce-dropped-ledger watcher broadcaster ledger-id drop-result))))
+
 (defn transact!
   [conn watcher broadcaster {:keys [ledger-id tx-id txn opts] :as params}]
   (go-try
@@ -38,12 +44,15 @@
           (= :ledger-create event-type)
           (<? (create-ledger! conn watcher broadcaster event*))
 
+          (= :ledger-drop event-type)
+          (<? (drop-ledger! conn watcher broadcaster event*))
+
           (= :tx-queue event-type)
           (<? (transact! conn watcher broadcaster event*))
 
           :else
           (throw (ex-info (str "Unexpected event message: event type '" event-type "' not"
-                               " one of (':ledger-create', ':tx-queue')")
+                               " one of (':ledger-create', ':ledger-drop', ':tx-queue')")
                           {:status 500, :error :consensus/unexpected-event}))))
       (catch Exception e
         (let [{:keys [ledger-id tx-id]} event]
@@ -106,6 +115,12 @@
               (put-and-close! out-ch overloaded-error)))
       out-ch))
 
+  (-queue-drop-ledger [_ drop-ledger-event]
+    (let [out-ch (async/chan)]
+      (go (or (async/offer! tx-queue [drop-ledger-event out-ch])
+              (put-and-close! out-ch overloaded-error)))
+      out-ch))
+
   (-queue-new-transaction [_ new-txn-event]
     (let [out-ch (async/chan)]
       (go (or (async/offer! tx-queue [new-txn-event out-ch])
@@ -122,6 +137,11 @@
   (-queue-new-ledger [_ new-ledger-event]
     (let [out-ch (async/chan)]
       (go (>! tx-queue [new-ledger-event out-ch]))
+      out-ch))
+
+  (-queue-drop-ledger [_ drop-ledger-event]
+    (let [out-ch (async/chan)]
+      (go (>! tx-queue [drop-ledger-event out-ch]))
       out-ch))
 
   (-queue-new-transaction [_ new-txn-event]

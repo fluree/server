@@ -8,7 +8,7 @@
             [fluree.server.consensus.raft]
             [fluree.server.consensus.raft.handler :as consensus-handler]
             [fluree.server.handlers.create :as create-handler]
-            [fluree.server.handlers.transact :as tx-handler]
+            [fluree.server.handlers.transact :as srv-tx]
             [fluree.server.system :as system]
             [integrant.core :as ig]
             [integrant.repl :refer [clear go halt init reset reset-all]]))

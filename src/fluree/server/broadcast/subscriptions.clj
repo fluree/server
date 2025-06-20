@@ -102,7 +102,10 @@
   (-broadcast-commit [_ ledger-id event]
     (let [action  (events/event-type event)
           message (select-keys event [:tx-id :commit :t])]
-      (send-message-to-all state action ledger-id message)))
+      (send-message-to-all state ledger-id action message)))
+  (-broadcast-drop [_ ledger-id event]
+    (let [action (events/event-type event)]
+      (send-message-to-all state ledger-id action event)))
   (-broadcast-error [_ ledger-id error-event]
     ;; no-op as subscribers are only concerned with successful transactions
     (log/debug "Skipping error broadcast of event" error-event "for ledger" ledger-id))

@@ -82,7 +82,14 @@
           (is (= [{"f:retract" [],
                    "f:assert" [{"ex:name" "nickel", "id" "ex:coin"}],
                    "f:t" 2}]
-                 (-> resp :body (json/parse false))))))))
+                 (-> resp :body (json/parse false)))))))
+    (testing "to drop"
+      (let [drop-req {"ledger" "closed-test"}
+            resp     (api-post :drop {:body (crypto/create-jws (json/stringify drop-req)
+                                                               (:private root-auth))
+                                      :headers jwt-headers})]
+        (testing "is accepted"
+          (is (= 200 (:status resp)))))))
 
   (testing "non-root request"
     (testing "to create"
@@ -103,9 +110,14 @@
                                     :headers jwt-headers})]
         (testing "is rejected"
           (is (= 403 (:status resp)))
-          (is (= {"error" "Untrusted credential."} (-> resp :body (json/parse false)))))))
+          (is (= {"error" "Untrusted credential."} (-> resp :body (json/parse false)))))
+
+        ;; create as root for further testing
+        (api-post :create {:body (crypto/create-jws (json/stringify create-req)
+                                                    (:private root-auth))
+                           :headers jwt-headers})))
     (testing "to transact"
-      (let [create-req {"ledger" "closed-test"
+      (let [create-req {"ledger" "closed-test2"
                         "@context" default-context
                         "insert" [{"@id" "ex:coin" "ex:name" "nickel"}]}
             resp (api-post :transact {:body (crypto/create-jws (json/stringify create-req)
@@ -114,7 +126,7 @@
         (testing "is rejected"
           (is (= 403 (:status resp))))))
     (testing "to query"
-      (let [create-req {"from" "closed-test"
+      (let [create-req {"from" "closed-test2"
                         "@context" default-context
                         "where" [{"@id" "?s" "ex:name" "?name"}]
                         "select" ["?s" "?name"]}
@@ -126,7 +138,7 @@
           (is (= [] (-> resp :body (json/parse false)))))))
     (testing "to query history"
       (let [create-req {"@context" default-context
-                        "from" "closed-test"
+                        "from" "closed-test2"
                         "history" "ex:coin"
                         "t" {"from" 1}}
             resp (api-post :history {:body (crypto/create-jws (json/stringify create-req)
@@ -136,7 +148,7 @@
           (is (= 200 (:status resp)))
           (is (= [] (-> resp :body (json/parse false)))))))
     (testing "to claim more authority"
-      (let [create-req {"from" "closed-test"
+      (let [create-req {"from" "closed-test2"
                         "@context" default-context
                         "where" [{"@id" "?s" "ex:name" "?name"}]
                         "select" ["?s" "?name"]
@@ -147,7 +159,14 @@
                                    :headers jwt-headers})]
         (testing "is silently demoted"
           (is (= 200 (:status resp)))
-          (is (= [] (-> resp :body (json/parse false))))))))
+          (is (= [] (-> resp :body (json/parse false)))))))
+    (testing "to drop"
+      (let [drop-req {"ledger" "closed-test2"}
+            resp     (api-post :drop {:body (crypto/create-jws (json/stringify drop-req)
+                                                               (:private non-root-auth))
+                                      :headers jwt-headers})]
+        (testing "is rejected"
+          (is (= 403 (:status resp)))))))
 
   (testing "unsigned request"
     (testing "to create"
@@ -167,7 +186,11 @@
                                     :headers json-headers})]
         (testing "is rejected"
           (is (= 400 (:status resp)))
-          (is (= {"error" "Missing credential."} (-> resp :body (json/parse false)))))))
+          (is (= {"error" "Missing credential."} (-> resp :body (json/parse false)))))
+        ;; create as root for further testing
+        (api-post :create {:body (crypto/create-jws (json/stringify create-req)
+                                                    (:private root-auth))
+                           :headers jwt-headers})))
     (testing "to transact"
       (let [transact-req {"ledger" "closed-test3"
                           "@context" default-context
@@ -194,6 +217,13 @@
                          "t" {"from" 1 "to" "latest"}}
             resp (api-post :history {:body (json/stringify history-req)
                                      :headers json-headers})]
+        (testing "is rejected"
+          (is (= 400 (:status resp)))
+          (is (= {"error" "Missing credential."} (-> resp :body (json/parse false)))))))
+    (testing "to drop"
+      (let [drop-req {"ledger" "closed-test3"}
+            resp     (api-post :drop {:body (json/stringify drop-req)
+                                      :headers json-headers})]
         (testing "is rejected"
           (is (= 400 (:status resp)))
           (is (= {"error" "Missing credential."} (-> resp :body (json/parse false)))))))))
