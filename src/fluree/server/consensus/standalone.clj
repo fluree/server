@@ -52,7 +52,7 @@
 
           :else
           (throw (ex-info (str "Unexpected event message: event type '" event-type "' not"
-                               " one of (':ledger-create', ':tx-queue')")
+                               " one of (':ledger-create', ':ledger-drop', ':tx-queue')")
                           {:status 500, :error :consensus/unexpected-event}))))
       (catch Exception e
         (let [{:keys [ledger-id tx-id]} event]
