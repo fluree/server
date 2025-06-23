@@ -1,7 +1,7 @@
 (ns fluree.server.handlers.drop
   (:require [fluree.db.util.log :as log]
             [fluree.server.consensus :as consensus]
-            [fluree.server.handlers.shared :refer [deref! defhandler]]
+            [fluree.server.handlers.shared :as shared :refer [deref! defhandler]]
             [fluree.server.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
@@ -9,7 +9,7 @@
 (defn queue-consensus
   [consensus watcher ledger-id]
   (let [drop-resp-ch (consensus/queue-drop-ledger consensus ledger-id)]
-    (consensus/monitor-consensus watcher ledger-id drop-resp-ch)))
+    (shared/monitor-consensus watcher ledger-id drop-resp-ch)))
 
 (defn drop-ledger
   [consensus watcher ledger-id]

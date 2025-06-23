@@ -12,7 +12,7 @@
   [consensus watcher ledger-id tx-id txn opts]
   (let [;; initial response is not completion, but acknowledgement of persistence
         persist-resp-ch (consensus/queue-new-ledger consensus ledger-id tx-id txn opts)]
-    (consensus/monitor-consensus watcher ledger-id persist-resp-ch :tx-id tx-id)))
+    (shared/monitor-consensus watcher ledger-id persist-resp-ch :tx-id tx-id)))
 
 (defn create-ledger!
   [consensus watcher ledger-id txn opts]
