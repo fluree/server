@@ -9,7 +9,7 @@
 (defn queue-consensus
   [consensus watcher ledger-id]
   (let [drop-resp-ch (consensus/queue-drop-ledger consensus ledger-id)]
-    (shared/monitor-consensus watcher ledger-id drop-resp-ch)))
+    (shared/monitor-consensus-persistence watcher ledger-id drop-resp-ch)))
 
 (defn drop-ledger
   [consensus watcher ledger-id]

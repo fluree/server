@@ -23,7 +23,7 @@
   (let [;; initial response is not completion, but acknowledgement of persistence
         persist-resp-ch (consensus/queue-new-transaction consensus ledger-id tx-id
                                                          expanded-txn opts)]
-    (shared/monitor-consensus watcher ledger-id persist-resp-ch :tx-id tx-id)))
+    (shared/monitor-consensus-persistence watcher ledger-id persist-resp-ch :tx-id tx-id)))
 
 (defn transact!
   [consensus watcher ledger-id txn opts]

@@ -71,11 +71,11 @@
     fuel   (with-fuel-header fuel)
     policy (with-policy-header policy)))
 
-(defn monitor-consensus
+(defn monitor-consensus-persistence
   [watcher ledger-id resp-chan & {:keys [tx-id]}]
   (go
     (let [resp (<! resp-chan)]
-      ;; check for exception from consensus consensus, if so we must
+      ;; check for exception from trying to put event in consensus, if so we must
       ;; deliver the watch here, but if successful the consensus process will
       ;; deliver the watch downstream
       (when (util/exception? resp)
