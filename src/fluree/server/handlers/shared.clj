@@ -1,6 +1,10 @@
 (ns fluree.server.handlers.shared
-  (:require [fluree.db.util.core :as util]
-            [fluree.db.util.json :as json])
+  (:require [clojure.core.async :as async :refer [go <!]]
+            [fluree.db.util.core :as util]
+            [fluree.db.util.json :as json]
+            [fluree.db.util.log :as log]
+            [fluree.server.consensus.events :as events]
+            [fluree.server.watcher :as watcher])
   (:import (clojure.lang ExceptionInfo)
            (java.util Base64)))
 
@@ -66,3 +70,15 @@
     time   (with-time-header time)
     fuel   (with-fuel-header fuel)
     policy (with-policy-header policy)))
+
+(defn monitor-consensus-persistence
+  [watcher ledger-id resp-chan & {:keys [tx-id]}]
+  (go
+    (let [resp (<! resp-chan)]
+      ;; check for exception from trying to put event in consensus, if so we must
+      ;; deliver the watch here, but if successful the consensus process will
+      ;; deliver the watch downstream
+      (when (util/exception? resp)
+        (log/warn resp "Error submitting event.")
+        (let [error-event (events/error ledger-id resp :tx-id tx-id)]
+          (watcher/deliver-event watcher (or tx-id ledger-id) error-event))))))

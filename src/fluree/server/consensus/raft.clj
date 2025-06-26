@@ -327,6 +327,8 @@
   consensus/Transactor
   (-queue-new-ledger [group ledger-msg]
     (new-entry-async group ledger-msg))
+  (-queue-drop-ledger [_group ledger-msg]
+    (throw (ex-info "Drop not yet supported for Raft consensus." (merge ledger-msg {:error :not-yet-implemented}))))
   (-queue-new-transaction [group txn-msg]
     (new-entry-async group txn-msg)))
 
