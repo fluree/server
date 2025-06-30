@@ -24,12 +24,15 @@
   (map? x))
 
 (defn with-txn
-  [evt txn]
-  (cond (txn-address? txn)
-        (assoc evt :txn-address txn)
+  [evt txn {:keys [format] :as _opts}]
+  (cond (= :turtle format)
+        (assoc evt :txn txn)
 
         (txn? evt)
         (assoc evt :txn txn)
+
+        (txn-address? txn)
+        (assoc evt :txn-address txn)
 
         :else
         (throw (ex-info "Unrecognized transaction format"
@@ -45,7 +48,7 @@
              :ledger-id ledger-id
              :opts      opts
              :instant   (System/currentTimeMillis)}]
-    (with-txn evt txn)))
+    (with-txn evt txn opts)))
 
 (defn drop-ledger
   "Create a new event message to drop an existing ledger."
@@ -64,7 +67,7 @@
              :ledger-id ledger-id
              :opts      opts
              :instant   (System/currentTimeMillis)}]
-    (with-txn evt txn)))
+    (with-txn evt txn opts)))
 
 (defn get-txn
   "Gets the transaction value, either a transaction document or the storage
