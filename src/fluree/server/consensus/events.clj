@@ -79,14 +79,13 @@
 
 (defn save-raw-txn!
   "Saves the value of the `:raw-txn` option found within the event message `event`
-  to the commit storage accessible to the connection `conn`. Returns a new event
+  to the commit storage accessible to the ledger `ledger`. Returns a new event
   message with the `:raw-txn` option replaced by the address the document was
   stored under."
-  [conn event]
+  [{:keys [commit-catalog] :as _conn} ledger-id event]
   (go-try
     (if-let [raw-txn (-> event :opts :raw-txn)]
-      (let [{:keys [ledger-id]} event
-            {:keys [address]}   (<? (transact/save-txn! conn ledger-id raw-txn))]
+      (let [{:keys [address]} (<? (transact/save-txn! commit-catalog ledger-id raw-txn))]
         (-> event
             (assoc-in [:opts :raw-txn-address] address)
             (update :opts dissoc :raw-txn)))
@@ -94,19 +93,19 @@
 
 (defn save-txns!
   "Saves the transaction documents found within the event message `event` to the
-  commit storage accessible to the connection `conn`. Returns a new event
+  commit storage accessible to the ledger `ledger`. Returns a new event
   message with the transaction documents replaced by the address the document
   was stored under."
-  [conn event]
+  [{:keys [commit-catalog] :as conn} event]
   (go-try
     (if-let [txn (:txn event)]
       (let [{:keys [ledger-id]} event
-            {:keys [address]}   (<? (transact/save-txn! conn ledger-id txn))
-            event* (-> event
-                       (assoc :txn-address address)
-                       (dissoc :txn))]
+            {:keys [address]}   (<? (transact/save-txn! commit-catalog ledger-id txn))
+            event*              (-> event
+                                    (assoc :txn-address address)
+                                    (dissoc :txn))]
         (if (raw-txn-opt? event*)
-          (<? (save-raw-txn! conn event*))
+          (<? (save-raw-txn! conn ledger-id event*))
           event*))
       (do (when-not (:txn-address event)
             (log/warn "Error saving transaction. No transaction found for event" event))
