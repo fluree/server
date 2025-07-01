@@ -27,10 +27,378 @@ The quickest way to run Fluree Server with Docker:
 docker run -p 58090:8090 -v `pwd`/data:/opt/fluree-server/data fluree/server
 ```
 
+Or run directly with Java (requires Java 11+):
+
+```bash
+# Download the latest JAR from releases or build from source (instructions below)
+java -jar fluree-server.jar --config /path/to/config.jsonld
+```
+
 For comprehensive documentation, visit
 [https://developers.flur.ee](https://developers.flur.ee).
 
 The sections below cover custom configurations and building from source.
+
+## API Examples
+
+Here are examples using curl to demonstrate key Fluree Server features. These
+examples assume the server is running on the default port 8090.
+
+### Create a New Ledger with an Initial Commit
+
+```bash
+curl -X POST http://localhost:8090/fluree/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ledger": "example/ledger",
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    },
+    "insert": [{
+      "@id": "ex:alice",
+      "@type": "schema:Person",
+      "schema:name": "Alice Johnson",
+      "schema:email": "alice@example.com"
+    }]
+  }'
+```
+
+Expected output:
+```json
+{
+  "ledger": "example/ledger",
+  "t": 1,
+  "commit": "fluree:commit:sha256:...",
+  "address": "fluree:memory://..."
+}
+```
+
+### Transact Additional Data
+
+```bash
+curl -X POST http://localhost:8090/fluree/transact \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ledger": "example/ledger",
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    },
+    "insert": [{
+      "@id": "ex:bob",
+      "@type": "schema:Person",
+      "schema:name": "Bob Smith",
+      "schema:email": "bob@example.com",
+      "schema:knows": {"@id": "ex:alice"}
+    }]
+  }'
+```
+
+Expected output:
+```json
+{
+  "ledger": "example/ledger",
+  "t": 2,
+  "commit": "fluree:commit:sha256:...",
+  "address": "fluree:memory://..."
+}
+```
+
+### Query Data
+
+```bash
+curl -X POST http://localhost:8090/fluree/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "example/ledger",
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    },
+    "select": {"?person": ["*"]},
+    "where": {
+      "@id": "?person",
+      "@type": "schema:Person"
+    }
+  }'
+```
+
+Expected output:
+```json
+[
+  {
+    "@id": "ex:alice",
+    "@type": "schema:Person",
+    "schema:name": "Alice Johnson",
+    "schema:email": "alice@example.com"
+  },
+  {
+    "@id": "ex:bob",
+    "@type": "schema:Person",
+    "schema:name": "Bob Smith",
+    "schema:email": "bob@example.com",
+    "schema:knows": {"@id": "ex:alice"}
+  }
+]
+```
+
+### SPARQL Query
+
+Fluree also supports SPARQL queries. Put the ledger name in the `FROM` clause:
+
+```bash
+curl -X POST http://localhost:8090/fluree/sparql \
+  -H "Content-Type: application/sparql" \
+  -d '
+    PREFIX schema: <http://schema.org/>
+    PREFIX ex: <http://example.org/>
+    
+    SELECT ?person ?name ?email
+    FROM <example/ledger>
+    WHERE {
+      ?person a schema:Person ;
+              schema:name ?name ;
+              schema:email ?email .
+    }
+  '
+```
+
+### Update Data
+
+```bash
+curl -X POST http://localhost:8090/fluree/transact \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ledger": "example/ledger",
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    },
+    "where": {
+      "@id": "?person",
+      "schema:email": "alice@example.com"
+    },
+    "delete": {
+      "@id": "?person",
+      "schema:email": "alice@example.com"
+    },
+    "insert": {
+      "@id": "?person",
+      "schema:email": "alice@newdomain.com"
+    }
+  }'
+```
+
+Expected output:
+```json
+{
+  "ledger": "example/ledger",
+  "t": 3,
+  "commit": "fluree:commit:sha256:...",
+  "address": "fluree:memory://..."
+}
+```
+
+### Time Travel: Query at a Specific Time
+
+Query the ledger state at transaction 2:
+
+```bash
+curl -X POST http://localhost:8090/fluree/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "example/ledger",
+    "t": 2,
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    },
+    "select": {"?person": ["*"]},
+    "where": {
+      "@id": "?person",
+      "@type": "schema:Person"
+    }
+  }'
+```
+
+Expected output (shows state before Alice's email was updated):
+```json
+[
+  {
+    "@id": "ex:alice",
+    "@type": "schema:Person",
+    "schema:name": "Alice Johnson",
+    "schema:email": "alice@example.com"
+  },
+  {
+    "@id": "ex:bob",
+    "@type": "schema:Person",
+    "schema:name": "Bob Smith",
+    "schema:email": "bob@example.com",
+    "schema:knows": {"@id": "ex:alice"}
+  }
+]
+```
+
+Query at a specific ISO-8601 timestamp:
+
+```bash
+curl -X POST http://localhost:8090/fluree/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "example/ledger",
+    "t": "2025-01-15T10:30:00Z",
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    },
+    "select": {"?person": ["*"]},
+    "where": {
+      "@id": "?person",
+      "@type": "schema:Person"
+    }
+  }'
+```
+
+Expected output (returns data as it existed at that timestamp):
+```json
+[
+  {
+    "@id": "ex:alice",
+    "@type": "schema:Person",
+    "schema:name": "Alice Johnson",
+    "schema:email": "alice@newdomain.com"
+  },
+  {
+    "@id": "ex:bob",
+    "@type": "schema:Person",
+    "schema:name": "Bob Smith",
+    "schema:email": "bob@example.com",
+    "schema:knows": {"@id": "ex:alice"}
+  }
+]
+```
+
+Query the ledger state from 5 minutes ago using ISO-8601 relative time format:
+
+```bash
+curl -X POST http://localhost:8090/fluree/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "example/ledger",
+    "t": "PT5M",
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    },
+    "select": {"?person": ["*"]},
+    "where": {
+      "@id": "?person",
+      "@type": "schema:Person"
+    }
+  }'
+```
+
+Expected output (same format as above, showing state from 5 minutes ago):
+```json
+[
+  {
+    "@id": "ex:alice",
+    "@type": "schema:Person",
+    "schema:name": "Alice Johnson",
+    "schema:email": "alice@newdomain.com"
+  },
+  {
+    "@id": "ex:bob",
+    "@type": "schema:Person",
+    "schema:name": "Bob Smith",
+    "schema:email": "bob@example.com",
+    "schema:knows": {"@id": "ex:alice"}
+  }
+]
+```
+
+
+### History Query for a Specific Subject
+
+Get the history of changes for just `ex:alice` (optionally limit to a property with e.g. `["ex:alice", "schema:email"]`):
+
+```bash
+curl -X POST http://localhost:8090/fluree/history \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "example/ledger",
+    "commit-details": true,
+    "history": ["ex:alice"],
+    "t": {"from": 1},
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    }
+  }'
+```
+
+Expected output (showing only changes related to ex:alice):
+```json
+[
+  {
+    "f:commit": {
+      "id": "fluree:commit:sha256:...",
+      "f:address": "fluree:memory://...",
+      "f:alias": "example/ledger",
+      "f:branch": "main",
+      "f:previous": null,
+      "f:time": 1704384000000,
+      "f:v": 0,
+      "f:data": {
+        "f:address": "fluree:memory://...",
+        "f:assert": [
+          {
+            "@id": "ex:alice",
+            "@type": "schema:Person",
+            "schema:name": "Alice Johnson",
+            "schema:email": "alice@example.com"
+          }
+        ],
+        "f:retract": [],
+        "f:flakes": 4,
+        "f:size": 256,
+        "f:t": 1
+      }
+    }
+  },
+  {
+    "f:commit": {
+      "id": "fluree:commit:sha256:...",
+      "f:address": "fluree:memory://...",
+      "f:alias": "example/ledger",
+      "f:branch": "main",
+      "f:previous": {"id": "fluree:commit:sha256:..."},
+      "f:time": 1704384120000,
+      "f:v": 0,
+      "f:data": {
+        "f:address": "fluree:memory://...",
+        "f:assert": [
+          {
+            "@id": "ex:alice",
+            "schema:email": "alice@newdomain.com"
+          }
+        ],
+        "f:retract": [
+          {
+            "@id": "ex:alice",
+            "schema:email": "alice@example.com"
+          }
+        ],
+        "f:flakes": 2,
+        "f:size": 128,
+        "f:t": 3
+      }
+    }
+  }
+]
+```
 
 ## Usage
 
