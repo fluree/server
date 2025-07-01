@@ -32,6 +32,198 @@ For comprehensive documentation, visit
 
 The sections below cover custom configurations and building from source.
 
+## API Examples
+
+Here are examples using curl to demonstrate key Fluree Server features. These
+examples assume the server is running on the default port 8090.
+
+### Create a New Ledger
+
+```bash
+curl -X POST http://localhost:8090/fluree/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ledger": "example/ledger",
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    },
+    "insert": [{
+      "@id": "ex:alice",
+      "@type": "schema:Person",
+      "schema:name": "Alice Johnson",
+      "schema:email": "alice@example.com"
+    }]
+  }'
+```
+
+### Transact Data
+
+```bash
+curl -X POST http://localhost:8090/fluree/transact \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ledger": "example/ledger",
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    },
+    "insert": [{
+      "@id": "ex:bob",
+      "@type": "schema:Person",
+      "schema:name": "Bob Smith",
+      "schema:email": "bob@example.com",
+      "schema:knows": {"@id": "ex:alice"}
+    }]
+  }'
+```
+
+### Query Data
+
+```bash
+curl -X POST http://localhost:8090/fluree/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "example/ledger",
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    },
+    "select": {"?person": ["*"]},
+    "where": {
+      "@id": "?person",
+      "@type": "schema:Person"
+    }
+  }'
+```
+
+### SPARQL Query
+
+Fluree also supports SPARQL queries. Put the ledger name in the `FROM` clause:
+
+```bash
+curl -X POST http://localhost:8090/fluree/sparql \
+  -H "Content-Type: application/sparql" \
+  -d '
+    PREFIX schema: <http://schema.org/>
+    PREFIX ex: <http://example.org/>
+    
+    SELECT ?person ?name ?email
+    FROM <example/ledger>
+    WHERE {
+      ?person a schema:Person ;
+              schema:name ?name ;
+              schema:email ?email .
+    }
+  '
+```
+
+### Update Data
+
+```bash
+curl -X POST http://localhost:8090/fluree/transact \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ledger": "example/ledger",
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    },
+    "where": {
+      "@id": "?person",
+      "schema:email": "alice@example.com"
+    },
+    "delete": {
+      "@id": "?person",
+      "schema:email": "alice@example.com"
+    },
+    "insert": {
+      "@id": "?person",
+      "schema:email": "alice@newdomain.com"
+    }
+  }'
+```
+
+### Time Travel: Query at a Specific Time
+
+Query the ledger state at transaction 2:
+
+```bash
+curl -X POST http://localhost:8090/fluree/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "example/ledger",
+    "t": 2,
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    },
+    "select": {"?person": ["*"]},
+    "where": {
+      "@id": "?person",
+      "@type": "schema:Person"
+    }
+  }'
+```
+
+Query at a specific ISO-8601 timestamp:
+
+```bash
+curl -X POST http://localhost:8090/fluree/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "example/ledger",
+    "t": "2025-01-15T10:30:00Z",
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    },
+    "select": {"?person": ["*"]},
+    "where": {
+      "@id": "?person",
+      "@type": "schema:Person"
+    }
+  }'
+```
+
+Query the ledger state from 5 minutes ago using ISO-8601 relative time format:
+
+```bash
+curl -X POST http://localhost:8090/fluree/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "example/ledger",
+    "t": "PT5M",
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    },
+    "select": {"?person": ["*"]},
+    "where": {
+      "@id": "?person",
+      "@type": "schema:Person"
+    }
+  }'
+```
+
+### History Query
+
+Get the history of changes:
+
+```bash
+curl -X POST http://localhost:8090/fluree/history \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "example/ledger",
+    "commit-details": true,
+    "t": {"from": 1},
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    }
+  }'
+```
+
 ## Usage
 
 ### Settings
