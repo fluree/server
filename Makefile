@@ -60,3 +60,15 @@ cljfmt-fix:
 clean: ## Remove build artifacts
 	rm -rf target
 	rm -rf .cpcache
+
+.PHONY: run
+run: ## Run the server without building JAR (development mode)
+	clojure -M:run-dev
+
+.PHONY: run-prod
+run-prod: ## Run the server without building JAR (production mode)
+	clojure -M:run-prod
+
+.PHONY: build-and-run
+build-and-run: uberjar ## Build JAR and run the server
+	java -jar target/server-*.jar

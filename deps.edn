@@ -51,7 +51,10 @@
                  integrant/repl              {:mvn/version "0.3.3"}}}
 
   :run-dev
-  {:main-opts   ["-m" "fluree.server" "--profile" "dev"]}
+  {:main-opts ["-m" "fluree.server" "--profile" "dev"]}
+
+  :run-prod
+  {:main-opts ["-m" "fluree.server"]}
 
   :test
   {:extra-paths ["test"]

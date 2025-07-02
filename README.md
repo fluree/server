@@ -27,11 +27,17 @@ The quickest way to run Fluree Server with Docker:
 docker run -p 58090:8090 -v `pwd`/data:/opt/fluree-server/data fluree/server
 ```
 
-Or run directly with Java (requires Java 11+):
+Or run from source (requires Java 11+ and Clojure):
 
 ```bash
-# Download the latest JAR from releases or build from source (instructions below)
-java -jar fluree-server.jar --config /path/to/config.jsonld
+# Run directly without building JAR (development mode)
+make run
+
+# Build and run in one command
+make build-and-run
+
+# Run with custom config
+java -jar target/server-*.jar --config /path/to/config.jsonld
 ```
 
 For comprehensive documentation, visit
@@ -424,10 +430,11 @@ Sample configuration files are provided in the `resources/` directory:
 #### Starting the Server
 The server can be started in different ways:
 - Default: Uses `file-config.jsonld` from resources
-- With specific config file: `--config /path/to/config.jsonld`
-- With specific resource: `--resource config-name.jsonld`
-- With config string: `--string "{config json}"`
-- With profile: `--profile dev` (applies profile-specific overrides)
+- With specific config file: `-c` or `--config /path/to/config.jsonld`
+- With specific resource: `-r` or `--resource config-name.jsonld`
+- With config string: `-s` or `--string "{config json}"`
+- With profile: `-p` or `--profile dev` (applies profile-specific overrides)
+- Show help: `-h` or `--help`
 
 #### Configuration Options
 The configuration files use the Fluree system vocabulary. Common configuration
@@ -557,6 +564,51 @@ Run `make help` to see all available tasks.
 - `make` or `make uberjar` - Build an executable server uberjar
 - `make docker-build` - Build the server Docker container
 - `make docker-push` - Build and publish the server Docker container
+
+### Running the Server
+
+#### Development Mode
+- `make run` - Run the server in development mode with the `dev` profile
+  - Uses reduced memory settings (200MB cache instead of 1000MB)
+  - Stores data in `dev/data` directory
+  - Reduces max pending transactions to 16
+  - Equivalent to: `clojure -M:run-dev`
+
+#### Production Mode
+- `make run-prod` - Run the server in production mode
+  - Uses default configuration from `file-config.jsonld`
+  - Full memory allocation (1000MB cache)
+  - Stores data in `/opt/fluree-server/data`
+  - Equivalent to: `clojure -M -m fluree.server`
+
+#### Running from JAR
+After building with `make uberjar`:
+```bash
+java -jar target/fluree-server.jar
+```
+
+With options:
+```bash
+# With a specific profile (short or long form)
+java -jar target/fluree-server.jar -p dev
+java -jar target/fluree-server.jar --profile dev
+
+# With a custom config file
+java -jar target/fluree-server.jar -c /path/to/config.jsonld
+java -jar target/fluree-server.jar --config /path/to/config.jsonld
+
+# With inline configuration
+java -jar target/fluree-server.jar -s '{"@context": {...}}'
+java -jar target/fluree-server.jar --string '{"@context": {...}}'
+
+# With a resource from the classpath
+java -jar target/fluree-server.jar -r memory-config.jsonld
+java -jar target/fluree-server.jar --resource memory-config.jsonld
+
+# Show help
+java -jar target/fluree-server.jar -h
+java -jar target/fluree-server.jar --help
+```
 
 ### Testing
 
