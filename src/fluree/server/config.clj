@@ -2,7 +2,7 @@
   (:require [clojure.java.io :as io]
             [fluree.db.connection.config :as conn-config]
             [fluree.db.util.core :as util :refer [get-id  get-first-value]]
-            [fluree.server.config.validation :as validation]
+            [fluree.db.util.log :as log]
             [fluree.server.config.vocab :as vocab]
             [fluree.server.consensus :as-alias consensus]
             [fluree.server.http :as-alias http]))
@@ -10,21 +10,55 @@
 (set! *warn-on-reflection* true)
 
 (defn deep-merge
-  ([x y]
-   (if (and (map? x) (map? y))
-     (merge-with deep-merge x y)
-     (if (some? y)
-       y
-       x)))
-  ([x y & more]
-   (reduce deep-merge x (cons y more))))
+  "Deep merge two maps"
+  [& maps]
+  (apply merge-with
+         (fn [v1 v2]
+           (if (and (map? v1) (map? v2))
+             (deep-merge v1 v2)
+             v2))
+         maps))
 
-(defn apply-overrides
+(defn merge-profile
+  "Merge profile overrides into the config's @graph nodes"
+  [config profile profile-overrides]
+  (let [base-config (dissoc config "profiles")
+        graph       (get base-config "@graph")
+        ;; Create a map of @id -> override for quick lookup
+        overrides   (reduce (fn [m override]
+                              (assoc m (get override "@id") override))
+                            {}
+                            profile-overrides)
+        ;; Merge overrides into matching nodes
+        merged-graph (mapv (fn [node]
+                             (let [node-id (get node "@id")]
+                               (if-let [override (get overrides node-id)]
+                                 (do
+                                   (log/info "Applying profile override for node:" node-id)
+                                   (deep-merge node override))
+                                 node)))
+                           graph)]
+    (log/info (str "Applied " (count overrides) " profile overrides from profile: " profile))
+    (assoc base-config "@graph" merged-graph)))
+
+(defn apply-profile
+  "Apply a profile to a JSON-LD config by merging profile overrides into the @graph nodes"
   [config profile]
-  (let [profile-overrides (get-in config [:profiles profile])]
-    (-> config
-        (dissoc :profiles)
-        (deep-merge profile-overrides))))
+  (cond
+    ;; No profile specified, just remove profiles section
+    (nil? profile)
+    (dissoc config "profiles")
+    
+    ;; Profile found in config
+    (get-in config ["profiles" profile])
+    (merge-profile config profile (get-in config ["profiles" profile]))
+    
+    ;; Profile not found
+    :else
+    (do
+      (log/warn "Profile" profile "not found in configuration. Available profiles:" 
+                (keys (get config "profiles")))
+      (dissoc config "profiles"))))
 
 (defn consensus?
   [node]
@@ -58,12 +92,6 @@
       (jetty-api? node)            (derive id ::http/jetty) ; TODO: Enable other http servers
       :else                        (conn-config/derive-node-id node))
     node))
-
-(defn finalize
-  [config profile]
-  (-> config
-      (apply-overrides profile)
-      validation/coerce))
 
 (defn read-resource
   [resource-name]
