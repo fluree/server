@@ -42,15 +42,15 @@
                                        "f:policyClass" [{"@id" "ex:EmployeePolicy"}]
                                        "ex:user"       {"@id" "ex:alice"}}
                                       ;; embedded policy
-                                      {"@id"          "ex:ssnRestriction"
-                                       "@type"        ["f:AccessPolicy" "ex:EmployeePolicy"]
-                                       "f:onProperty" [{"@id" "schema:ssn"}]
-                                       "f:required"   true
-                                       "f:action"     [{"@id" "f:view"} {"@id" "f:modify"}]
-                                       "f:query"      {"@type"  "@json"
-                                                       "@value" {"@context" {"ex" "http://example.org/ns/"}
-                                                                 "where"    {"@id"     "?$identity"
-                                                                             "ex:user" {"@id" "?$this"}}}}}
+                                      {"@id"            "ex:ssnRestriction"
+                                       "@type"          ["f:AccessPolicy" "ex:EmployeePolicy"]
+                                       "f:targetProperty" [{"@id" "schema:ssn"}]
+                                       "f:required"     true
+                                       "f:action"       [{"@id" "f:view"} {"@id" "f:modify"}]
+                                       "f:query"        {"@type"  "@json"
+                                                         "@value" {"@context" {"ex" "http://example.org/ns/"}
+                                                                   "where"    {"@id"     "?$identity"
+                                                                               "ex:user" {"@id" "?$this"}}}}}
                                       {"@id"      "ex:defaultAllowView"
                                        "@type"    ["f:AccessPolicy" "ex:EmployeePolicy"]
                                        "f:action" {"@id" "f:view"}
@@ -269,15 +269,15 @@
                                        "f:policyClass" [{"@id" "ex:EmployeePolicy"}]
                                        "ex:user"       {"@id" "ex:alice"}}
                                       ;; embedded policy
-                                      {"@id"          "ex:ssnRestriction"
-                                       "@type"        ["f:AccessPolicy" "ex:EmployeePolicy"]
-                                       "f:onProperty" [{"@id" "schema:ssn"}]
-                                       "f:action"     [{"@id" "f:view"} {"@id" "f:modify"}]
-                                       "f:required"   true
-                                       "f:query"      {"@type"  "@json"
-                                                       "@value" {"@context" {"ex" "http://example.org/ns/"}
-                                                                 "where"    {"@id"     "?$identity"
-                                                                             "ex:user" {"@id" "?$this"}}}}}
+                                      {"@id"            "ex:ssnRestriction"
+                                       "@type"          ["f:AccessPolicy" "ex:EmployeePolicy"]
+                                       "f:targetProperty" [{"@id" "schema:ssn"}]
+                                       "f:action"       [{"@id" "f:view"} {"@id" "f:modify"}]
+                                       "f:required"     true
+                                       "f:query"        {"@type"  "@json"
+                                                         "@value" {"@context" {"ex" "http://example.org/ns/"}
+                                                                   "where"    {"@id"     "?$identity"
+                                                                               "ex:user" {"@id" "?$this"}}}}}
                                       {"@id"      "ex:defaultAllowView"
                                        "@type"    ["f:AccessPolicy" "ex:EmployeePolicy"]
                                        "f:action" {"@id" "f:view"}
@@ -367,15 +367,15 @@
           policy        {"@context" {"ex"     "http://example.org/ns/"
                                      "schema" "http://schema.org/"
                                      "f"      "https://ns.flur.ee/ledger#"}
-                         "@graph"   [{"@id"          "ex:ssnRestriction"
-                                      "@type"        ["f:AccessPolicy" "ex:EmployeePolicy"]
-                                      "f:onProperty" [{"@id" "schema:ssn"}]
-                                      "f:action"     [{"@id" "f:view"} {"@id" "f:modify"}]
-                                      "f:required"   true
-                                      "f:query"      {"@type"  "@json"
-                                                      "@value" {"@context" {"ex" "http://example.org/ns/"}
-                                                                "where"    {"@id"     "?$identity"
-                                                                            "ex:user" {"@id" "?$this"}}}}}
+                         "@graph"   [{"@id"            "ex:ssnRestriction"
+                                      "@type"          ["f:AccessPolicy" "ex:EmployeePolicy"]
+                                      "f:targetProperty" [{"@id" "schema:ssn"}]
+                                      "f:action"       [{"@id" "f:view"} {"@id" "f:modify"}]
+                                      "f:required"     true
+                                      "f:query"        {"@type"  "@json"
+                                                        "@value" {"@context" {"ex" "http://example.org/ns/"}
+                                                                  "where"    {"@id"     "?$identity"
+                                                                              "ex:user" {"@id" "?$this"}}}}}
                                      {"@id"      "ex:defaultAllowView"
                                       "@type"    ["f:AccessPolicy" "ex:EmployeePolicy"]
                                       "f:action" {"@id" "f:view"}
