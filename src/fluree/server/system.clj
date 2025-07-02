@@ -146,8 +146,20 @@
                           (vals parsed-config))
         cache-mb (when connection-config
                    (conn-config/get-first-integer connection-config conn-vocab/cache-max-mb))
-        storage-path (when storage-config
-                       (conn-config/get-first-string storage-config conn-vocab/file-path))
+        storage-type (when storage-config
+                       (let [storage-id (:id storage-config)]
+                         (cond
+                           (conn-config/get-first-string storage-config conn-vocab/file-path)
+                           (str "File storage at " (conn-config/get-first-string storage-config conn-vocab/file-path))
+                           
+                           (conn-config/get-first-string storage-config conn-vocab/s3-bucket)
+                           (str "S3 storage (bucket: " (conn-config/get-first-string storage-config conn-vocab/s3-bucket) ")")
+                           
+                           (conn-config/get-first-string storage-config conn-vocab/ipfs-endpoint)
+                           (str "IPFS storage (endpoint: " (conn-config/get-first-string storage-config conn-vocab/ipfs-endpoint) ")")
+                           
+                           :else
+                           (str "Storage type: " (name (or storage-id "unknown"))))))
         consensus-type (when consensus-config
                          (util/get-first-value consensus-config server-vocab/consensus-protocol))
         max-pending-txns (when (and consensus-config (= "standalone" consensus-type))
@@ -161,9 +173,7 @@
     (log/info "  Consensus mode:" (or consensus-type "Not configured"))
     (when max-pending-txns
       (log/info "  Max pending transactions:" max-pending-txns))
-    (log/info "  Storage:" (if storage-path
-                             (str "File-based at " storage-path)
-                             "In-memory"))
+    (log/info "  Storage:" (or storage-type "In-memory"))
     (log/info "  Cache size:" (if cache-mb
                                 (str cache-mb " MB")
                                 "Not configured"))
