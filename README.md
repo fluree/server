@@ -27,11 +27,17 @@ The quickest way to run Fluree Server with Docker:
 docker run -p 58090:8090 -v `pwd`/data:/opt/fluree-server/data fluree/server
 ```
 
-Or run directly with Java (requires Java 11+):
+Or run from source (requires Java 11+ and Clojure):
 
 ```bash
-# Download the latest JAR from releases or build from source (instructions below)
-java -jar fluree-server.jar --config /path/to/config.jsonld
+# Run directly without building JAR (development mode)
+make run
+
+# Build and run in one command
+make build-and-run
+
+# Run with custom config
+java -jar target/server-*.jar --config /path/to/config.jsonld
 ```
 
 For comprehensive documentation, visit
