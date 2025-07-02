@@ -1,0 +1,84 @@
+{
+  "@context": {
+    "@base": "https://ns.flur.ee/config/raft/",
+    "@vocab": "https://ns.flur.ee/system#",
+    "profiles": {
+      "@container": [
+        "@graph",
+        "@index"
+      ]
+    }
+  },
+  "@id": "raftClusterConfig",
+  "@graph": [
+    {
+      "@id": "localDiskStorage",
+      "@type": "Storage",
+      "filePath": "dev/data/ledger"
+    },
+    {
+      "@id": "connection",
+      "@type": "Connection",
+      "parallelism": 4,
+      "cacheMaxMb": 1000,
+      "commitStorage": {
+        "@id": "localDiskStorage"
+      },
+      "indexStorage": {
+        "@id": "localDiskStorage"
+      },
+      "primaryPublisher": {
+        "@type": "Publisher",
+        "storage": {
+          "@id": "localDiskStorage"
+        }
+      },
+      "defaults": {
+        "indexing": {
+          "reindexMinBytes": 1000000,
+          "reindexMaxBytes": 1000000000
+        }
+      }
+    },
+    {
+      "@id": "consensus",
+      "@type": "Consensus",
+      "consensusProtocol": "raft",
+      "raftLogHistory": 10,
+      "raftEntriesMax": 200,
+      "raftCatchUpRounds": 10,
+      "raftServers": [
+        "/ip4/127.0.0.1/tcp/62071"
+      ],
+      "raftThisServer": "/ip4/127.0.0.1/tcp/62071",
+      "storage": {
+        "@id": "localDiskStorage"
+      },
+      "connection": {
+        "@id": "connection"
+      }
+    },
+    {
+      "@id": "http",
+      "@type": "API",
+      "httpPort": 8090,
+      "maxTxnWaitMs": 120000
+    }
+  ],
+  "profiles": {
+    "dev": [
+      {
+        "@id": "localDiskStorage",
+        "filePath": "dev/data"
+      },
+      {
+        "@id": "connection",
+        "cacheMaxMb": 200
+      },
+      {
+        "@id": "consensus",
+        "maxPendingTxns": 16
+      }
+    ]
+  }
+}
