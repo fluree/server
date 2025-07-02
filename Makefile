@@ -67,7 +67,7 @@ run: ## Run the server without building JAR (development mode)
 
 .PHONY: run-prod
 run-prod: ## Run the server without building JAR (production mode)
-	clojure -M -m fluree.server
+	clojure -M:run-prod
 
 .PHONY: build-and-run
 build-and-run: uberjar ## Build JAR and run the server

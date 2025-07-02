@@ -51,8 +51,10 @@
                  integrant/repl              {:mvn/version "0.3.3"}}}
 
   :run-dev
-  {:exec-fn   fluree.server/start
-   :exec-args {:profile :dev}}
+  {:main-opts ["-m" "fluree.server" "--profile" "dev"]}
+
+  :run-prod
+  {:main-opts ["-m" "fluree.server"]}
 
   :test
   {:extra-paths ["test"]
