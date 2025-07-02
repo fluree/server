@@ -1,7 +1,8 @@
 (ns fluree.server.profile-test
   (:require [clojure.test :refer [deftest is testing]]
             [fluree.db.util.json :as json]
-            [fluree.server.config :as config]))
+            [fluree.server.config :as config]
+            [fluree.server.system :as system]))
 
 (def test-config-str
   "{
@@ -128,4 +129,99 @@
                              (-> (get % "https://ns.flur.ee/system#maxPendingTxns")
                                  first
                                  :value)))
-                    (vals parsed-with-profile))))))))
+                    (vals parsed-with-profile)))))))
+
+(deftest error-handling-test
+  (testing "Error conditions are handled gracefully"
+    
+    (testing "Invalid JSON throws helpful error"
+      (is (thrown-with-msg? 
+           Exception
+           #"JSON error"
+           (system/start-config "{invalid json" nil))))
+    
+    (testing "Invalid JSON with profile throws helpful error"
+      (is (thrown-with-msg?
+           Exception
+           #"JSON error"
+           (system/start-config "{\"@context\": bad json}" "dev"))))
+    
+    (testing "Non-existent config file throws helpful error"
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo
+           #"Unable to load configuration file"
+           (system/start-file "/non/existent/path/config.json" nil))))
+    
+    (testing "Non-existent resource throws helpful error"
+      (is (thrown-with-msg?
+           clojure.lang.ExceptionInfo
+           #"Unable to load configuration resource"
+           (system/start-resource "non-existent-resource.json" nil))))
+    
+    (testing "Profile with malformed structure handles gracefully"
+      (let [config-with-bad-profile
+            {"@context" {"@base" "https://ns.flur.ee/config/test/"
+                         "@vocab" "https://ns.flur.ee/system#"}
+             "@id" "testConfig"
+             "@graph" [{"@id" "node1" "@type" "Storage"}]
+             "profiles" {"bad" "not-an-array"}}]
+        ;; Should not throw, but should log warning
+        (is (= (dissoc config-with-bad-profile "profiles")
+               (config/apply-profile config-with-bad-profile "bad")))))
+    
+    (testing "Profile override missing @id is skipped"
+      (let [config-with-missing-id
+            {"@context" {"@base" "https://ns.flur.ee/config/test/"
+                         "@vocab" "https://ns.flur.ee/system#"}
+             "@id" "testConfig"
+             "@graph" [{"@id" "storage" 
+                        "@type" "Storage"
+                        "filePath" "/prod/data"}]
+             "profiles" {"dev" [{"filePath" "/dev/data"}  ;; Missing @id
+                                {"@id" "storage"
+                                 "filePath" "/dev2/data"}]}}
+            result (config/apply-profile config-with-missing-id "dev")]
+        ;; Should apply the override that has @id, skip the one without
+        (is (= "/dev2/data" 
+               (get-in result ["@graph" 0 "filePath"])))))
+    
+    (testing "Empty profile array works"
+      (let [config-with-empty-profile
+            {"@context" {"@base" "https://ns.flur.ee/config/test/"
+                         "@vocab" "https://ns.flur.ee/system#"}
+             "@id" "testConfig"
+             "@graph" [{"@id" "storage" "@type" "Storage"}]
+             "profiles" {"empty" []}}
+            result (config/apply-profile config-with-empty-profile "empty")]
+        ;; Should return config without profiles
+        (is (= (dissoc config-with-empty-profile "profiles")
+               result))))
+    
+    (testing "Profile with null values works"
+      (let [config-with-null
+            {"@context" {"@base" "https://ns.flur.ee/config/test/"
+                         "@vocab" "https://ns.flur.ee/system#"}
+             "@id" "testConfig"
+             "@graph" [{"@id" "storage" 
+                        "@type" "Storage"
+                        "filePath" "/prod/data"
+                        "maxSize" 1000}]
+             "profiles" {"dev" [{"@id" "storage"
+                                 "filePath" "/dev/data"
+                                 "maxSize" nil}]}}
+            result (config/apply-profile config-with-null "dev")]
+        ;; null should override the value
+        (is (= "/dev/data" 
+               (get-in result ["@graph" 0 "filePath"])))
+        (is (nil? (get-in result ["@graph" 0 "maxSize"]))))))
+    
+    (testing "Valid JSON but invalid config structure throws error"
+      (is (thrown?
+           Exception
+           (system/start-config "{\"valid\": \"json\", \"but\": \"not valid config\"}" nil))))
+    
+    (testing "Config missing required fields throws error"
+      (is (thrown?
+           Exception
+           (system/start-config (json/stringify {"@context" {"@base" "test"}
+                                                  "@graph" [{"@id" "broken"}]}) nil))))))

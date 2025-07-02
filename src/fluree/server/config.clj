@@ -97,8 +97,8 @@
   [resource-name]
   (try
     (-> resource-name io/resource slurp)
-    (catch IllegalArgumentException e
-      (throw (ex-info (str "Unable to load configuration resource " resource-name)
+    (catch Exception e
+      (throw (ex-info (str "Unable to load configuration resource: " resource-name)
                       {:status 400, :error :server/missing-config}
                       e)))))
 
@@ -106,7 +106,7 @@
   [path]
   (try
     (-> path io/file slurp)
-    (catch IllegalArgumentException e
+    (catch Exception e
       (throw (ex-info (str "Unable to load configuration file at path: " path)
                       {:status 400, :error :server/missing-config}
                       e)))))
