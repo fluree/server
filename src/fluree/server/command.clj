@@ -4,7 +4,6 @@
 
 (set! *warn-on-reflection* true)
 
-
 (def cli-options
   [["-p" "--profile PROFILE" "Run profile"]
    ["-c" "--config FILE" "Load configuration at a file path"]

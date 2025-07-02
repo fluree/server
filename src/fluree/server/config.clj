@@ -48,15 +48,15 @@
     ;; No profile specified, just remove profiles section
     (nil? profile)
     (dissoc config "profiles")
-    
+
     ;; Profile found in config
     (get-in config ["profiles" profile])
     (merge-profile config profile (get-in config ["profiles" profile]))
-    
+
     ;; Profile not found
     :else
     (do
-      (log/warn "Profile" profile "not found in configuration. Available profiles:" 
+      (log/warn "Profile" profile "not found in configuration. Available profiles:"
                 (keys (get config "profiles")))
       (dissoc config "profiles"))))
 

@@ -136,7 +136,7 @@
 
 (defn log-config-summary
   [parsed-config]
-  (let [connection-config (some #(when (conn-config/type? % conn-vocab/connection-type) %) 
+  (let [connection-config (some #(when (conn-config/type? % conn-vocab/connection-type) %)
                                 (vals parsed-config))
         storage-config (some #(when (conn-config/type? % conn-vocab/storage-type) %)
                              (vals parsed-config))
@@ -162,11 +162,11 @@
     (when max-pending-txns
       (log/info "  Max pending transactions:" max-pending-txns))
     (log/info "  Storage:" (if storage-path
-                              (str "File-based at " storage-path)
-                              "In-memory"))
-    (log/info "  Cache size:" (if cache-mb 
-                                  (str cache-mb " MB")
-                                  "Not configured"))
+                             (str "File-based at " storage-path)
+                             "In-memory"))
+    (log/info "  Cache size:" (if cache-mb
+                                (str cache-mb " MB")
+                                "Not configured"))
     (when closed-mode
       (log/info "  Closed mode: enabled"))))
 
