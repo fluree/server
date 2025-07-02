@@ -151,13 +151,13 @@
                          (cond
                            (conn-config/get-first-string storage-config conn-vocab/file-path)
                            (str "File storage at " (conn-config/get-first-string storage-config conn-vocab/file-path))
-                           
+
                            (conn-config/get-first-string storage-config conn-vocab/s3-bucket)
                            (str "S3 storage (bucket: " (conn-config/get-first-string storage-config conn-vocab/s3-bucket) ")")
-                           
+
                            (conn-config/get-first-string storage-config conn-vocab/ipfs-endpoint)
                            (str "IPFS storage (endpoint: " (conn-config/get-first-string storage-config conn-vocab/ipfs-endpoint) ")")
-                           
+
                            :else
                            (str "Storage type: " (name (or storage-id "unknown"))))))
         consensus-type (when consensus-config
