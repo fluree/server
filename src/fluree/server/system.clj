@@ -177,14 +177,12 @@
    (let [json-config (if (string? config)
                        (json/parse config false)
                        config)
-         _ (when profile
-             (log/info "Applying profile:" profile))
          config-with-profile (if profile
                                (config/apply-profile json-config profile)
-                               json-config)]
-     (let [parsed-config (config/parse config-with-profile)]
-       (log-config-summary parsed-config)
-       (conn-system/initialize parsed-config)))))
+                               json-config)
+         parsed-config (config/parse config-with-profile)]
+     (log-config-summary parsed-config)
+     (conn-system/initialize parsed-config))))
 
 (defn start-file
   ([path]
