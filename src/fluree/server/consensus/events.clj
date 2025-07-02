@@ -206,6 +206,10 @@
    (-> (ledger-dropped ledger-id drop-result)
        (assoc :server processing-server))))
 
+(defn ledger-dropped?
+  [evt]
+  (type? evt :ledger-dropped))
+
 (defn error
   ([ledger-id exception]
    {:type :error
@@ -225,4 +229,5 @@
   [evt]
   (or (transaction-committed? evt)
       (ledger-created? evt)
+      (ledger-dropped? evt)
       (error? evt)))
