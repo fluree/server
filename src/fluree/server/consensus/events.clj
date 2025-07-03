@@ -1,7 +1,8 @@
 (ns fluree.server.consensus.events
   "Common namespace for defining consensus event messages shared across consensus
   protocols"
-  (:require [fluree.db.connection :as connection]
+  (:require [clojure.string :as str]
+            [fluree.db.connection :as connection]
             [fluree.db.track :as-alias track]
             [fluree.db.transact :as transact]
             [fluree.db.util.async :refer [<? go-try]]
@@ -17,22 +18,35 @@
 
 (defn txn-address?
   [x]
-  (string? x))
+  (str/starts-with? x "fluree:"))
 
-(defn txn?
+(defn jld-txn?
   [x]
   (map? x))
 
+(defn turtle-txn?
+  [x]
+  (string? x))
+
 (defn with-txn
-  [evt txn {:keys [format] :as _opts}]
-  (cond (= :turtle format)
-        (assoc evt :txn txn)
-
-        (txn? evt)
-        (assoc evt :txn txn)
-
-        (txn-address? txn)
+  [evt txn]
+  (cond (txn-address? txn)
         (assoc evt :txn-address txn)
+
+        (jld-txn? evt)
+        (assoc evt :txn txn)
+
+        :else
+        (throw (ex-info "Unrecognized transaction format"
+                        {:status 400, :error :server/unrecognized-transaction}))))
+
+(defn with-turtle-txn
+  [evt txn]
+  (cond (txn-address? txn)
+        (assoc evt :txn-address txn)
+
+        (turtle-txn? evt)
+        (assoc evt :txn txn)
 
         :else
         (throw (ex-info "Unrecognized transaction format"
@@ -48,7 +62,7 @@
              :ledger-id ledger-id
              :opts      opts
              :instant   (System/currentTimeMillis)}]
-    (with-txn evt txn opts)))
+    (with-txn evt txn)))
 
 (defn drop-ledger
   "Create a new event message to drop an existing ledger."
@@ -67,7 +81,9 @@
              :ledger-id ledger-id
              :opts      opts
              :instant   (System/currentTimeMillis)}]
-    (with-txn evt txn opts)))
+    (if (= :turtle (:format opts))
+      (with-turtle-txn evt txn)
+      (with-txn evt txn))))
 
 (defn get-txn
   "Gets the transaction value, either a transaction document or the storage
