@@ -1,7 +1,8 @@
 {:deps {org.clojure/clojure    {:mvn/version "1.11.3"}
         org.clojure/core.async {:mvn/version "1.6.681"}
         com.fluree/db          {:git/url "https://github.com/fluree/db.git"
-                                :git/sha "d674111dc0f2f1e2d061e558001e852a28ed5eaf"}
+                                :git/sha "33f8a5889a424df9644eaeae6dcaec313c26a199"}
+
         com.fluree/json-ld     {:git/url "https://github.com/fluree/json-ld.git"
                                 :git/sha "73a990a4b803d0b4cfbbbe4dc16275b39a3add4e"}
 
@@ -49,7 +50,8 @@
    :extra-deps  {org.clojure/tools.namespace {:mvn/version "1.5.0"}
                  clj-http/clj-http           {:mvn/version "3.13.0"}
                  criterium/criterium         {:mvn/version "0.4.6"}
-                 integrant/repl              {:mvn/version "0.3.3"}}}
+                 integrant/repl              {:mvn/version "0.3.3"}}
+   :jvm-opts    ["-Djdk.attach.allowAttachSelf"]}
 
   :run-dev
   {:main-opts ["-m" "fluree.server" "--profile" "dev"]}

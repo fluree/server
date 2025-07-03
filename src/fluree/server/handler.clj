@@ -327,9 +327,12 @@
                        :sparql
                        (-> headers (get "content-type") (= "application/sparql-update"))
                        :sparql
+                       (-> headers (get "content-type") (= "text/turtle"))
+                       :turtle
 
                        (= format "sparql") :sparql
-                       (= output "fql")    :fql
+                       (= format "fql")    :fql
+                       (= format "turtle") :turtle
                        :else               :fql)
 
           policy        (when policy
@@ -481,7 +484,37 @@
                         400 {:body ErrorResponse}
                         409 {:body ErrorResponse}
                         500 {:body ErrorResponse}}
-           :handler    #'srv-tx/default}}])
+           :handler    #'srv-tx/update}}])
+
+(def fluree-update-route
+  ["/update"
+   {:post {:summary    "Endpoint for submitting transactions"
+           :parameters {:body TransactRequestBody}
+           :responses  {200 {:body TransactResponseBody}
+                        400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+           :handler    #'srv-tx/update}}])
+
+(def fluree-insert-route
+  ["/insert"
+   {:post {:summary    "Endpoint for inserting into the specified ledger."
+           :parameters {:body :any}
+           :responses  {200 {:body TransactResponseBody}
+                        400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+           :handler    #'srv-tx/insert}}])
+
+(def fluree-upsert-route
+  ["/upsert"
+   {:post {:summary    "Endpoint for upserting into the specified ledger."
+           :parameters {:body :any}
+           :responses  {200 {:body TransactResponseBody}
+                        400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+           :handler    #'srv-tx/upsert}}])
 
 (def fluree-query-routes
   ["/query"
@@ -517,6 +550,9 @@
 (def default-fluree-route-map
   {:create       fluree-create-routes
    :drop         fluree-drop-route
+   :insert       fluree-insert-route
+   :upsert       fluree-upsert-route
+   :update       fluree-update-route
    :transact     fluree-transact-routes
    :query        fluree-query-routes
    :history      fluree-history-routes

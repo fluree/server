@@ -1,4 +1,5 @@
 (ns fluree.server.handlers.transact
+  (:refer-clojure :exclude [update])
   (:require [clojure.set :refer [rename-keys]]
             [fluree.crypto :as crypto]
             [fluree.db.api :as fluree]
@@ -47,17 +48,45 @@
       (select-keys [:ledger-id :commit :t :tx-id])
       (rename-keys {:ledger-id :ledger})))
 
-(defhandler default
+(defhandler update
   [{:keys          [fluree/consensus fluree/watcher credential/did fluree/opts raw-txn]
     {:keys [body]} :parameters}]
   (let [txn       (fluree/format-txn body opts)
         ledger-id (or (:ledger opts)
                       (extract-ledger-id txn))
-        opts*     (cond-> (assoc opts :format :fql)
+        opts*     (cond-> (assoc opts :format :fql :op :update)
                     raw-txn (assoc :raw-txn raw-txn)
                     did     (assoc :did did))
         {:keys [status] :as commit-event}
         (deref! (transact! consensus watcher ledger-id txn opts*))
+
+        body (commit-event->response-body commit-event)]
+    (shared/with-tracking-headers {:status status, :body body}
+      commit-event)))
+
+(defhandler insert
+  [{:keys [fluree/consensus fluree/watcher credential/did fluree/opts raw-txn]
+    {insert-txn :body} :parameters}]
+  (let [ledger-id (:ledger opts)
+        opts*     (cond-> (assoc opts :op :insert)
+                    raw-txn (assoc :raw-txn raw-txn)
+                    did     (assoc :identity did))
+        {:keys [status] :as commit-event}
+        (deref! (transact! consensus watcher ledger-id insert-txn opts*))
+
+        body (commit-event->response-body commit-event)]
+    (shared/with-tracking-headers {:status status, :body body}
+      commit-event)))
+
+(defhandler upsert
+  [{:keys [fluree/consensus fluree/watcher credential/did fluree/opts raw-txn]
+    {upsert-txn :body} :parameters}]
+  (let [ledger-id (:ledger opts)
+        opts*     (cond-> (assoc opts :op :upsert)
+                    raw-txn (assoc :raw-txn raw-txn)
+                    did     (assoc :identity did))
+        {:keys [status] :as commit-event}
+        (deref! (transact! consensus watcher ledger-id upsert-txn opts*))
 
         body (commit-event->response-body commit-event)]
     (shared/with-tracking-headers {:status status, :body body}

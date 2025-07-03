@@ -29,7 +29,10 @@
           _             (log/debug "Starting transaction processing for ledger:" ledger-id
                                    "with tx-id" tx-id ". Transaction sat in queue for"
                                    (- start-time (:instant params)) "milliseconds.")
-          commit-result (deref! (fluree/transact! conn txn opts))]
+          commit-result (case (:op opts)
+                          :update (deref! (fluree/transact! conn txn opts))
+                          :upsert (deref! (fluree/upsert! conn ledger-id txn opts))
+                          :insert (deref! (fluree/insert! conn ledger-id txn opts)))]
       (response/announce-commit watcher broadcaster ledger-id tx-id commit-result))))
 
 (defn process-event
