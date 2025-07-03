@@ -328,7 +328,8 @@ Expected output (same format as above, showing state from 5 minutes ago):
 
 ### History Query for a Specific Subject
 
-Get the history of changes for just `ex:alice` (optionally limit to a property with e.g. `["ex:alice", "schema:email"]`):
+Get the history of changes for just `ex:alice` (optionally limit to a
+property with e.g. `["ex:alice", "schema:email"]`):
 
 ```bash
 curl -X POST http://localhost:8090/fluree/history \
@@ -413,9 +414,89 @@ Configuration is handled through JSON-LD configuration files with samples (and
 the default) located in the `resources/` directory. The server can be started
 with different configuration files and profiles. 
 
-**Note:** The Fluree server does not currently support environment variables for
-configuration overrides. All configuration must be provided through JSON-LD
-files or command-line arguments.
+#### Dynamic Configuration with ConfigurationValue
+Fluree Server supports dynamic configuration values that can be resolved from
+Java system properties, environment variables, or default values. This allows
+you to externalize configuration without modifying your JSON-LD files.
+
+To use dynamic configuration, replace any configuration value with a
+ConfigurationValue object:
+
+```json
+{
+  "@type": "ConfigurationValue",
+  "javaProp": "fluree.http.port",
+  "envVar": "FLUREE_HTTP_PORT", 
+  "defaultVal": 8090
+}
+```
+
+**Resolution Priority:**
+1. Java system property (highest priority)
+2. Environment variable 
+3. Default value (lowest priority)
+
+**Examples:**
+
+Set HTTP port from environment variable with fallback:
+```json
+{
+  "@id": "http",
+  "@type": "API",
+  "httpPort": {
+    "@type": "ConfigurationValue",
+    "envVar": "FLUREE_HTTP_PORT",
+    "defaultVal": 8090
+  }
+}
+```
+
+Configure cache size from Java property:
+```json
+{
+  "@id": "connection",
+  "@type": "Connection",
+  "cacheMaxMb": {
+    "@type": "ConfigurationValue",
+    "javaProp": "fluree.cache.maxMb",
+    "envVar": "FLUREE_CACHE_MB",
+    "defaultVal": 1000
+  }
+}
+```
+
+Configure file storage path:
+```json
+{
+  "@id": "storage",
+  "@type": "Storage",
+  "filePath": {
+    "@type": "ConfigurationValue",
+    "javaProp": "fluree.data.dir",
+    "envVar": "FLUREE_DATA_DIR",
+    "defaultVal": "/opt/fluree-server/data"
+  }
+}
+```
+
+**Usage:**
+
+With environment variables:
+```bash
+export FLUREE_HTTP_PORT=9090
+export FLUREE_CACHE_MB=2000
+java -jar target/fluree-server.jar
+```
+
+With Java system properties:
+```bash
+java -Dfluree.http.port=9090 -Dfluree.cache.maxMb=2000 \
+     -jar target/fluree-server.jar
+```
+
+**Note:** ConfigurationValue can be used for any configuration property that
+accepts a value. If no value can be resolved (no property set, no environment
+variable, and no default), the server will fail to start with an error.
 
 #### Configuration Files
 Sample configuration files are provided in the `resources/` directory:
