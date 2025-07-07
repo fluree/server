@@ -75,8 +75,11 @@ Expected output:
 {
   "ledger": "example/ledger",
   "t": 1,
-  "commit": "fluree:commit:sha256:...",
-  "address": "fluree:memory://..."
+  "tx-id": "089aeb0dd3a5cbef5cafd76aee57b71ff039ec35c9ce574daafa891c6c401381",
+  "commit": {
+    "address": "fluree:memory://...",
+    "hash": "..."
+  }
 }
 ```
 
@@ -106,8 +109,11 @@ Expected output:
 {
   "ledger": "example/ledger",
   "t": 2,
-  "commit": "fluree:commit:sha256:...",
-  "address": "fluree:memory://..."
+  "tx-id": "f4de14124f6121125b20dace04f6867326639b786d65eb542a3d02e1d6c1787e",
+  "commit": {
+    "address": "fluree:memory://...",
+    "hash": "..."
+  }
 }
 ```
 
@@ -154,8 +160,9 @@ Expected output:
 Fluree also supports SPARQL queries. Put the ledger name in the `FROM` clause:
 
 ```bash
-curl -X POST http://localhost:8090/fluree/sparql \
-  -H "Content-Type: application/sparql" \
+curl -X POST http://localhost:8090/fluree/query \
+  -H "Content-Type: application/sparql-query" \
+  -H "Accept: application/sparql-results+json" \
   -d '
     PREFIX schema: <http://schema.org/>
     PREFIX ex: <http://example.org/>
@@ -168,6 +175,47 @@ curl -X POST http://localhost:8090/fluree/sparql \
               schema:email ?email .
     }
   '
+```
+
+Expected output (SPARQL Results JSON format):
+```json
+{
+  "head": {
+    "vars": ["person", "name", "email"]
+  },
+  "results": {
+    "bindings": [
+      {
+        "person": {
+          "type": "uri",
+          "value": "http://example.org/alice"
+        },
+        "name": {
+          "type": "literal",
+          "value": "Alice Johnson"
+        },
+        "email": {
+          "type": "literal",
+          "value": "alice@example.com"
+        }
+      },
+      {
+        "person": {
+          "type": "uri",
+          "value": "http://example.org/bob"
+        },
+        "name": {
+          "type": "literal",
+          "value": "Bob Smith"
+        },
+        "email": {
+          "type": "literal",
+          "value": "bob@example.com"
+        }
+      }
+    ]
+  }
+}
 ```
 
 ### Update Data
@@ -201,8 +249,11 @@ Expected output:
 {
   "ledger": "example/ledger",
   "t": 3,
-  "commit": "fluree:commit:sha256:...",
-  "address": "fluree:memory://..."
+  "tx-id": "f85faf51e07d932a5323677519ec0568cb14cf6c5c8f42f4d393c3df4f8a3558",
+  "commit": {
+    "address": "fluree:memory://...",
+    "hash": "..."
+  }
 }
 ```
 
@@ -341,7 +392,8 @@ curl -X POST http://localhost:8090/fluree/history \
     "t": {"from": 1},
     "@context": {
       "schema": "http://schema.org/",
-      "ex": "http://example.org/"
+      "ex": "http://example.org/",
+      "f": "https://ns.flur.ee/ledger#"
     }
   }'
 ```
@@ -350,15 +402,26 @@ Expected output (showing only changes related to ex:alice):
 ```json
 [
   {
+    "f:t": 1,
+    "f:assert": [
+      {
+        "@id": "ex:alice",
+        "@type": "schema:Person",
+        "schema:name": "Alice Johnson",
+        "schema:email": "alice@example.com"
+      }
+    ],
+    "f:retract": [],
     "f:commit": {
-      "id": "fluree:commit:sha256:...",
+      "@id": "fluree:commit:sha256:...",
       "f:address": "fluree:memory://...",
       "f:alias": "example/ledger",
       "f:branch": "main",
       "f:previous": null,
       "f:time": 1704384000000,
-      "f:v": 0,
+      "f:v": 1,
       "f:data": {
+        "@id": "fluree:db:sha256:...",
         "f:address": "fluree:memory://...",
         "f:assert": [
           {
@@ -369,22 +432,36 @@ Expected output (showing only changes related to ex:alice):
           }
         ],
         "f:retract": [],
-        "f:flakes": 4,
-        "f:size": 256,
+        "f:flakes": 3,
+        "f:size": 384,
         "f:t": 1
       }
     }
   },
   {
+    "f:t": 3,
+    "f:assert": [
+      {
+        "@id": "ex:alice",
+        "schema:email": "alice@newdomain.com"
+      }
+    ],
+    "f:retract": [
+      {
+        "@id": "ex:alice",
+        "schema:email": "alice@example.com"
+      }
+    ],
     "f:commit": {
-      "id": "fluree:commit:sha256:...",
+      "@id": "fluree:commit:sha256:...",
       "f:address": "fluree:memory://...",
       "f:alias": "example/ledger",
       "f:branch": "main",
-      "f:previous": {"id": "fluree:commit:sha256:..."},
+      "f:previous": {"@id": "fluree:commit:sha256:..."},
       "f:time": 1704384120000,
-      "f:v": 0,
+      "f:v": 1,
       "f:data": {
+        "@id": "fluree:db:sha256:...",
         "f:address": "fluree:memory://...",
         "f:assert": [
           {
@@ -398,8 +475,8 @@ Expected output (showing only changes related to ex:alice):
             "schema:email": "alice@example.com"
           }
         ],
-        "f:flakes": 2,
-        "f:size": 128,
+        "f:flakes": 31,
+        "f:size": 4090,
         "f:t": 3
       }
     }
