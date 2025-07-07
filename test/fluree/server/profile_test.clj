@@ -46,7 +46,7 @@
       {
         \"@id\": \"http\",
         \"@type\": \"API\",
-        \"httpPort\": 8090
+        \"httpPort\": 58090
       }
     ],
     \"profiles\": {
