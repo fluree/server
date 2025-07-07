@@ -501,12 +501,15 @@ ConfigurationValue object:
 
 ```json
 {
-  "@type": "ConfigurationValue",
+  "@type": "ConfigurationValue",  // Optional - included for clarity
   "javaProp": "fluree.http.port",
   "envVar": "FLUREE_HTTP_PORT", 
   "defaultVal": 8090
 }
 ```
+
+Note: The `@type` field is optional but recommended for clarity. At least one
+of `javaProp`, `envVar`, or `defaultVal` must be present.
 
 **Resolution Priority:**
 1. Java system property (highest priority)

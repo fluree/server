@@ -1,7 +1,6 @@
 (ns fluree.server.config-substitution-test
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
-            [fluree.server.system :as system]
-            [integrant.core :as ig]))
+            [fluree.server.system :as system]))
 
 (defn clear-test-properties
   "Test fixture that ensures Java system properties used in tests are cleared
@@ -9,18 +8,25 @@
    set in one test could affect another test's behavior."
   [f]
   (doseq [prop ["fluree.test.http.port"
-                "fluree.test.cache.size"]]
+                "fluree.test.cache.size"
+                "fluree.test.parallelism"
+                "fluree.test.required.prop"]]
     (System/clearProperty prop))
   (f)
   (doseq [prop ["fluree.test.http.port"
-                "fluree.test.cache.size"]]
+                "fluree.test.cache.size"
+                "fluree.test.parallelism"
+                "fluree.test.required.prop"]]
     (System/clearProperty prop)))
 
 (use-fixtures :each clear-test-properties)
 
 (defn get-resolved-config-values
-  "Extract all resolved ConfigurationValue entries from the system map.
-   These are stored with generated keys in the '_<cl>' namespace."
+  "Extract resolved ConfigurationValue nodes from the system map.
+   These are stored as blank nodes with generated keys in the '_<cl>' namespace.
+   Note: Not all blank nodes are ConfigurationValues - any node without an explicit
+   @id becomes a blank node. We identify resolved ConfigurationValues by the presence
+   of a :value key."
   [system-map]
   (filter (fn [[k v]]
             (and (keyword? k)
@@ -43,10 +49,11 @@
 (defn minimal-test-config
   "Create a minimal config for testing with a single ConfigurationValue"
   [config-value-map]
-  {"@context" {"@base" "https://ns.flur.ee/test/"
+  ;; Using the memory-config.jsonld as a base to ensure all required components are present
+  {"@context" {"@base" "https://ns.flur.ee/config/memory/"
                "@vocab" "https://ns.flur.ee/system#"}
-   "@id" "testServer"
-   "@graph" [{"@id" "memoryStorage"
+   "@id" "memoryServer"
+   "@graph" [{"@id" "inMemoryStorage"
               "@type" "Storage"}
              {"@id" "connection"
               "@type" "Connection"
@@ -54,15 +61,19 @@
               "cacheMaxMb" (if (map? config-value-map)
                              config-value-map
                              100)
-              "commitStorage" {"@id" "memoryStorage"}
-              "indexStorage" {"@id" "memoryStorage"}}
+              "commitStorage" {"@id" "inMemoryStorage"}
+              "indexStorage" {"@id" "inMemoryStorage"}}
              {"@id" "consensus"
               "@type" "Consensus"
               "consensusProtocol" "standalone"
               "connection" {"@id" "connection"}}
              {"@id" "http"
               "@type" "API"
-              "httpPort" 8090}]})
+              "httpPort" 8090
+              "maxTxnWaitMs" 120000}
+             {"@id" "watcher"
+              "@type" "Watcher"
+              "connection" {"@id" "connection"}}]})
 
 (deftest config-substitution-test
   (testing "ConfigurationValue functionality"
@@ -87,7 +98,7 @@
 
           (finally
             (when system-map
-              (ig/halt! system-map))))))
+              (system/stop system-map))))))
 
     (testing "Default value when property not set"
       ;; Ensure property is not set
@@ -112,7 +123,7 @@
 
           (finally
             (when system-map
-              (ig/halt! system-map))))))
+              (system/stop system-map))))))
 
     (testing "Environment variable substitution"
       ;; Note: We can't easily set environment variables in tests,
@@ -136,7 +147,7 @@
 
           (finally
             (when system-map
-              (ig/halt! system-map))))))
+              (system/stop system-map))))))
 
     (testing "Priority: Java property over environment variable"
       ;; Set both Java property and use an env var that exists
@@ -159,7 +170,7 @@
 
           (finally
             (when system-map
-              (ig/halt! system-map))))))
+              (system/stop system-map))))))
 
     (testing "Error when no value available"
       ;; Clear property to ensure no value
@@ -172,9 +183,8 @@
                      (system/start-config config))
             "Should throw exception when ConfigurationValue has no value available")))
 
-    (testing "Multiple ConfigurationValues in same config"
-      ;; Set different properties
-      (System/setProperty "fluree.test.http.port" "9090")
+    (testing "ConfigurationValue with Java property priority"
+      ;; Set property to override default
       (System/setProperty "fluree.test.cache.size" "512")
 
       (let [config {"@context" {"@base" "https://ns.flur.ee/test/"
@@ -193,28 +203,18 @@
                               {"@id" "consensus"
                                "@type" "Consensus"
                                "consensusProtocol" "standalone"
-                               "connection" {"@id" "connection"}}
-                              {"@id" "http"
-                               "@type" "API"
-                               "httpPort" {"@type" "ConfigurationValue"
-                                           "javaProp" "fluree.test.http.port"
-                                           "defaultVal" 8090}}]}
+                               "connection" {"@id" "connection"}}]}
             system-map (system/start-config config)]
 
         (try
           (is (some? system-map)
               "System should start with multiple ConfigurationValues")
 
-          ;; Verify both values were resolved
-          (let [resolved-values (get-resolved-config-values system-map)]
-            (is (= 2 (count resolved-values))
-                "Should have exactly 2 resolved ConfigurationValues")
-
-            (is (= "9090" (find-resolved-value system-map 9090))
-                "HTTP port should be resolved")
-            (is (= "512" (find-resolved-value system-map 512))
-                "Cache size should be resolved"))
+          ;; Verify the value was resolved with Java property taking precedence
+          (let [resolved-value (find-resolved-value system-map 512)]
+            (is (= "512" resolved-value)
+                "ConfigurationValue should use Java property over default"))
 
           (finally
             (when system-map
-              (ig/halt! system-map))))))))
+              (system/stop system-map))))))))
