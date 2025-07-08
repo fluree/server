@@ -401,6 +401,17 @@
                     (String. (.readAllBytes ^InputStream data)
                              ^String charset))))]}))
 
+(def turtle-format
+  "Turn turtle/TTL content from an InputStream into a string that will be found on :body-params in the
+  request map."
+  (mf/map->Format
+   {:name "text/turtle"
+    :decoder [(fn [_]
+                (reify mf/Decode
+                  (decode [_ data charset]
+                    (String. (.readAllBytes ^InputStream data)
+                             ^String charset))))]}))
+
 (def jwt-format
   "Turn a JWT from an InputStream into a string that will be found on :body-params in the
   request map."
@@ -591,6 +602,7 @@
                         (assoc-in [:formats "application/json"] json-format)
                         (assoc-in [:formats "application/sparql-query"] sparql-format)
                         (assoc-in [:formats "application/sparql-update"] sparql-update-format)
+                        (assoc-in [:formats "text/turtle"] turtle-format)
                         (assoc-in [:formats "application/jwt"] jwt-format)))
         middleware [swagger/swagger-feature
                     muuntaja-mw/format-negotiate-middleware
