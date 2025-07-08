@@ -59,7 +59,7 @@
                         "insert" {"id"      "ex:transaction-test"
                                   "type"    "schema:Test"
                                   "ex:name" "transact-endpoint-json-test"}})
-          res         (api-post :transact {:body req :headers json-headers})]
+          res         (api-post :update {:body req :headers json-headers})]
       (is (= 200 (:status res)))
       (is (= {"ledger" ledger-name, "t" 2}
              (-> res :body (json/parse false) (select-keys ["ledger" "t"])))))))

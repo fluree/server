@@ -83,18 +83,18 @@ Expected output:
 }
 ```
 
-### Transact Additional Data
+### Insert Additional Data
 
 ```bash
-curl -X POST http://localhost:8090/fluree/transact \
+curl -X POST http://localhost:8090/fluree/insert \
   -H "Content-Type: application/json" \
+  -H "fluree-ledger: example/ledger" \
   -d '{
-    "ledger": "example/ledger",
     "@context": {
       "schema": "http://schema.org/",
       "ex": "http://example.org/"
     },
-    "insert": [{
+    "@graph": [{
       "@id": "ex:bob",
       "@type": "schema:Person",
       "schema:name": "Bob Smith",
@@ -218,13 +218,50 @@ Expected output (SPARQL Results JSON format):
 }
 ```
 
-### Update Data
+### Insert Data
+
+The `/insert` endpoint adds new data to the ledger. If the subject already exists, the operation will merge the new properties with existing ones:
 
 ```bash
-curl -X POST http://localhost:8090/fluree/transact \
+curl -X POST http://localhost:8090/fluree/insert \
   -H "Content-Type: application/json" \
+  -H "fluree-ledger: example/ledger" \
   -d '{
-    "ledger": "example/ledger",
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    },
+    "@graph": [{
+      "@id": "ex:charlie",
+      "@type": "schema:Person",
+      "schema:name": "Charlie Brown",
+      "schema:email": "charlie@example.com"
+    }]
+  }'
+```
+
+Expected output:
+```json
+{
+  "ledger": "example/ledger",
+  "t": 3,
+  "tx-id": "...",
+  "commit": {
+    "address": "fluree:memory://...",
+    "hash": "..."
+  }
+}
+```
+
+### Update Data
+
+The `/update` endpoint is the preferred way to modify existing data using `where`, `delete`, and `insert` clauses. This endpoint replaces the deprecated `/transact` endpoint:
+
+```bash
+curl -X POST http://localhost:8090/fluree/update \
+  -H "Content-Type: application/json" \
+  -H "fluree-ledger: example/ledger" \
+  -d '{
     "@context": {
       "schema": "http://schema.org/",
       "ex": "http://example.org/"
@@ -248,14 +285,54 @@ Expected output:
 ```json
 {
   "ledger": "example/ledger",
-  "t": 3,
-  "tx-id": "f85faf51e07d932a5323677519ec0568cb14cf6c5c8f42f4d393c3df4f8a3558",
+  "t": 4,
+  "tx-id": "...",
   "commit": {
     "address": "fluree:memory://...",
     "hash": "..."
   }
 }
 ```
+
+### Upsert Data
+
+The `/upsert` endpoint performs an "update or insert" operation. If the subject exists, it updates the properties; if not, it creates a new subject:
+
+```bash
+curl -X POST http://localhost:8090/fluree/upsert \
+  -H "Content-Type: application/json" \
+  -H "fluree-ledger: example/ledger" \
+  -d '{
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    },
+    "@graph": [{
+      "@id": "ex:alice",
+      "schema:age": 43
+    }, {
+      "@id": "ex:diana",
+      "@type": "schema:Person",
+      "schema:name": "Diana Prince",
+      "schema:email": "diana@example.com"
+    }]
+  }'
+```
+
+Expected output:
+```json
+{
+  "ledger": "example/ledger",
+  "t": 5,
+  "tx-id": "...",
+  "commit": {
+    "address": "fluree:memory://...",
+    "hash": "..."
+  }
+}
+```
+
+**Note:** The `/transact` endpoint is maintained for backward compatibility but `/update` should be preferred for all new implementations.
 
 ### Time Travel: Query at a Specific Time
 
@@ -439,7 +516,7 @@ Expected output (showing only changes related to ex:alice):
     }
   },
   {
-    "f:t": 3,
+    "f:t": 4,
     "f:assert": [
       {
         "@id": "ex:alice",
@@ -477,7 +554,40 @@ Expected output (showing only changes related to ex:alice):
         ],
         "f:flakes": 31,
         "f:size": 4090,
-        "f:t": 3
+        "f:t": 4
+      }
+    }
+  },
+  {
+    "f:t": 5,
+    "f:assert": [
+      {
+        "@id": "ex:alice",
+        "schema:age": 43
+      }
+    ],
+    "f:retract": [],
+    "f:commit": {
+      "@id": "fluree:commit:sha256:...",
+      "f:address": "fluree:memory://...",
+      "f:alias": "example/ledger",
+      "f:branch": "main",
+      "f:previous": {"@id": "fluree:commit:sha256:..."},
+      "f:time": 1704384180000,
+      "f:v": 1,
+      "f:data": {
+        "@id": "fluree:db:sha256:...",
+        "f:address": "fluree:memory://...",
+        "f:assert": [
+          {
+            "@id": "ex:alice",
+            "schema:age": 43
+          }
+        ],
+        "f:retract": [],
+        "f:flakes": 32,
+        "f:size": 4120,
+        "f:t": 5
       }
     }
   }
