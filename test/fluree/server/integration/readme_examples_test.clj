@@ -40,39 +40,39 @@
         (is (= 200 (:status insert-response))))))
 
     ;; Example 3: Query Data
-      (testing "Query all Person entities"
-        (let [query-response (test-system/api-post
-                              :query
-                              {:body (json/stringify
-                                      {"from" "example/ledger"
-                                       "@context" {"schema" "http://schema.org/"
-                                                   "ex" "http://example.org/"}
-                                       "select" {"?person" ["*"]}
-                                       "where" {"@id" "?person"
-                                                "@type" "schema:Person"}})
-                               :headers test-system/json-headers})]
-          (is (= 200 (:status query-response)))
-          (let [results (json/parse (:body query-response) false)
-                alice (first (filter #(= "ex:alice" (get % "@id")) results))
-                bob (first (filter #(= "ex:bob" (get % "@id")) results))]
-            (is (= 2 (count results)))
+  (testing "Query all Person entities"
+    (let [query-response (test-system/api-post
+                          :query
+                          {:body (json/stringify
+                                  {"from" "example/ledger"
+                                   "@context" {"schema" "http://schema.org/"
+                                               "ex" "http://example.org/"}
+                                   "select" {"?person" ["*"]}
+                                   "where" {"@id" "?person"
+                                            "@type" "schema:Person"}})
+                           :headers test-system/json-headers})]
+      (is (= 200 (:status query-response)))
+      (let [results (json/parse (:body query-response) false)
+            alice (first (filter #(= "ex:alice" (get % "@id")) results))
+            bob (first (filter #(= "ex:bob" (get % "@id")) results))]
+        (is (= 2 (count results)))
             ;; Check Alice
-            (is (= {"@id" "ex:alice"
-                    "@type" "schema:Person"
-                    "schema:name" "Alice Johnson"
-                    "schema:email" "alice@example.com"}
-                   alice))
+        (is (= {"@id" "ex:alice"
+                "@type" "schema:Person"
+                "schema:name" "Alice Johnson"
+                "schema:email" "alice@example.com"}
+               alice))
             ;; Check Bob
-            (is (= {"@id" "ex:bob"
-                    "@type" "schema:Person"
-                    "schema:name" "Bob Smith"
-                    "schema:email" "bob@example.com"
-                    "schema:knows" {"@id" "ex:alice"}}
-                   bob)))))
+        (is (= {"@id" "ex:bob"
+                "@type" "schema:Person"
+                "schema:name" "Bob Smith"
+                "schema:email" "bob@example.com"
+                "schema:knows" {"@id" "ex:alice"}}
+               bob)))))
 
     ;; Example 4: SPARQL Query
-      (testing "SPARQL query for all persons"
-        (let [sparql-query "PREFIX schema: <http://schema.org/>
+  (testing "SPARQL query for all persons"
+    (let [sparql-query "PREFIX schema: <http://schema.org/>
                          PREFIX ex: <http://example.org/>
                          
                          SELECT ?person ?name ?email
@@ -82,211 +82,211 @@
                                    schema:name ?name ;
                                    schema:email ?email .
                          }"
-              sparql-response (test-system/api-post
-                               :query
-                               {:body sparql-query
-                                :headers test-system/sparql-results-headers})]
-          (is (= 200 (:status sparql-response)))
-          (let [body (json/parse (:body sparql-response) false)]
+          sparql-response (test-system/api-post
+                           :query
+                           {:body sparql-query
+                            :headers test-system/sparql-results-headers})]
+      (is (= 200 (:status sparql-response)))
+      (let [body (json/parse (:body sparql-response) false)]
           ;; SPARQL returns results in a specific format
-            (is (map? body))
-            (is (contains? body "head"))
-            (is (contains? body "results"))
-            (let [bindings (get-in body ["results" "bindings"])]
-              (is (= 2 (count bindings)))
+        (is (map? body))
+        (is (contains? body "head"))
+        (is (contains? body "results"))
+        (let [bindings (get-in body ["results" "bindings"])]
+          (is (= 2 (count bindings)))
             ;; Check that we have results for both Alice and Bob
-              (let [names (set (map #(get-in % ["name" "value"]) bindings))]
-                (is (= #{"Alice Johnson" "Bob Smith"} names)))))))
+          (let [names (set (map #(get-in % ["name" "value"]) bindings))]
+            (is (= #{"Alice Johnson" "Bob Smith"} names)))))))
 
     ;; Example 5: Insert Data (Charlie)
-      (testing "Insert Charlie using /insert endpoint"
-        (let [insert-response (test-system/api-post
-                               :insert
-                               {:body (json/stringify
-                                       {"@context" {"schema" "http://schema.org/"
-                                                    "ex" "http://example.org/"}
-                                        "@graph" [{"@id" "ex:charlie"
-                                                   "@type" "schema:Person"
-                                                   "schema:name" "Charlie Brown"
-                                                   "schema:email" "charlie@example.com"}]})
-                                :headers (assoc test-system/json-headers
-                                                "fluree-ledger" "example/ledger")})]
-          (is (= 200 (:status insert-response)))))
+  (testing "Insert Charlie using /insert endpoint"
+    (let [insert-response (test-system/api-post
+                           :insert
+                           {:body (json/stringify
+                                   {"@context" {"schema" "http://schema.org/"
+                                                "ex" "http://example.org/"}
+                                    "@graph" [{"@id" "ex:charlie"
+                                               "@type" "schema:Person"
+                                               "schema:name" "Charlie Brown"
+                                               "schema:email" "charlie@example.com"}]})
+                            :headers (assoc test-system/json-headers
+                                            "fluree-ledger" "example/ledger")})]
+      (is (= 200 (:status insert-response)))))
 
     ;; Example 6: Update Data
-      (testing "Update Alice's email"
-        (let [update-response (test-system/api-post
-                               :update
-                               {:body (json/stringify
-                                       {"@context" {"schema" "http://schema.org/"
-                                                    "ex" "http://example.org/"}
-                                        "where" {"@id" "?person"
-                                                 "schema:email" "alice@example.com"}
-                                        "delete" {"@id" "?person"
-                                                  "schema:email" "alice@example.com"}
-                                        "insert" {"@id" "?person"
-                                                  "schema:email" "alice@newdomain.com"}})
-                                :headers (assoc test-system/json-headers
-                                                "fluree-ledger" "example/ledger")})]
-          (is (= 200 (:status update-response)))))
+  (testing "Update Alice's email"
+    (let [update-response (test-system/api-post
+                           :update
+                           {:body (json/stringify
+                                   {"@context" {"schema" "http://schema.org/"
+                                                "ex" "http://example.org/"}
+                                    "where" {"@id" "?person"
+                                             "schema:email" "alice@example.com"}
+                                    "delete" {"@id" "?person"
+                                              "schema:email" "alice@example.com"}
+                                    "insert" {"@id" "?person"
+                                              "schema:email" "alice@newdomain.com"}})
+                            :headers (assoc test-system/json-headers
+                                            "fluree-ledger" "example/ledger")})]
+      (is (= 200 (:status update-response)))))
 
     ;; Example 7: Upsert Data
-      (testing "Upsert Alice's age and add Diana"
-        (let [upsert-response (test-system/api-post
-                               :upsert
-                               {:body (json/stringify
-                                       {"@context" {"schema" "http://schema.org/"
-                                                    "ex" "http://example.org/"}
-                                        "@graph" [{"@id" "ex:alice"
-                                                   "schema:age" 43}
-                                                  {"@id" "ex:diana"
-                                                   "@type" "schema:Person"
-                                                   "schema:name" "Diana Prince"
-                                                   "schema:email" "diana@example.com"}]})
-                                :headers (assoc test-system/json-headers
-                                                "fluree-ledger" "example/ledger")})
-              verify-response (test-system/api-post
-                               :query
-                               {:body (json/stringify
-                                       {"from" "example/ledger"
-                                        "@context" {"schema" "http://schema.org/"
-                                                    "ex" "http://example.org/"}
-                                        "select" {"?person" ["*"]}
-                                        "where" {"@id" "?person"
-                                                 "@type" "schema:Person"}})
-                                :headers test-system/json-headers})]
-          (is (= 200 (:status upsert-response)))
+  (testing "Upsert Alice's age and add Diana"
+    (let [upsert-response (test-system/api-post
+                           :upsert
+                           {:body (json/stringify
+                                   {"@context" {"schema" "http://schema.org/"
+                                                "ex" "http://example.org/"}
+                                    "@graph" [{"@id" "ex:alice"
+                                               "schema:age" 43}
+                                              {"@id" "ex:diana"
+                                               "@type" "schema:Person"
+                                               "schema:name" "Diana Prince"
+                                               "schema:email" "diana@example.com"}]})
+                            :headers (assoc test-system/json-headers
+                                            "fluree-ledger" "example/ledger")})
+          verify-response (test-system/api-post
+                           :query
+                           {:body (json/stringify
+                                   {"from" "example/ledger"
+                                    "@context" {"schema" "http://schema.org/"
+                                                "ex" "http://example.org/"}
+                                    "select" {"?person" ["*"]}
+                                    "where" {"@id" "?person"
+                                             "@type" "schema:Person"}})
+                            :headers test-system/json-headers})]
+      (is (= 200 (:status upsert-response)))
           ;; Verify the upsert worked
-          (is (= 200 (:status verify-response)))
-          (let [results (json/parse (:body verify-response) false)
-                alice (first (filter #(= "ex:alice" (get % "@id")) results))
-                diana (first (filter #(= "ex:diana" (get % "@id")) results))]
-            (is (= 4 (count results))) ;; Alice, Bob, Charlie, Diana
+      (is (= 200 (:status verify-response)))
+      (let [results (json/parse (:body verify-response) false)
+            alice (first (filter #(= "ex:alice" (get % "@id")) results))
+            diana (first (filter #(= "ex:diana" (get % "@id")) results))]
+        (is (= 4 (count results))) ;; Alice, Bob, Charlie, Diana
             ;; Check Alice has age now and email is still updated
-            (is (= {"@id" "ex:alice"
-                    "@type" "schema:Person"
-                    "schema:name" "Alice Johnson"
-                    "schema:email" "alice@newdomain.com"
-                    "schema:age" 43}
-                   alice))
+        (is (= {"@id" "ex:alice"
+                "@type" "schema:Person"
+                "schema:name" "Alice Johnson"
+                "schema:email" "alice@newdomain.com"
+                "schema:age" 43}
+               alice))
             ;; Check Diana was added
-            (is (= {"@id" "ex:diana"
-                    "@type" "schema:Person"
-                    "schema:name" "Diana Prince"
-                    "schema:email" "diana@example.com"}
-                   diana)))))
+        (is (= {"@id" "ex:diana"
+                "@type" "schema:Person"
+                "schema:name" "Diana Prince"
+                "schema:email" "diana@example.com"}
+               diana)))))
 
     ;; Example 6: Insert with Turtle Format
-      (testing "Insert Emily using Turtle format"
-        (let [turtle-data "@prefix schema: <http://schema.org/> .
+  (testing "Insert Emily using Turtle format"
+    (let [turtle-data "@prefix schema: <http://schema.org/> .
 @prefix ex: <http://example.org/> .
 
 ex:emily a schema:Person ;
     schema:name \"Emily Davis\" ;
     schema:email \"emily@example.com\" ;
     schema:age 28 ."
-              insert-response (test-system/api-post
-                               :insert
-                               {:body turtle-data
-                                :headers (assoc test-system/json-headers
-                                                "content-type" "text/turtle"
-                                                "fluree-ledger" "example/ledger")})]
-          (is (= 200 (:status insert-response)))))
+          insert-response (test-system/api-post
+                           :insert
+                           {:body turtle-data
+                            :headers (assoc test-system/json-headers
+                                            "content-type" "text/turtle"
+                                            "fluree-ledger" "example/ledger")})]
+      (is (= 200 (:status insert-response)))))
 
     ;; Example 7: Upsert with Turtle Format
-      (testing "Upsert Emily's job title and add Frank using Turtle format"
-        (let [turtle-data "@prefix schema: <http://schema.org/> .
+  (testing "Upsert Emily's job title and add Frank using Turtle format"
+    (let [turtle-data "@prefix schema: <http://schema.org/> .
 @prefix ex: <http://example.org/> .
 
 ex:emily schema:jobTitle \"Senior Engineer\" .
 ex:frank a schema:Person ;
     schema:name \"Frank Wilson\" ;
     schema:email \"frank@example.com\" ."
-              upsert-response (test-system/api-post
-                               :upsert
-                               {:body turtle-data
-                                :headers (assoc test-system/json-headers
-                                                "content-type" "text/turtle"
-                                                "fluree-ledger" "example/ledger")})
-              verify-response (test-system/api-post
-                               :query
-                               {:body (json/stringify
-                                       {"from" "example/ledger"
-                                        "@context" {"schema" "http://schema.org/"
-                                                    "ex" "http://example.org/"}
-                                        "select" {"?person" ["*"]}
-                                        "where" {"@id" "?person"
-                                                 "@type" "schema:Person"}})
-                                :headers test-system/json-headers})]
-          (is (= 200 (:status upsert-response)))
+          upsert-response (test-system/api-post
+                           :upsert
+                           {:body turtle-data
+                            :headers (assoc test-system/json-headers
+                                            "content-type" "text/turtle"
+                                            "fluree-ledger" "example/ledger")})
+          verify-response (test-system/api-post
+                           :query
+                           {:body (json/stringify
+                                   {"from" "example/ledger"
+                                    "@context" {"schema" "http://schema.org/"
+                                                "ex" "http://example.org/"}
+                                    "select" {"?person" ["*"]}
+                                    "where" {"@id" "?person"
+                                             "@type" "schema:Person"}})
+                            :headers test-system/json-headers})]
+      (is (= 200 (:status upsert-response)))
           ;; Verify the upsert worked
-          (is (= 200 (:status verify-response)))
-          (let [results (json/parse (:body verify-response) false)
-                emily (first (filter #(= "ex:emily" (get % "@id")) results))
-                frank (first (filter #(= "ex:frank" (get % "@id")) results))]
-            (is (= 6 (count results))) ;; Alice, Bob, Charlie, Diana, Emily, Frank
+      (is (= 200 (:status verify-response)))
+      (let [results (json/parse (:body verify-response) false)
+            emily (first (filter #(= "ex:emily" (get % "@id")) results))
+            frank (first (filter #(= "ex:frank" (get % "@id")) results))]
+        (is (= 6 (count results))) ;; Alice, Bob, Charlie, Diana, Emily, Frank
             ;; Check Emily has job title now and original data preserved
-            (is (= {"@id" "ex:emily"
-                    "@type" "schema:Person"
-                    "schema:name" "Emily Davis"
-                    "schema:email" "emily@example.com"
-                    "schema:age" 28
-                    "schema:jobTitle" "Senior Engineer"}
-                   emily))
+        (is (= {"@id" "ex:emily"
+                "@type" "schema:Person"
+                "schema:name" "Emily Davis"
+                "schema:email" "emily@example.com"
+                "schema:age" 28
+                "schema:jobTitle" "Senior Engineer"}
+               emily))
             ;; Check Frank was added
-            (is (= {"@id" "ex:frank"
-                    "@type" "schema:Person"
-                    "schema:name" "Frank Wilson"
-                    "schema:email" "frank@example.com"}
-                   frank))))
+        (is (= {"@id" "ex:frank"
+                "@type" "schema:Person"
+                "schema:name" "Frank Wilson"
+                "schema:email" "frank@example.com"}
+               frank))))
 
     ;; Example 8: Time Travel Query at t=2
-      (testing "Query at transaction 2 (before email update)"
-        (let [time-query-response (test-system/api-post
-                                   :query
-                                   {:body (json/stringify
-                                           {"from" "example/ledger"
-                                            "t" 2
-                                            "@context" {"schema" "http://schema.org/"
-                                                        "ex" "http://example.org/"}
-                                            "select" {"?person" ["*"]}
-                                            "where" {"@id" "?person"
-                                                     "@type" "schema:Person"}})
-                                    :headers test-system/json-headers})]
-          (is (= 200 (:status time-query-response)))
-          (let [results (json/parse (:body time-query-response) false)
-                alice (first (filter #(= "ex:alice" (get % "@id")) results))]
-            (is (= 2 (count results)))
+    (testing "Query at transaction 2 (before email update)"
+      (let [time-query-response (test-system/api-post
+                                 :query
+                                 {:body (json/stringify
+                                         {"from" "example/ledger"
+                                          "t" 2
+                                          "@context" {"schema" "http://schema.org/"
+                                                      "ex" "http://example.org/"}
+                                          "select" {"?person" ["*"]}
+                                          "where" {"@id" "?person"
+                                                   "@type" "schema:Person"}})
+                                  :headers test-system/json-headers})]
+        (is (= 200 (:status time-query-response)))
+        (let [results (json/parse (:body time-query-response) false)
+              alice (first (filter #(= "ex:alice" (get % "@id")) results))]
+          (is (= 2 (count results)))
             ;; At t=2, Alice should still have her old email
-            (is (= {"@id" "ex:alice"
-                    "@type" "schema:Person"
-                    "schema:name" "Alice Johnson"
-                    "schema:email" "alice@example.com"}
-                   alice)))))
+          (is (= {"@id" "ex:alice"
+                  "@type" "schema:Person"
+                  "schema:name" "Alice Johnson"
+                  "schema:email" "alice@example.com"}
+                 alice)))))
 
     ;; Example 7: Current state query (after update)
-      (testing "Query current state shows updated email"
-        (let [current-query-response (test-system/api-post
-                                      :query
-                                      {:body (json/stringify
-                                              {"from" "example/ledger"
-                                               "@context" {"schema" "http://schema.org/"
-                                                           "ex" "http://example.org/"}
-                                               "select" {"?person" ["*"]}
-                                               "where" {"@id" "?person"
-                                                        "@type" "schema:Person"}})
-                                       :headers test-system/json-headers})]
-          (is (= 200 (:status current-query-response)))
-          (let [results (json/parse (:body current-query-response) false)
-                alice (first (filter #(= "ex:alice" (get % "@id")) results))]
-            (is (= 6 (count results))) ;; Alice, Bob, Charlie, Diana, Emily, Frank
+    (testing "Query current state shows updated email"
+      (let [current-query-response (test-system/api-post
+                                    :query
+                                    {:body (json/stringify
+                                            {"from" "example/ledger"
+                                             "@context" {"schema" "http://schema.org/"
+                                                         "ex" "http://example.org/"}
+                                             "select" {"?person" ["*"]}
+                                             "where" {"@id" "?person"
+                                                      "@type" "schema:Person"}})
+                                     :headers test-system/json-headers})]
+        (is (= 200 (:status current-query-response)))
+        (let [results (json/parse (:body current-query-response) false)
+              alice (first (filter #(= "ex:alice" (get % "@id")) results))]
+          (is (= 6 (count results))) ;; Alice, Bob, Charlie, Diana, Emily, Frank
             ;; Current state should show Alice's new email and age
-            (is (= {"@id" "ex:alice"
-                    "@type" "schema:Person"
-                    "schema:name" "Alice Johnson"
-                    "schema:email" "alice@newdomain.com"
-                    "schema:age" 43}
-                   alice))))) ;; Should have age from upsert
+          (is (= {"@id" "ex:alice"
+                  "@type" "schema:Person"
+                  "schema:name" "Alice Johnson"
+                  "schema:email" "alice@newdomain.com"
+                  "schema:age" 43}
+                 alice))))) ;; Should have age from upsert
 
     ;; Example 10: History Query for a Specific Subject
     (testing "Query history for Alice"
