@@ -54,11 +54,16 @@
   (let [txn       (fluree/format-txn body opts)
         ledger-id (or (:ledger opts)
                       (extract-ledger-id txn))
+        ;; Ensure the transaction includes the ledger for the underlying update! function
+        txn-with-ledger (if (and (:ledger opts)
+                                 (not (parse/get-named txn "ledger")))
+                          (assoc txn "ledger" ledger-id)
+                          txn)
         opts*     (cond-> (assoc opts :format :fql :op :update)
                     raw-txn (assoc :raw-txn raw-txn)
                     did     (assoc :did did))
         {:keys [status] :as commit-event}
-        (deref! (transact! consensus watcher ledger-id txn opts*))
+        (deref! (transact! consensus watcher ledger-id txn-with-ledger opts*))
 
         body (commit-event->response-body commit-event)]
     (shared/with-tracking-headers {:status status, :body body}
