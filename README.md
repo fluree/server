@@ -285,7 +285,7 @@ Expected output:
 ```json
 {
   "ledger": "example/ledger",
-  "t": 3,
+  "t": 4,
   "tx-id": "...",
   "commit": {
     "address": "fluree:memory://...",
@@ -323,7 +323,7 @@ Expected output:
 ```json
 {
   "ledger": "example/ledger",
-  "t": 4,
+  "t": 5,
   "tx-id": "...",
   "commit": {
     "address": "fluree:memory://...",
@@ -516,7 +516,7 @@ Expected output (showing only changes related to ex:alice):
     }
   },
   {
-    "f:t": 3,
+    "f:t": 4,
     "f:assert": [
       {
         "@id": "ex:alice",
@@ -554,7 +554,40 @@ Expected output (showing only changes related to ex:alice):
         ],
         "f:flakes": 31,
         "f:size": 4090,
-        "f:t": 3
+        "f:t": 4
+      }
+    }
+  },
+  {
+    "f:t": 5,
+    "f:assert": [
+      {
+        "@id": "ex:alice",
+        "schema:age": 43
+      }
+    ],
+    "f:retract": [],
+    "f:commit": {
+      "@id": "fluree:commit:sha256:...",
+      "f:address": "fluree:memory://...",
+      "f:alias": "example/ledger",
+      "f:branch": "main",
+      "f:previous": {"@id": "fluree:commit:sha256:..."},
+      "f:time": 1704384180000,
+      "f:v": 1,
+      "f:data": {
+        "@id": "fluree:db:sha256:...",
+        "f:address": "fluree:memory://...",
+        "f:assert": [
+          {
+            "@id": "ex:alice",
+            "schema:age": 43
+          }
+        ],
+        "f:retract": [],
+        "f:flakes": 32,
+        "f:size": 4120,
+        "f:t": 5
       }
     }
   }
