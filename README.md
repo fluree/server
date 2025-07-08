@@ -332,6 +332,66 @@ Expected output:
 }
 ```
 
+### Insert with Turtle Format
+
+The `/insert` endpoint also supports Turtle (TTL) format for RDF data:
+
+```bash
+curl -X POST http://localhost:8090/fluree/insert \
+  -H "Content-Type: text/turtle" \
+  -H "fluree-ledger: example/ledger" \
+  -d '@prefix schema: <http://schema.org/> .
+@prefix ex: <http://example.org/> .
+
+ex:emily a schema:Person ;
+    schema:name "Emily Davis" ;
+    schema:email "emily@example.com" ;
+    schema:age 28 .'
+```
+
+Expected output:
+```json
+{
+  "ledger": "example/ledger",
+  "t": 6,
+  "tx-id": "...",
+  "commit": {
+    "address": "fluree:memory://...",
+    "hash": "..."
+  }
+}
+```
+
+### Upsert with Turtle Format
+
+The `/upsert` endpoint also accepts Turtle format:
+
+```bash
+curl -X POST http://localhost:8090/fluree/upsert \
+  -H "Content-Type: text/turtle" \
+  -H "fluree-ledger: example/ledger" \
+  -d '@prefix schema: <http://schema.org/> .
+@prefix ex: <http://example.org/> .
+
+ex:emily schema:jobTitle "Senior Engineer" .
+ex:frank a schema:Person ;
+    schema:name "Frank Wilson" ;
+    schema:email "frank@example.com" .'
+```
+
+Expected output:
+```json
+{
+  "ledger": "example/ledger",
+  "t": 7,
+  "tx-id": "...",
+  "commit": {
+    "address": "fluree:memory://...",
+    "hash": "..."
+  }
+}
+```
+
 **Note:** The `/transact` endpoint is maintained for backward compatibility but `/update` should be preferred for all new implementations.
 
 ### Time Travel: Query at a Specific Time

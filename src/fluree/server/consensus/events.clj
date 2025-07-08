@@ -33,7 +33,7 @@
   (cond (txn-address? txn)
         (assoc evt :txn-address txn)
 
-        (jld-txn? evt)
+        (jld-txn? txn)
         (assoc evt :txn txn)
 
         :else
@@ -45,7 +45,7 @@
   (cond (txn-address? txn)
         (assoc evt :txn-address txn)
 
-        (turtle-txn? evt)
+        (turtle-txn? txn)
         (assoc evt :txn txn)
 
         :else
