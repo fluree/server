@@ -231,3 +231,10 @@
       (ledger-created? evt)
       (ledger-dropped? evt)
       (error? evt)))
+
+(defn watcher-id
+  "Return the watcher id for a given event. Drop events do not have a txn-id and use a
+  ledger-id instead."
+  [evt]
+  (or (:tx-id evt)
+      (:ledger-id evt)))
