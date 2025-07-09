@@ -12,9 +12,9 @@
 
 (defn announce-dropped-ledger
   [watcher broadcaster ledger-id drop-result]
-  (let [new-ledger-event (events/ledger-dropped ledger-id drop-result)]
-    (broadcast/broadcast-new-ledger! broadcaster new-ledger-event)
-    (watcher/deliver-event watcher ledger-id new-ledger-event)
+  (let [dropped-ledger-event (events/ledger-dropped ledger-id drop-result)]
+    (broadcast/broadcast-new-ledger! broadcaster dropped-ledger-event)
+    (watcher/deliver-event watcher ledger-id dropped-ledger-event)
     ::dropped-ledger))
 
 (defn announce-commit
