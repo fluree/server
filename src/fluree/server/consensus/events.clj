@@ -206,6 +206,10 @@
    (-> (ledger-dropped ledger-id drop-result)
        (assoc :server processing-server))))
 
+(defn ledger-dropped?
+  [evt]
+  (type? evt :ledger-dropped))
+
 (defn error
   ([ledger-id exception]
    {:type :error
@@ -225,4 +229,12 @@
   [evt]
   (or (transaction-committed? evt)
       (ledger-created? evt)
+      (ledger-dropped? evt)
       (error? evt)))
+
+(defn watcher-id
+  "Return the watcher id for a given event. Drop events do not have a txn-id and use a
+  ledger-id instead."
+  [evt]
+  (or (:tx-id evt)
+      (:ledger-id evt)))

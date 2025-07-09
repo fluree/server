@@ -81,4 +81,4 @@
       (when (util/exception? resp)
         (log/warn resp "Error submitting event.")
         (let [error-event (events/error ledger-id resp :tx-id tx-id)]
-          (watcher/deliver-event watcher (or tx-id ledger-id) error-event))))))
+          (watcher/deliver-event watcher (events/watcher-id error-event) error-event))))))
