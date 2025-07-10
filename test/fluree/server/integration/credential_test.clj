@@ -102,7 +102,7 @@
     (testing "invalid credential"
       (let [valid-tx    (<!!
                          (cred/generate {"ledger"   ledger-name
-                                         "@context" ["https://ns.flur.ee", {"ex" "http://example.com/ns/"}]
+                                         "@context" ["https://ns.flur.ee/ledger/v1", {"ex" "http://example.com/ns/"}]
                                          "insert"   {"@id"    "ex:cred-test"
                                                      "ex:KEY" "VALUE"}}
                                         (:private auth)))
