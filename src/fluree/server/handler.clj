@@ -52,7 +52,7 @@
   (m/schema [:map-of :keyword :any]))
 
 (def TValue
-  (m/schema pos-int?))
+  (m/schema nat-int?))
 
 (def DID
   (m/schema [:string {:min 1}]))

@@ -8,22 +8,31 @@
 (deftest readme-examples-test
   (testing "README API Examples"
 
-    ;; Example 1: Create a New Ledger with an Initial Commit
-    (testing "Create ledger with initial data"
+    ;; Example 1: Create a New Ledger (empty)
+    (testing "Create ledger without initial data"
       (let [create-response (test-system/api-post
                              :create
                              {:body (json/stringify
-                                     {"ledger" "example/ledger"
-                                      "@context" {"schema" "http://schema.org/"
-                                                  "ex" "http://example.org/"}
-                                      "insert" [{"@id" "ex:alice"
-                                                 "@type" "schema:Person"
-                                                 "schema:name" "Alice Johnson"
-                                                 "schema:email" "alice@example.com"}]})
+                                     {"ledger" "example/ledger"})
                               :headers test-system/json-headers})]
         (is (= 201 (:status create-response)))))
 
-    ;; Example 2: Insert Additional Data
+    ;; Example 2: Insert Alice
+    (testing "Insert Alice as first data"
+      (let [insert-response (test-system/api-post
+                             :insert
+                             {:body (json/stringify
+                                     {"@context" {"schema" "http://schema.org/"
+                                                  "ex" "http://example.org/"}
+                                      "@graph" [{"@id" "ex:alice"
+                                                 "@type" "schema:Person"
+                                                 "schema:name" "Alice Johnson"
+                                                 "schema:email" "alice@example.com"}]})
+                              :headers (assoc test-system/json-headers
+                                              "fluree-ledger" "example/ledger")})]
+        (is (= 200 (:status insert-response)))))
+
+    ;; Example 3: Insert Additional Data
     (testing "Add Bob who knows Alice"
       (let [insert-response (test-system/api-post
                              :insert
@@ -39,7 +48,7 @@
                                               "fluree-ledger" "example/ledger")})]
         (is (= 200 (:status insert-response))))))
 
-    ;; Example 3: Query Data
+    ;; Example 4: Query Data
   (testing "Query all Person entities"
     (let [query-response (test-system/api-post
                           :query
@@ -70,7 +79,7 @@
                 "schema:knows" {"@id" "ex:alice"}}
                bob)))))
 
-    ;; Example 4: SPARQL Query
+    ;; Example 5: SPARQL Query
   (testing "SPARQL query for all persons"
     (let [sparql-query "PREFIX schema: <http://schema.org/>
                          PREFIX ex: <http://example.org/>
@@ -98,7 +107,7 @@
           (let [names (set (map #(get-in % ["name" "value"]) bindings))]
             (is (= #{"Alice Johnson" "Bob Smith"} names)))))))
 
-    ;; Example 5: Insert Data (Charlie)
+    ;; Example 6: Insert Data (Charlie)
   (testing "Insert Charlie using /insert endpoint"
     (let [insert-response (test-system/api-post
                            :insert
@@ -113,7 +122,7 @@
                                             "fluree-ledger" "example/ledger")})]
       (is (= 200 (:status insert-response)))))
 
-    ;; Example 6: Update Data
+    ;; Example 7: Update Data
   (testing "Update Alice's email"
     (let [update-response (test-system/api-post
                            :update
@@ -130,7 +139,7 @@
                                             "fluree-ledger" "example/ledger")})]
       (is (= 200 (:status update-response)))))
 
-    ;; Example 7: Upsert Data
+    ;; Example 8: Upsert Data
   (testing "Upsert Alice's age and add Diana"
     (let [upsert-response (test-system/api-post
                            :upsert
@@ -176,7 +185,7 @@
                 "schema:email" "diana@example.com"}
                diana)))))
 
-    ;; Example 6: Insert with Turtle Format
+    ;; Example 9: Insert with Turtle Format
   (testing "Insert Emily using Turtle format"
     (let [turtle-data "@prefix schema: <http://schema.org/> .
 @prefix ex: <http://example.org/> .
@@ -193,7 +202,7 @@ ex:emily a schema:Person ;
                                             "fluree-ledger" "example/ledger")})]
       (is (= 200 (:status insert-response)))))
 
-    ;; Example 7: Upsert with Turtle Format
+    ;; Example 10: Upsert with Turtle Format
   (testing "Upsert Emily's job title and add Frank using Turtle format"
     (let [turtle-data "@prefix schema: <http://schema.org/> .
 @prefix ex: <http://example.org/> .
@@ -240,7 +249,7 @@ ex:frank a schema:Person ;
                 "schema:email" "frank@example.com"}
                frank))))
 
-    ;; Example 8: Time Travel Query at t=2
+    ;; Example 11: Time Travel Query at t=2
     (testing "Query at transaction 2 (before email update)"
       (let [time-query-response (test-system/api-post
                                  :query
@@ -264,7 +273,7 @@ ex:frank a schema:Person ;
                   "schema:email" "alice@example.com"}
                  alice)))))
 
-    ;; Example 7: Current state query (after update)
+    ;; Example 12: Current state query (after update)
     (testing "Query current state shows updated email"
       (let [current-query-response (test-system/api-post
                                     :query
@@ -288,7 +297,7 @@ ex:frank a schema:Person ;
                   "schema:age" 43}
                  alice))))) ;; Should have age from upsert
 
-    ;; Example 10: History Query for a Specific Subject
+    ;; Example 13: History Query for a Specific Subject
     (testing "Query history for Alice"
       (let [history-response (test-system/api-post
                               :history
