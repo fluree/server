@@ -6,6 +6,7 @@
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.events :as events]
             [fluree.server.consensus.response :as response]
+            [fluree.server.consensus.shared.create :as shared-create]
             [fluree.server.handlers.shared :refer [deref!]]))
 
 (set! *warn-on-reflection* true)
@@ -13,7 +14,10 @@
 (defn create-ledger!
   [conn watcher broadcaster {:keys [ledger-id tx-id txn opts] :as _params}]
   (go-try
-    (let [commit-result (deref! (fluree/create-with-txn conn txn opts))]
+    (let [commit-result (if txn
+                          (deref! (fluree/create-with-txn conn txn opts))
+                          (let [ledger (deref! (fluree/create conn ledger-id opts))]
+                            (shared-create/genesis-result ledger)))]
       (response/announce-new-ledger watcher broadcaster ledger-id tx-id commit-result))))
 
 (defn drop-ledger!

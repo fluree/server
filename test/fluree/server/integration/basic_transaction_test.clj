@@ -18,9 +18,28 @@
                                      "ex:name" "create-endpoint-test"}]})
           res         (api-post :create {:body req :headers json-headers})]
       (is (= 201 (:status res)))
+      ;; Should return t: 1 for genesis commit + transaction commit
       (is (= {"ledger" ledger-name
               "t"      1}
              (-> res :body (json/parse false) (select-keys ["ledger" "t"])))))))
+
+(deftest ^:integration ^:json create-endpoint-without-data-json-test
+  (testing "can create a new ledger without initial data w/ JSON"
+    (let [ledger-name (str "create-endpoint-no-data-" (random-uuid))
+          req         (json/stringify
+                       {"ledger" ledger-name})
+          res         (api-post :create {:body req :headers json-headers})
+          body        (json/parse (:body res) false)]
+      (is (= 201 (:status res)))
+      ;; Should return t: 0 for genesis commit only (no transaction data)
+      (is (= {"ledger" ledger-name
+              "t"      0}
+             (select-keys body ["ledger" "t"])))
+      ;; Should have same response structure as creation with data
+      (is (contains? body "tx-id"))
+      (is (contains? body "commit"))
+      (is (contains? (get body "commit") "address"))
+      (is (contains? (get body "commit") "hash")))))
 
 #_(deftest ^:integration ^:edn create-endpoint-edn-test
     (testing "can create a new ledger w/ EDN"
