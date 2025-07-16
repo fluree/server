@@ -50,18 +50,43 @@ The sections below cover custom configurations and building from source.
 Here are examples using curl to demonstrate key Fluree Server features. These
 examples assume the server is running on the default port 8090.
 
-### Create a New Ledger with an Initial Commit
+### Create a New Ledger
 
 ```bash
 curl -X POST http://localhost:8090/fluree/create \
   -H "Content-Type: application/json" \
   -d '{
-    "ledger": "example/ledger",
+    "ledger": "example/ledger"
+  }'
+```
+
+Expected output:
+```json
+{
+  "ledger": "example/ledger",
+  "t": 0,
+  "tx-id": "089aeb0dd3a5cbef5cafd76aee57b71ff039ec35c9ce574daafa891c6c401381",
+  "commit": {
+    "address": "fluree:memory://...",
+    "hash": "..."
+  }
+}
+```
+
+### Insert Data
+
+After creating the ledger, you can add data using the `/insert` endpoint:
+
+```bash
+curl -X POST http://localhost:8090/fluree/insert \
+  -H "Content-Type: application/json" \
+  -H "fluree-ledger: example/ledger" \
+  -d '{
     "@context": {
       "schema": "http://schema.org/",
       "ex": "http://example.org/"
     },
-    "insert": [{
+    "@graph": [{
       "@id": "ex:alice",
       "@type": "schema:Person",
       "schema:name": "Alice Johnson",
@@ -75,7 +100,7 @@ Expected output:
 {
   "ledger": "example/ledger",
   "t": 1,
-  "tx-id": "089aeb0dd3a5cbef5cafd76aee57b71ff039ec35c9ce574daafa891c6c401381",
+  "tx-id": "f4de14124f6121125b20dace04f6867326639b786d65eb542a3d02e1d6c1787e",
   "commit": {
     "address": "fluree:memory://...",
     "hash": "..."
@@ -218,7 +243,7 @@ Expected output (SPARQL Results JSON format):
 }
 ```
 
-### Insert Data
+### Insert More Data
 
 The `/insert` endpoint adds new data to the ledger. If the subject already exists, the operation will merge the new properties with existing ones:
 

@@ -23,20 +23,36 @@
     (watcher/monitor p ledger-id result-ch :tx-id tx-id)
     p))
 
+(defn- extract-ledger-id
+  "Extracts ledger ID from request body, options, or transaction."
+  [body opts txn]
+  (or (get body "ledger")
+      (:ledger opts)
+      (when txn (srv-tx/extract-ledger-id txn))))
+
+(defn- has-txn-data?
+  "Checks if request body contains transaction data."
+  [body]
+  (contains? body "insert"))
+
+(defn- prepare-create-options
+  "Prepares options for ledger creation.
+  Removes :identity since empty ledgers have no policies to check."
+  [opts]
+  (dissoc opts :identity))
+
 (defhandler default
   [{:keys          [fluree/opts fluree/consensus fluree/watcher]
     {:keys [body]} :parameters}]
   (log/debug "create body:" body)
-  (let [txn          (fluree/format-txn body opts)
-        ledger-id    (or (:ledger opts)
-                         (srv-tx/extract-ledger-id txn))
-        opts*        (dissoc opts :identity) ; Remove identity option because the
-                                             ; request should have been validated
-                                             ; upstream, and there are no policies
-                                             ; in an empty ledger to allow any
-                                             ; actions
-        commit-event (deref! (create-ledger! consensus watcher ledger-id txn opts*))
-
-        body (srv-tx/commit-event->response-body commit-event)]
-    (shared/with-tracking-headers {:status 201, :body body}
+  (let [txn           (when (has-txn-data? body)
+                        (fluree/format-txn body opts))
+        ledger-id     (extract-ledger-id body opts txn)
+        _             (when-not ledger-id
+                        (throw (ex-info "Ledger ID must be provided"
+                                        {:status 400 :error :db/invalid-ledger-id})))
+        opts*         (prepare-create-options opts)
+        commit-event  (deref! (create-ledger! consensus watcher ledger-id txn opts*))
+        response-body (srv-tx/commit-event->response-body commit-event)]
+    (shared/with-tracking-headers {:status 201, :body response-body}
       commit-event)))

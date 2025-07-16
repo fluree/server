@@ -30,7 +30,10 @@
 
 (defn with-txn
   [evt txn]
-  (cond (txn-address? txn)
+  (cond (nil? txn)
+        evt
+
+        (txn-address? txn)
         (assoc evt :txn-address txn)
 
         (jld-txn? txn)
