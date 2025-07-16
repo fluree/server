@@ -1,16 +1,24 @@
 (ns fluree.server.consensus.shared.create
   "Shared functions for ledger creation across consensus mechanisms."
-  (:require [fluree.db.api :as fluree]
+  (:require [clojure.string :as str]
+            [fluree.db.api :as fluree]
             [fluree.db.util.log :as log]))
+
+(def commit-id-prefix "fluree:commit:sha256:b")
+
+(defn commit-id?
+  "Checks if a string is a valid commit ID.
+  Commit IDs have format: 'fluree:commit:sha256:b<base32-hash>'"
+  [commit-id]
+  (and (string? commit-id)
+       (str/starts-with? commit-id commit-id-prefix)))
 
 (defn hash-from-id
   "Extracts the hash portion from a commit ID.
   Commit IDs have format: 'fluree:commit:sha256:b<base32-hash>'"
   [commit-id]
-  (when (string? commit-id)
-    (let [prefix "fluree:commit:sha256:b"]
-      (when (.startsWith ^String commit-id prefix)
-        (subs commit-id (count prefix))))))
+  (when (commit-id? commit-id)
+    (subs commit-id (count commit-id-prefix))))
 
 (defn genesis-result
   "Creates a commit result map for a genesis commit."
