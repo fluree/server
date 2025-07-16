@@ -1,6 +1,6 @@
 (ns fluree.server.handlers.shared
   (:require [clojure.core.async :as async :refer [go <!]]
-            [fluree.db.util.core :as util]
+            [fluree.db.util :as util]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.events :as events]

@@ -1,6 +1,6 @@
 (ns fluree.server.consensus.raft.producers.new-index-file
   (:require [clojure.core.async :as async :refer [<! go-loop]]
-            [fluree.db.util.core :as util]
+            [fluree.db.util :as util]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.raft.participant :as participant]
             [fluree.server.consensus.raft.producers.new-commit :refer [consensus-push-index-commit]]))

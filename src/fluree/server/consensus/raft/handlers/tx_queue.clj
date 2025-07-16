@@ -1,6 +1,6 @@
 (ns fluree.server.consensus.raft.handlers.tx-queue
   (:require [fluree.db.api :as fluree]
-            [fluree.db.util.core :as util]
+            [fluree.db.util :as util]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.raft.producers.new-commit :refer [consensus-push-commit]]
             [fluree.server.consensus.raft.producers.new-index-file :as new-index-file]
