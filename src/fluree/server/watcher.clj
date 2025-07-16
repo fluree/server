@@ -7,7 +7,7 @@
   responsible server from a queue, processed, and then the results broadcast
   back out."
   (:require [clojure.core.async :as async :refer [<! go]]
-            [fluree.db.util.core :as util]
+            [fluree.db.util :as util]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.events :as events]))
 

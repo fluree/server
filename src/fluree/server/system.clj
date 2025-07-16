@@ -4,7 +4,7 @@
             [fluree.db.connection.config :as conn-config]
             [fluree.db.connection.system :as conn-system]
             [fluree.db.connection.vocab :as conn-vocab]
-            [fluree.db.util.core :as util :refer [get-first]]
+            [fluree.db.util :as util :refer [get-first]]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [fluree.server :as-alias server]

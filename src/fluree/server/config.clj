@@ -1,7 +1,7 @@
 (ns fluree.server.config
   (:require [clojure.java.io :as io]
             [fluree.db.connection.config :as conn-config]
-            [fluree.db.util.core :as util :refer [get-id  get-first-value]]
+            [fluree.db.util :as util :refer [get-id  get-first-value]]
             [fluree.db.util.log :as log]
             [fluree.server.config.vocab :as vocab]
             [fluree.server.consensus :as-alias consensus]
