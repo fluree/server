@@ -44,8 +44,7 @@
                                     "f:query" {"@type" "@json"
                                                "@value" {}}}]}}
             resp (api-post :create {:body    (crypto/create-jws (json/stringify create-req)
-                                                                (:private root-auth)
-                                                                {:include-pubkey true})
+                                                                (:private root-auth))
                                     :headers jwt-headers})]
         (testing "is accepted"
           (is (= 201 (:status resp))))))
@@ -54,8 +53,7 @@
                           "@context" default-context
                           "insert" [{"@id" "ex:coin" "ex:name" "nickel"}]}
             resp (api-post :transact {:body (crypto/create-jws (json/stringify transact-req)
-                                                               (:private root-auth)
-                                                               {:include-pubkey true})
+                                                               (:private root-auth))
                                       :headers jwt-headers})]
         (testing "is accepted"
           (is (= 200 (:status resp))))))
@@ -65,8 +63,7 @@
                        "where" [{"@id" "?s" "ex:name" "?name"}]
                        "select" "?s"}
             resp (api-post :query {:body (crypto/create-jws (json/stringify query-req)
-                                                            (:private root-auth)
-                                                            {:include-pubkey true})
+                                                            (:private root-auth))
                                    :headers jwt-headers})]
         (testing "is accepted"
           (is (= 200 (:status resp)))
@@ -78,8 +75,7 @@
                          "history" "ex:coin"
                          "t" {"from" 1 "to" "latest"}}
             resp (api-post :history {:body (crypto/create-jws (json/stringify history-req)
-                                                              (:private root-auth)
-                                                              {:include-pubkey true})
+                                                              (:private root-auth))
                                      :headers jwt-headers})]
         (testing "is accepted"
           (is (= 200 (:status resp)))
@@ -90,8 +86,7 @@
     (testing "to drop"
       (let [drop-req {"ledger" "closed-test"}
             resp     (api-post :drop {:body (crypto/create-jws (json/stringify drop-req)
-                                                               (:private root-auth)
-                                                               {:include-pubkey true})
+                                                               (:private root-auth))
                                       :headers jwt-headers})]
         (testing "is accepted"
           (is (= 200 (:status resp)))))))
@@ -111,8 +106,7 @@
                                     "f:query" {"@type" "@json"
                                                "@value" {}}}]}}
             resp (api-post :create {:body    (crypto/create-jws (json/stringify create-req)
-                                                                (:private non-root-auth)
-                                                                {:include-pubkey true})
+                                                                (:private non-root-auth))
                                     :headers jwt-headers})]
         (testing "is rejected"
           (is (= 403 (:status resp)))
@@ -120,16 +114,14 @@
 
         ;; create as root for further testing
         (api-post :create {:body (crypto/create-jws (json/stringify create-req)
-                                                    (:private root-auth)
-                                                    {:include-pubkey true})
+                                                    (:private root-auth))
                            :headers jwt-headers})))
     (testing "to transact"
       (let [create-req {"ledger" "closed-test2"
                         "@context" default-context
                         "insert" [{"@id" "ex:coin" "ex:name" "nickel"}]}
             resp (api-post :transact {:body (crypto/create-jws (json/stringify create-req)
-                                                               (:private non-root-auth)
-                                                               {:include-pubkey true})
+                                                               (:private non-root-auth))
                                       :headers jwt-headers})]
         (testing "is rejected"
           (is (= 403 (:status resp))))))
@@ -139,8 +131,7 @@
                         "where" [{"@id" "?s" "ex:name" "?name"}]
                         "select" ["?s" "?name"]}
             resp (api-post :query {:body (crypto/create-jws (json/stringify create-req)
-                                                            (:private non-root-auth)
-                                                            {:include-pubkey true})
+                                                            (:private non-root-auth))
                                    :headers jwt-headers})]
         (testing "is accepted"
           (is (= 200 (:status resp)))
@@ -151,8 +142,7 @@
                         "history" "ex:coin"
                         "t" {"from" 1}}
             resp (api-post :history {:body (crypto/create-jws (json/stringify create-req)
-                                                              (:private non-root-auth)
-                                                              {:include-pubkey true})
+                                                              (:private non-root-auth))
                                      :headers jwt-headers})]
         (testing "is accepted"
           (is (= 200 (:status resp)))
@@ -165,8 +155,7 @@
                         ;; claiming root-auth identity in opts
                         "opts" {"did" (:id root-auth)}}
             resp (api-post :query {:body (crypto/create-jws (json/stringify create-req)
-                                                            (:private non-root-auth)
-                                                            {:include-pubkey true})
+                                                            (:private non-root-auth))
                                    :headers jwt-headers})]
         (testing "is silently demoted"
           (is (= 200 (:status resp)))
@@ -174,8 +163,7 @@
     (testing "to drop"
       (let [drop-req {"ledger" "closed-test2"}
             resp     (api-post :drop {:body (crypto/create-jws (json/stringify drop-req)
-                                                               (:private non-root-auth)
-                                                               {:include-pubkey true})
+                                                               (:private non-root-auth))
                                       :headers jwt-headers})]
         (testing "is rejected"
           (is (= 403 (:status resp)))))))

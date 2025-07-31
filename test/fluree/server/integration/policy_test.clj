@@ -190,8 +190,7 @@
                                        "schema:ssn" "444-44-4444"}}
                   txn-res (api-post :transact {:body    (crypto/create-jws
                                                          (json/stringify txn-req)
-                                                         (:private auth)
-                                                         {:include-pubkey true})
+                                                         (:private auth))
                                                :headers {"Content-Type" "application/jwt"}})]
               (is (= 200
                      (:status txn-res))
@@ -206,8 +205,7 @@
                                         "schema:ssn" "333-33-3333"}]}
                   txn-res (api-post :transact {:body    (crypto/create-jws
                                                          (json/stringify txn-req)
-                                                         (:private auth)
-                                                         {:include-pubkey true})
+                                                         (:private auth))
                                                :headers {"Content-Type" "application/jwt"}})]
 
               (is (not= 200 (:status txn-res))
@@ -225,8 +223,7 @@
                              "t"        {"from" 1}}
                   query-res (api-post :history {:body    (crypto/create-jws
                                                           (json/stringify query-req)
-                                                          (:private auth)
-                                                          {:include-pubkey true})
+                                                          (:private auth))
                                                 :headers {"Content-Type" "application/jwt"}})]
 
               (is (= 200 (:status query-res)))

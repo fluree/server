@@ -6,7 +6,7 @@
 
         integrant/integrant {:mvn/version "0.10.0"}
         com.fluree/crypto   {:git/url "https://github.com/fluree/fluree.crypto.git"
-                             :git/sha "cd92370b7c49aac78720833f520787dcebe86b9e"}
+                             :git/sha "065c425d98c97cb648f01ad3c708f2c71c80e11d"}
 
         ;; network, consensus
         com.github.fluree/raft {:git/tag "v1.0.0-beta2"
