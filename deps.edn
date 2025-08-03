@@ -5,7 +5,8 @@
         com.fluree/json-ld     {:mvn/version "1.0.1"}
 
         integrant/integrant {:mvn/version "0.10.0"}
-        com.fluree/crypto   {:mvn/version "3.0.1"}
+        com.fluree/crypto   {:git/url "https://github.com/fluree/fluree.crypto.git"
+                             :git/sha "065c425d98c97cb648f01ad3c708f2c71c80e11d"}
 
         ;; network, consensus
         com.github.fluree/raft {:git/tag "v1.0.0-beta2"

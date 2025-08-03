@@ -192,7 +192,6 @@
                                                          (json/stringify txn-req)
                                                          (:private auth))
                                                :headers {"Content-Type" "application/jwt"}})]
-
               (is (= 200
                      (:status txn-res))
                   "txn signed by authorized user succeeds")))

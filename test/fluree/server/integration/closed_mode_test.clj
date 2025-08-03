@@ -23,9 +23,9 @@
 
 (def root-auth auth)
 (def non-root-auth
-  {:id "did:fluree:Tf4KTeKpWcZAJadKfJ4JUv84dkBYy5KFHod"
-   :private "8d542edcd3a11b4ca5faabe7c9fa09045d6f489b9461518dbd86c6c9e3b21fec",
-   :public "03ad2f0920fd7e8b77b422f0922f53abd260336be2a3fccdc1bfadd8d858da149b"})
+  {:id "did:key:z6MkiKJFxJJd9QuqKgzBR2kiSybE9V2517sFd2kTS7kQe9mg",
+   :public "39649a89208b4fbcf818de6716b17a0b1a2f7b63ad7de55187130f39a4ef7157",
+   :private "8d542edcd3a11b4ca5faabe7c9fa09045d6f489b9461518dbd86c6c9e3b21fec"})
 
 (deftest closed-mode
   ;; all endpoints
@@ -67,7 +67,7 @@
                                    :headers jwt-headers})]
         (testing "is accepted"
           (is (= 200 (:status resp)))
-          (is (= ["did:fluree:TfHgFTQQiJMHaK1r1qxVPZ3Ridj9pCozqnh" "ex:coin"]
+          (is (= ["did:key:z6MkmbNqfM3ANYZnzDp9YDfa62pHggKosBkCyVdgQtgEKkGQ" "ex:coin"]
                  (-> resp :body (json/parse false)))))))
     (testing "to query history"
       (let [history-req {"from" "closed-test"
