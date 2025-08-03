@@ -2,7 +2,6 @@
         org.clojure/core.async {:mvn/version "1.6.681"}
         com.fluree/db          {:git/url "https://github.com/fluree/db.git"
                                 :git/sha "c1e1491fb73d2d67170f039872cdde206c1a695c"}
-        com.fluree/json-ld     {:mvn/version "1.0.1"}
 
         integrant/integrant {:mvn/version "0.10.0"}
         com.fluree/crypto   {:git/url "https://github.com/fluree/fluree.crypto.git"
