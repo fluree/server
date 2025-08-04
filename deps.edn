@@ -1,11 +1,12 @@
 {:deps {org.clojure/clojure    {:mvn/version "1.11.3"}
         org.clojure/core.async {:mvn/version "1.6.681"}
         com.fluree/db          {:git/url "https://github.com/fluree/db.git"
-                                :git/sha "9a92e713e4c78cc3169bf4b7be9ea531234e9dd0"}
+                                :git/sha "db9960c95a91d539596df54c134e6f99aed7294d"}
         com.fluree/json-ld     {:mvn/version "1.0.1"}
 
         integrant/integrant {:mvn/version "0.10.0"}
-        com.fluree/crypto   {:mvn/version "3.0.1"}
+        com.fluree/crypto   {:git/url "https://github.com/fluree/fluree.crypto.git"
+                             :git/sha "065c425d98c97cb648f01ad3c708f2c71c80e11d"}
 
         ;; network, consensus
         com.github.fluree/raft {:git/tag "v1.0.0-beta2"

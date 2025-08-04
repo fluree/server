@@ -164,8 +164,8 @@
        (throw (ex-info "Error creating random ledger" res))))))
 
 (def auth
-  {:id      "did:fluree:TfHgFTQQiJMHaK1r1qxVPZ3Ridj9pCozqnh"
-   :public  "03b160698617e3b4cd621afd96c0591e33824cb9753ab2f1dace567884b4e242b0"
+  {:id      "did:key:z6MkmbNqfM3ANYZnzDp9YDfa62pHggKosBkCyVdgQtgEKkGQ",
+   :public  "6a16232782dd2cc2896ccdfaf67ef91a54e4bbf98e4a73b6739465ccf1fe23c9",
    :private "509553eece84d5a410f1012e8e19e84e938f226aa3ad144e2d12f36df0f51c1e"})
 
 (defn run-closed-test-server
