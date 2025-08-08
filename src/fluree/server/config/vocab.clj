@@ -53,3 +53,6 @@
 
 (def max-pending-txns
   (conn-vocab/system-iri "maxPendingTxns"))
+
+(def cors-origins
+  (conn-vocab/system-iri "corsOrigins"))
