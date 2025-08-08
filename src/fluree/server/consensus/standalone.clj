@@ -16,8 +16,8 @@
   (go-try
     (let [commit-result (if txn
                           (deref! (fluree/create-with-txn conn txn opts))
-                          (let [ledger (deref! (fluree/create conn ledger-id opts))]
-                            (shared-create/genesis-result ledger)))]
+                          (let [db (deref! (fluree/create conn ledger-id opts))]
+                            (shared-create/genesis-result db)))]
       (response/announce-new-ledger watcher broadcaster ledger-id tx-id commit-result))))
 
 (defn drop-ledger!

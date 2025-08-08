@@ -16,11 +16,10 @@
 (defhandler history
   [{:keys [fluree/conn fluree/opts] {{ledger :from :as query} :body} :parameters :as _req}]
 
-  (let [ledger* (deref! (fluree/load conn ledger))
-        query*  (dissoc query :from)
+  (let [query*  (dissoc query :from)
 
         {:keys [status result] :as history-response}
-        (deref! (fluree/history ledger* query* opts))]
+        (deref! (fluree/history conn ledger query* opts))]
     (log/debug "history handler received query:" query opts)
     (shared/with-tracking-headers {:status status, :body result}
       history-response)))
