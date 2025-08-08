@@ -203,10 +203,13 @@
         handler)))
 
 (defn wrap-cors
-  [handler]
-  (rmc/wrap-cors handler
-                 :access-control-allow-origin [#".*"]
-                 :access-control-allow-methods [:get :post]))
+  [cors-origins handler]
+  (let [origins (or cors-origins [#".*"])]
+    (rmc/wrap-cors handler
+                   :access-control-allow-origin origins
+                   :access-control-allow-methods [:get :post :options]
+                   :access-control-allow-headers :any
+                   :access-control-allow-credentials false)))
 
 (defn unwrap-credential
   "Checks to see if the request body (:body-params) is a verifiable credential. If it is,
@@ -439,7 +442,7 @@
          resp)))))
 
 (defn compose-app-middleware
-  [{:keys [connection consensus watcher subscriptions root-identities closed-mode]
+  [{:keys [connection consensus watcher subscriptions root-identities closed-mode cors-origins]
     :as   _config}]
   (let [exception-middleware (exception/create-exception-middleware
                               (merge
@@ -455,7 +458,7 @@
     ;; other middleware are caught and turned into appropriate responses.
     ;; Seems kind of clunky. Maybe there's a better way? - WSM 2023-04-28
     (sort-middleware-by-weight [[1 exception-middleware]
-                                [10 wrap-cors]
+                                [10 (partial wrap-cors cors-origins)]
                                 [10 (partial wrap-assoc-system connection consensus
                                              watcher subscriptions)]
                                 [50 unwrap-credential]

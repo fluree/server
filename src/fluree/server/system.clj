@@ -27,19 +27,36 @@
 (derive ::server/subscriptions ::server/broadcast)
 (derive ::http/jetty ::server/http)
 
+(defn parse-cors-origins
+  "Parse CORS origins from config. Supports strings, regex patterns, and special values."
+  [origins]
+  (when origins
+    (mapv (fn [origin]
+            (cond
+              ;; Special case for wildcard
+              (= origin "*") #".*"
+              ;; Regex pattern (starts with ^)
+              (and (string? origin) (str/starts-with? origin "^"))
+              (re-pattern origin)
+              ;; Plain string origin
+              :else origin))
+          origins)))
+
 (defmethod ig/expand-key ::server/http
   [k config]
   (let [max-txn-wait-ms (conn-config/get-first-integer config server-vocab/max-txn-wait-ms)
         closed-mode     (conn-config/get-first-boolean config server-vocab/closed-mode)
         root-identities (set (conn-config/get-strings config server-vocab/root-identities))
+        cors-origins    (parse-cors-origins (conn-config/get-strings config server-vocab/cors-origins))
         config*         (-> config
                             (assoc :handler (ig/ref ::server/handler))
                             (dissoc server-vocab/max-txn-wait-ms server-vocab/closed-mode
-                                    server-vocab/root-identities))]
+                                    server-vocab/root-identities server-vocab/cors-origins))]
     {k                config*
      ::server/watcher {:max-txn-wait-ms max-txn-wait-ms}
      ::server/handler {:root-identities root-identities
                        :closed-mode     closed-mode
+                       :cors-origins    cors-origins
                        :connection      (ig/ref ::db/connection)
                        :consensus       (ig/ref ::server/consensus)
                        :watcher         (ig/ref ::server/watcher)
