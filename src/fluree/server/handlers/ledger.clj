@@ -15,11 +15,10 @@
 
 (defhandler history
   [{:keys [fluree/conn fluree/opts] {{ledger :from :as query} :body} :parameters :as _req}]
-
   (let [query*  (dissoc query :from)
-
-        {:keys [status result] :as history-response}
-        (deref! (fluree/history conn ledger query* opts))]
-    (log/debug "history handler received query:" query opts)
-    (shared/with-tracking-headers {:status status, :body result}
-      history-response)))
+        result  (deref! (fluree/history conn ledger query* opts))]
+    (log/debug "history handler received query:" query opts "result:" result)
+    ;; fluree/history may return either raw result or wrapped in {:status :result}
+    (if (and (map? result) (:status result) (:result result))
+      {:status (:status result), :body (:result result)}
+      {:status 200, :body result})))

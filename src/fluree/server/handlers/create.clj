@@ -1,6 +1,5 @@
 (ns fluree.server.handlers.create
   (:require [fluree.db.api :as fluree]
-            [fluree.db.util.log :as log]
             [fluree.server.consensus :as consensus]
             [fluree.server.handlers.shared :as shared :refer [deref! defhandler]]
             [fluree.server.handlers.transact :as srv-tx]
@@ -44,7 +43,6 @@
 (defhandler default
   [{:keys          [fluree/opts fluree/consensus fluree/watcher]
     {:keys [body]} :parameters}]
-  (log/debug "create body:" body)
   (let [txn           (when (has-txn-data? body)
                         (fluree/format-txn body opts))
         ledger-id     (extract-ledger-id body opts txn)

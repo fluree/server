@@ -41,18 +41,13 @@
   (let [create-opts (if txn (parse-opts txn) {})
         db      (deref! (fluree/create conn ledger-id create-opts))]
     (if txn
-      ;; If transaction provided, update and commit it
-      (let [commit!     (fn [updated-db]
-                          (let [index-files-ch (new-index-file/monitor-chan config)
-                                resp           (fluree/commit! conn ledger-id updated-db {:file-data?     true
-                                                                                          :index-files-ch index-files-ch})]
-                            (log/debug "New ledger" ledger-id "created with tx-id: " tx-id)
-                            resp))]
-        ;; following uses :file-data? and will return map with {:keys [db data-file commit-file]}
-        (-> db
-            (fluree/update txn opts)
-            deref!
-            commit!))
+      ;; If transaction provided, update db and commit it
+      (let [index-files-ch (new-index-file/monitor-chan config)
+            updated-db     (deref! (fluree/update conn ledger-id txn opts))
+            resp           (deref! (fluree/commit! conn updated-db {:file-data?     true
+                                                                    :index-files-ch index-files-ch}))]
+        (log/debug "New ledger" ledger-id "created with tx-id: " tx-id)
+        resp)
       ;; No transaction - genesis commit only
       (do
         (log/debug "New ledger" ledger-id "created without initial data with tx-id: " tx-id)

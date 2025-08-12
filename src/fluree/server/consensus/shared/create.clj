@@ -1,7 +1,6 @@
 (ns fluree.server.consensus.shared.create
   "Shared functions for ledger creation across consensus mechanisms."
   (:require [clojure.string :as str]
-            [fluree.db.api :as fluree]
             [fluree.db.util.log :as log]))
 
 (def commit-id-prefix "fluree:commit:sha256:b")
