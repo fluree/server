@@ -4,7 +4,7 @@
             [fluree.db.connection.config :as conn-config]
             [fluree.db.connection.system :as conn-system]
             [fluree.db.connection.vocab :as conn-vocab]
-            [fluree.db.util :as util :refer [get-first]]
+            [fluree.db.util :as util :refer [get-first of-type?]]
             [fluree.db.util.json :as json]
             [fluree.db.util.log :as log]
             [fluree.server :as-alias server]
@@ -153,38 +153,38 @@
 
 (defn log-config-summary
   [parsed-config]
-  (let [connection-config (some #(when (conn-config/type? % conn-vocab/connection-type) %)
+  (let [connection-config (some #(when (of-type? % conn-vocab/connection-type) %)
                                 (vals parsed-config))
-        storage-config (some #(when (conn-config/type? % conn-vocab/storage-type) %)
-                             (vals parsed-config))
-        consensus-config (some #(when (config/consensus? %) %)
-                               (vals parsed-config))
-        http-config (some #(when (config/http-api? %) %)
-                          (vals parsed-config))
-        cache-mb (when connection-config
-                   (conn-config/get-first-integer connection-config conn-vocab/cache-max-mb))
-        storage-type (when storage-config
-                       (let [storage-id (:id storage-config)]
-                         (cond
-                           (conn-config/get-first-string storage-config conn-vocab/file-path)
-                           (str "File storage at " (conn-config/get-first-string storage-config conn-vocab/file-path))
+        storage-config    (some #(when (of-type? % conn-vocab/storage-type) %)
+                                (vals parsed-config))
+        consensus-config  (some #(when (config/consensus? %) %)
+                                (vals parsed-config))
+        http-config       (some #(when (config/http-api? %) %)
+                                (vals parsed-config))
+        cache-mb          (when connection-config
+                            (conn-config/get-first-integer connection-config conn-vocab/cache-max-mb))
+        storage-type      (when storage-config
+                            (let [storage-id (:id storage-config)]
+                              (cond
+                                (conn-config/get-first-string storage-config conn-vocab/file-path)
+                                (str "File storage at " (conn-config/get-first-string storage-config conn-vocab/file-path))
 
-                           (conn-config/get-first-string storage-config conn-vocab/s3-bucket)
-                           (str "S3 storage (bucket: " (conn-config/get-first-string storage-config conn-vocab/s3-bucket) ")")
+                                (conn-config/get-first-string storage-config conn-vocab/s3-bucket)
+                                (str "S3 storage (bucket: " (conn-config/get-first-string storage-config conn-vocab/s3-bucket) ")")
 
-                           (conn-config/get-first-string storage-config conn-vocab/ipfs-endpoint)
-                           (str "IPFS storage (endpoint: " (conn-config/get-first-string storage-config conn-vocab/ipfs-endpoint) ")")
+                                (conn-config/get-first-string storage-config conn-vocab/ipfs-endpoint)
+                                (str "IPFS storage (endpoint: " (conn-config/get-first-string storage-config conn-vocab/ipfs-endpoint) ")")
 
-                           :else
-                           (str "Storage type: " (name (or storage-id "unknown"))))))
-        consensus-type (when consensus-config
-                         (util/get-first-value consensus-config server-vocab/consensus-protocol))
+                                :else
+                                (str "Storage type: " (name (or storage-id "unknown"))))))
+        consensus-type   (when consensus-config
+                           (util/get-first-value consensus-config server-vocab/consensus-protocol))
         max-pending-txns (when (and consensus-config (= "standalone" consensus-type))
                            (conn-config/get-first-integer consensus-config server-vocab/max-pending-txns))
-        http-port (when http-config
-                    (conn-config/get-first-integer http-config server-vocab/http-port))
-        closed-mode (when http-config
-                      (conn-config/get-first-boolean http-config server-vocab/closed-mode))]
+        http-port        (when http-config
+                           (conn-config/get-first-integer http-config server-vocab/http-port))
+        closed-mode      (when http-config
+                           (conn-config/get-first-boolean http-config server-vocab/closed-mode))]
     (log/info "Server configuration summary:")
     (log/info "  HTTP port:" (or http-port "Not configured"))
     (log/info "  Consensus mode:" (or consensus-type "Not configured"))

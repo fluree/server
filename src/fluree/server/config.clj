@@ -1,7 +1,7 @@
 (ns fluree.server.config
   (:require [clojure.java.io :as io]
             [fluree.db.connection.config :as conn-config]
-            [fluree.db.util :as util :refer [get-id  get-first-value]]
+            [fluree.db.util :as util :refer [get-id get-first-value of-type?]]
             [fluree.db.util.log :as log]
             [fluree.server.config.vocab :as vocab]
             [fluree.server.consensus :as-alias consensus]
@@ -62,7 +62,7 @@
 
 (defn consensus?
   [node]
-  (conn-config/type? node vocab/consensus-type))
+  (of-type? node vocab/consensus-type))
 
 (defn raft-consensus?
   [node]
@@ -76,7 +76,7 @@
 
 (defn http-api?
   [node]
-  (and (conn-config/type? node vocab/api-type)
+  (and (of-type? node vocab/api-type)
        (contains? node vocab/http-port)))
 
 (defn jetty-api?
