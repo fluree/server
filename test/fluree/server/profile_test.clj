@@ -1,7 +1,7 @@
 (ns fluree.server.profile-test
   (:require [clojure.test :refer [deftest is testing]]
-            [fluree.db.util.json :as json]
             [fluree.db.util :as util]
+            [fluree.db.util.json :as json]
             [fluree.server :as server]
             [fluree.server.command :as command]
             [fluree.server.config :as config]
