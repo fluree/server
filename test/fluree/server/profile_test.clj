@@ -1,6 +1,7 @@
 (ns fluree.server.profile-test
   (:require [clojure.test :refer [deftest is testing]]
             [fluree.db.util.json :as json]
+            [fluree.db.util :as util]
             [fluree.server :as server]
             [fluree.server.command :as command]
             [fluree.server.config :as config]
@@ -81,27 +82,23 @@
       (testing "Without profile, default values are used"
         (let [parsed-no-profile (config/parse json-config)]
           ;; Find the localStorage node
-          (is (some #(and (= :https<cl><sl><sl>ns<do>flur<do>ee<sl>config<sl>test<sl>/localStorage (:id %))
+          (is (some #(and (= :https<cl><sl><sl>ns<do>flur<do>ee<sl>config<sl>test<sl>/localStorage (util/get-id %))
                           (= "/opt/fluree-server/data"
-                             (-> (get % "https://ns.flur.ee/system#filePath")
-                                 first
-                                 :value)))
+                             (util/get-first-value % "https://ns.flur.ee/system#filePath")))
                     (vals parsed-no-profile)))
 
           ;; Find the connection node
-          (is (some #(and (= :https<cl><sl><sl>ns<do>flur<do>ee<sl>config<sl>test<sl>/connection (:id %))
+          (is (some #(and (= :https<cl><sl><sl>ns<do>flur<do>ee<sl>config<sl>test<sl>/connection
+                             (util/get-id %))
                           (= 1000
-                             (-> (get % "https://ns.flur.ee/system#cacheMaxMb")
-                                 first
-                                 :value)))
+                             (util/get-first-value % "https://ns.flur.ee/system#cacheMaxMb")))
                     (vals parsed-no-profile)))
 
           ;; Find the consensus node
-          (is (some #(and (= :https<cl><sl><sl>ns<do>flur<do>ee<sl>config<sl>test<sl>/consensus (:id %))
+          (is (some #(and (= :https<cl><sl><sl>ns<do>flur<do>ee<sl>config<sl>test<sl>/consensus
+                             (util/get-id %))
                           (= 512
-                             (-> (get % "https://ns.flur.ee/system#maxPendingTxns")
-                                 first
-                                 :value)))
+                             (util/get-first-value % "https://ns.flur.ee/system#maxPendingTxns")))
                     (vals parsed-no-profile)))))
 
       ;; Test with dev profile
@@ -110,27 +107,24 @@
               parsed-with-profile (config/parse config-with-profile)]
 
           ;; Find the localStorage node - should have dev/data
-          (is (some #(and (= :https<cl><sl><sl>ns<do>flur<do>ee<sl>config<sl>test<sl>/localStorage (:id %))
+          (is (some #(and (= :https<cl><sl><sl>ns<do>flur<do>ee<sl>config<sl>test<sl>/localStorage
+                             (util/get-id %))
                           (= "dev/data"
-                             (-> (get % "https://ns.flur.ee/system#filePath")
-                                 first
-                                 :value)))
+                             (util/get-first-value % "https://ns.flur.ee/system#filePath")))
                     (vals parsed-with-profile)))
 
           ;; Find the connection node - cacheMaxMb should be 200
-          (is (some #(and (= :https<cl><sl><sl>ns<do>flur<do>ee<sl>config<sl>test<sl>/connection (:id %))
+          (is (some #(and (= :https<cl><sl><sl>ns<do>flur<do>ee<sl>config<sl>test<sl>/connection
+                             (util/get-id %))
                           (= 200
-                             (-> (get % "https://ns.flur.ee/system#cacheMaxMb")
-                                 first
-                                 :value)))
+                             (util/get-first-value % "https://ns.flur.ee/system#cacheMaxMb")))
                     (vals parsed-with-profile)))
 
           ;; Find the consensus node - maxPendingTxns should be 16
-          (is (some #(and (= :https<cl><sl><sl>ns<do>flur<do>ee<sl>config<sl>test<sl>/consensus (:id %))
+          (is (some #(and (= :https<cl><sl><sl>ns<do>flur<do>ee<sl>config<sl>test<sl>/consensus
+                             (util/get-id %))
                           (= 16
-                             (-> (get % "https://ns.flur.ee/system#maxPendingTxns")
-                                 first
-                                 :value)))
+                             (util/get-first-value % "https://ns.flur.ee/system#maxPendingTxns")))
                     (vals parsed-with-profile)))))))
 
   (deftest error-handling-test
