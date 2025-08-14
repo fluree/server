@@ -296,7 +296,7 @@
                         (json/stringify
                          (assoc secret-query
                                 "opts" {"policyClass"  "ex:EmployeePolicy"
-                                        "policyValues" ["?$identity" [alice-did]]}))
+                                        "policyValues" ["?$identity" [{"@type" "@id" "@value" alice-did}]]}))
                         :headers json-headers}
           query-res    (api-post :query query-req)]
 
@@ -316,7 +316,7 @@
                                                    schema:ssn ?ssn.}")
                          :headers (assoc sparql-headers
                                          "Fluree-Policy-Class" "ex:EmployeePolicy"
-                                         "Fluree-Policy-Values" (json/stringify ["?$identity" [alice-did]]))}
+                                         "Fluree-Policy-Values" (json/stringify ["?$identity" [{"@type" "@id" "@value" alice-did}]]))}
               query-res (api-post :query query-req)]
 
           (is (= [["ex:alice" "111-11-1111"]]
@@ -380,7 +380,7 @@
                                       "f:action" {"@id" "f:view"}
                                       "f:query"  {"@type"  "@json"
                                                   "@value" {}}}]}
-          policy-values ["?$identity" [alice-did]]
+          policy-values ["?$identity" [{"@type" "@id" "@value" alice-did}]]
           query-req     {:body
                          (json/stringify
                           (assoc secret-query
