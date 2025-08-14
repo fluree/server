@@ -1,9 +1,9 @@
 {:deps {org.clojure/clojure    {:mvn/version "1.11.3"}
         org.clojure/core.async {:mvn/version "1.6.681"}
         com.fluree/db          {:git/url "https://github.com/fluree/db.git"
-                                :git/sha "df2df64e9e981f008e4a4d50b7341ecb827016c3"}
+                                :git/sha "28e3b94e3f00d5ceecc7d9a7fcd49951286e67c4"}
         com.fluree/json-ld     {:git/url "https://github.com/fluree/json-ld.git"
-                                :git/sha "bca4c3aab601bdcc801323d90c6e5cc24c304914"}
+                                :git/sha "1db2f86ebe25787bdf4ab8a730a1a4c68e60ac3c"}
 
         integrant/integrant {:mvn/version "0.10.0"}
         com.fluree/crypto   {:git/url "https://github.com/fluree/fluree.crypto.git"
