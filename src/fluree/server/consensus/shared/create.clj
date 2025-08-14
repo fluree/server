@@ -1,7 +1,6 @@
 (ns fluree.server.consensus.shared.create
   "Shared functions for ledger creation across consensus mechanisms."
   (:require [clojure.string :as str]
-            [fluree.db.api :as fluree]
             [fluree.db.util.log :as log]))
 
 (def commit-id-prefix "fluree:commit:sha256:b")
@@ -21,21 +20,19 @@
     (subs commit-id (count commit-id-prefix))))
 
 (defn genesis-result
-  "Creates a commit result map for a genesis commit."
-  [ledger]
-  (let [db     (fluree/db ledger)
-        commit (:commit db)]
+  "Creates a commit result map for a genesis commit from a database."
+  [db]
+  (let [commit (:commit db)]
     {:db      db
      :address (:address commit)
      :hash    (or (:hash commit)
                   (hash-from-id (:id commit)))}))
 
 (defn file-result
-  "Creates a commit result map with file metadata structure.
+  "Creates a commit result map with file metadata structure from a database.
   Used by Raft consensus. Genesis commits have data files but with empty assertions."
-  [ledger]
-  (let [db         (fluree/db ledger)
-        commit     (:commit db)
+  [db]
+  (let [commit     (:commit db)
         ;; Genesis commits have a data file referenced in the commit
         data-addr  (-> commit :data :address)]
     (when-not data-addr

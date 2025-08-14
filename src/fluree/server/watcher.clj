@@ -64,6 +64,7 @@
   (deliver-event [_ id event]
     ;; note: this can have a race condition, but given it is a promise chan, the
     ;; second put! will be ignored
+    (log/debug "Watcher delivering event for id:" id "event type:" (:type event))
     (swap! state deliver-event-state id event)))
 
 (defn start

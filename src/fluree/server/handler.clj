@@ -444,12 +444,24 @@
 (defn compose-app-middleware
   [{:keys [connection consensus watcher subscriptions root-identities closed-mode cors-origins]
     :as   _config}]
-  (let [exception-middleware (exception/create-exception-middleware
+  (let [fluree-exception-handler (fn [exception request]
+                                   (let [data (ex-data exception)
+                                         msg  (ex-message exception)]
+                                     (log/error exception "Exception in handler, message:" msg "ex-data:" data)
+                                     (if-let [response (:response data)]
+                                       (do
+                                         (log/debug "Returning fluree exception response:" response)
+                                         ;; Ensure response has a body
+                                         (if (:body response)
+                                           response
+                                           (assoc response :body {:error (or (:error data) msg)})))
+                                       (exception/http-response-handler exception request))))
+        exception-middleware (exception/create-exception-middleware
                               (merge
                                exception/default-handlers
                                {::exception/default
                                 (partial exception/wrap-log-to-console
-                                         exception/http-response-handler)}))]
+                                         fluree-exception-handler)}))]
     ;; Exception middleware should always be first AND last.
     ;; The last (highest sort order) one ensures that middleware that comes
     ;; after it will not be skipped on response if handler code throws an
