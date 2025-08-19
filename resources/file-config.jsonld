@@ -52,7 +52,7 @@
     {
       "@id": "http",
       "@type": "API",
-      "httpPort": 58090,
+      "httpPort": 8090,
       "maxTxnWaitMs": 120000,
       "corsOrigins": ["*"]
     }
