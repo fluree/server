@@ -272,7 +272,8 @@
 (def fluree-request-header-keys
   ["fluree-track-meta" "fluree-track-fuel" "fluree-track-policy" "fluree-ledger"
    "fluree-max-fuel" "fluree-identity" "fluree-policy-identity" "fluree-policy"
-   "fluree-policy-class" "fluree-policy-values" "fluree-format" "fluree-output"])
+   "fluree-policy-class" "fluree-policy-values" "fluree-format" "fluree-output"
+   "fluree-ledger-opts"])
 
 (defn parse-boolean-header
   [header name]
@@ -293,7 +294,7 @@
   (fn [{:keys [headers credential/did] :as req}]
     (let [{:keys [track-meta track-fuel track-policy max-fuel
                   identity policy-identity policy policy-class policy-values
-                  format output ledger]}
+                  format output ledger ledger-opts]}
           (-> headers
               (select-keys fluree-request-header-keys)
               (update-keys (fn [k] (keyword (subs k request-header-prefix-count)))))
@@ -359,6 +360,12 @@
                                  (throw (ex-info "Invalid Fluree-Policy-Values header: must be JSON."
                                                  {:status 400})))))
 
+          ledger-opts    (when ledger-opts
+                           (try (-> (json/parse ledger-opts false)
+                                    (update-vals #(update-keys % keyword)))
+                                (catch Exception _
+                                  (throw (ex-info "Invalid Fluree-Ledger-Opts header: must be JSON."
+                                                  {:status 400})))))
           opts (cond-> {}
                  meta          (assoc :meta meta)
                  max-fuel      (assoc :max-fuel max-fuel)
@@ -373,7 +380,8 @@
                  ;; Fluree-Identity overrides Fluree-Policy-Identity
                  identity        (assoc :identity identity)
                  ;; credential (signed) identity overrides all else
-                 did             (assoc :identity did))]
+                 did             (assoc :identity did)
+                 ledger-opts   (merge ledger-opts))]
       (-> req
           (assoc :fluree/opts opts)
           handler))))
