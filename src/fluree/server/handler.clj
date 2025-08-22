@@ -10,6 +10,7 @@
             [fluree.server.handlers.create :as create]
             [fluree.server.handlers.drop :as drop]
             [fluree.server.handlers.ledger :as ledger]
+            [fluree.server.handlers.ledger-resource :as ledger-resource]
             [fluree.server.handlers.remote-resource :as remote]
             [fluree.server.handlers.subscription :as subscription]
             [fluree.server.handlers.transact :as srv-tx]
@@ -116,10 +117,10 @@
 (def QueryFormat (m/schema [:enum :sparql]))
 
 (def QueryRequestBody
-  (m/schema [:multi {:dispatch ::format}
+  (m/schema [:multi {:dispatch :sparql/format}
              [:sparql [:map
-                       [::query SparqlQuery]
-                       [::format QueryFormat]]]
+                       [:sparql/query SparqlQuery]
+                       [:sparql/format QueryFormat]]]
              [::m/default FqlQuery]]))
 
 (def HistoryQueryResponse
@@ -387,9 +388,9 @@
                 (reify
                   mf/Decode
                   (decode [_ data charset]
-                    {::query  (String. (.readAllBytes ^InputStream data)
-                                       ^String charset)
-                     ::format :sparql})))]}))
+                    {:sparql/query  (String. (.readAllBytes ^InputStream data)
+                                             ^String charset)
+                     :sparql/format :sparql})))]}))
 
 (def sparql-update-format
   (mf/map->Format
@@ -570,7 +571,23 @@
           :parameters {:body SubscriptionRequestBody}
           :handler    #'subscription/default}}])
 
+(def fluree-multi-query-routes
+  ["/:query"
+   {:conflicting true  ; Allow this to conflict with specific routes
+    :get  query-endpoint
+    :post query-endpoint}])
+
+(def fluree-ledger-resource-routes
+  ["/{*ledger-path}"
+   {:conflicting true  ; Allow this catch-all to conflict with specific routes
+    :middleware [ledger-resource/wrap-ledger-extraction]
+    :get  {:summary "Ledger resource operations (GET)"
+           :handler #'ledger-resource/dispatch}
+    :post {:summary "Ledger resource operations (POST)"
+           :handler #'ledger-resource/dispatch}}])
+
 (def default-fluree-route-map
+  "Legacy routes maintained for backwards compatibility"
   {:create       fluree-create-routes
    :drop         fluree-drop-route
    :insert       fluree-insert-route
@@ -582,6 +599,11 @@
    :remote       fluree-remote-routes
    :subscription fluree-subscription-routes})
 
+(def new-fluree-route-map
+  "New routes with ledger-specific resources and multi-ledger query"
+  {:multi-query fluree-multi-query-routes
+   :ledger-resource fluree-ledger-resource-routes})
+
 (defn combine-fluree-routes
   [fluree-route-map]
   (->> fluree-route-map
@@ -589,7 +611,15 @@
        (into ["/fluree"])))
 
 (def default-fluree-routes
+  "Legacy routes for backwards compatibility"
   (combine-fluree-routes default-fluree-route-map))
+
+(def all-fluree-routes
+  "Combined legacy and new routes - specific routes first, then catch-all routes"
+  (let [;; Order matters: specific routes must come before catch-all routes
+        specific-routes (vals default-fluree-route-map)
+        catch-all-routes (vals new-fluree-route-map)]
+    (into ["/fluree"] (concat specific-routes catch-all-routes))))
 
 (def fallback-handler
   (let [swagger-ui-handler (swagger-ui/create-swagger-ui-handler
@@ -622,13 +652,15 @@
                     muuntaja-mw/format-request-middleware]]
     (ring/router all-routes {:data {:coercion   coercer
                                     :muuntaja   formatter
-                                    :middleware middleware}})))
+                                    :middleware middleware}
+                             ;; Allow conflicting routes - specific routes will be matched first
+                             :conflicts nil})))
 
 (defn app
   ([config]
    (app config []))
   ([config custom-routes]
-   (app config custom-routes default-fluree-routes))
+   (app config custom-routes all-fluree-routes))
   ([config custom-routes fluree-routes]
    (let [app-middleware (compose-app-middleware config)
          app-routes     (cond-> ["" {:middleware app-middleware} fluree-routes]
