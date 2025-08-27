@@ -43,7 +43,7 @@
     (if txn
       ;; If transaction provided, update db and commit it
       (let [index-files-ch (new-index-file/monitor-chan config)
-            updated-db     (deref! (fluree/update conn ledger-id txn opts))
+            updated-db     (deref! (fluree/update db txn opts))
             resp           (deref! (fluree/commit! conn updated-db {:file-data?     true
                                                                     :index-files-ch index-files-ch}))]
         (log/debug "New ledger" ledger-id "created with tx-id: " tx-id)
