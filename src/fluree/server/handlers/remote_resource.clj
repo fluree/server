@@ -21,6 +21,14 @@
     {:status 200
      :body   result}))
 
+(defhandler parse-address-hash
+  [{:keys [fluree/conn]
+    {{resource-address :resource :as body} :body} :parameters}]
+  (log/debug "Remote resource parse address hash request:" body)
+  (let [result (<?? (connection/parse-address-hash conn resource-address))]
+    {:status 200
+     :body   result}))
+
 (defhandler published-ledger-addresses
   [{:keys [fluree/conn]
     {{:keys [ledger] :as body} :body} :parameters}]
