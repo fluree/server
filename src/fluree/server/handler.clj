@@ -569,7 +569,7 @@
             :parameters {:body AddressRequestBody}
             :handler    #'remote/read-resource-address}}]
    ["/hash"
-    {:post {:summary    "Read resource from address"
+    {:post {:summary    "Parse content hash from address"
             :parameters {:body HashRequestBody}
             :handler    #'remote/parse-address-hash}}]
    ["/addresses"
