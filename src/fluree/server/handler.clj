@@ -137,6 +137,12 @@
              [:map
               [:resource Address]]]))
 
+(def HashRequestBody
+  (m/schema [:and
+             [:map-of :keyword :any]
+             [:map
+              [:address Address]]]))
+
 (def AliasRequestBody
   (m/schema [:and
              [:map-of :keyword :any]
@@ -562,6 +568,10 @@
     {:post {:summary    "Read resource from address"
             :parameters {:body AddressRequestBody}
             :handler    #'remote/read-resource-address}}]
+   ["/hash"
+    {:post {:summary    "Parse content hash from address"
+            :parameters {:body HashRequestBody}
+            :handler    #'remote/parse-address-hash}}]
    ["/addresses"
     {:post {:summary    "Retrieve ledger address from alias"
             :parameters {:body AliasRequestBody}
