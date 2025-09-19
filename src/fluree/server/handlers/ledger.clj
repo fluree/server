@@ -1,12 +1,11 @@
 (ns fluree.server.handlers.ledger
   (:require [fluree.db.api :as fluree]
             [fluree.db.util.log :as log]
-            [fluree.server.handler :as-alias handler]
             [fluree.server.handlers.shared :refer [defhandler deref!] :as shared]))
 
 (defhandler query
   [{:keys [fluree/conn fluree/opts] {:keys [body]} :parameters :as _req}]
-  (let [query (or (::handler/query body) body)
+  (let [query (or (:sparql/query body) body)
         {:keys [status result] :as query-response}
         (deref! (fluree/query-connection conn query opts))]
     (log/debug "query handler received query:" query opts)
@@ -22,3 +21,4 @@
     (if (and (map? result) (:status result) (:result result))
       {:status (:status result), :body (:result result)}
       {:status 200, :body result})))
+
