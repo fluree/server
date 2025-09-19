@@ -1,5 +1,6 @@
 (ns fluree.server.system
-  (:require [clojure.string :as str]
+  (:require [clojure.core.async :as async]
+            [clojure.string :as str]
             [fluree.db :as-alias db]
             [fluree.db.connection.config :as conn-config]
             [fluree.db.connection.system :as conn-system]
@@ -16,6 +17,7 @@
             [fluree.server.consensus.standalone :as standalone]
             [fluree.server.handler :as handler]
             [fluree.server.http :as-alias http]
+            [fluree.server.task :as task]
             [fluree.server.watcher :as watcher]
             [integrant.core :as ig]
             [ring.adapter.jetty9 :as jetty]))
@@ -199,15 +201,20 @@
 
 (defn start-config
   [config & {:keys [profile reindex]}]
-  (let [json-config (if (string? config)
-                      (json/parse config false)
-                      config)
+  (let [json-config         (if (string? config)
+                              (json/parse config false)
+                              config)
         config-with-profile (if profile
                               (config/apply-profile json-config profile)
                               json-config)
-        parsed-config (config/parse config-with-profile)]
+        parsed-config       (config/parse config-with-profile)
+        system              (conn-system/initialize parsed-config)]
     (log-config-summary parsed-config)
-    (conn-system/initialize parsed-config)))
+    (when reindex
+      (let [connection-key (first (filter #(isa? % :fluree.db/connection) (keys system)))]
+        (when-let [conn (get system connection-key)]
+          (async/<!! (task/reindex conn reindex)))))
+    system))
 
 (defn start-file
   [path & {:keys [profile reindex]}]
