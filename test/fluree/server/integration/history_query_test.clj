@@ -53,7 +53,7 @@
       (let [history-expectations
             {["id"]                  #(re-matches commit-id-regex %)
              ["f:address"]           #(re-matches mem-addr-regex %)
-             ["f:alias"]             #(= % (ledger-util/normalize-ledger-alias ledger-name))
+             ["f:alias"]             #(= % (ledger-util/ensure-ledger-branch ledger-name))
              ["f:previous"]          #(or (nil? %)
                                           (re-matches commit-id-regex (get % "id")))
              ["f:time"]              pos-int?
