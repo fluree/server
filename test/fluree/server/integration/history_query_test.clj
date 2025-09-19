@@ -1,6 +1,7 @@
 (ns fluree.server.integration.history-query-test
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [fluree.db.util.json :as json]
+            [fluree.db.util.ledger :as ledger-util]
             [fluree.server.integration.test-system
              :as test-system
              :refer [api-post json-headers run-test-server]]))
@@ -52,8 +53,7 @@
       (let [history-expectations
             {["id"]                  #(re-matches commit-id-regex %)
              ["f:address"]           #(re-matches mem-addr-regex %)
-             ["f:alias"]             #(= % ledger-name)
-             ["f:branch"]            #(= % "main")
+             ["f:alias"]             #(= % (ledger-util/normalize-ledger-alias ledger-name))
              ["f:previous"]          #(or (nil? %)
                                           (re-matches commit-id-regex (get % "id")))
              ["f:time"]              pos-int?
@@ -66,9 +66,8 @@
              ["f:data" "f:t"]        pos-int?}]
         (is (every? #(every? (fn [[kp valid?]]
                                (let [actual (get-in % kp)]
-                                 (or
-                                  (valid? actual)
-                                  (println "invalid:" (pr-str actual)))))
+                                 (or (valid? actual)
+                                     (println "invalid:" (pr-str actual)))))
                              history-expectations)
                     (map #(get % "f:commit") query-results)))))))
 

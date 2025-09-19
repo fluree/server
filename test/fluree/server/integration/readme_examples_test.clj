@@ -83,7 +83,7 @@
   (testing "SPARQL query for all persons"
     (let [sparql-query "PREFIX schema: <http://schema.org/>
                          PREFIX ex: <http://example.org/>
-                         
+
                          SELECT ?person ?name ?email
                          FROM <example/ledger>
                          WHERE {
@@ -319,6 +319,5 @@ ex:frank a schema:Person ;
           (is (every? #(and (contains? % "f:commit")
                             (contains? % "f:assert")
                             (contains? % "f:retract")
-                            (= "example/ledger" (get-in % ["f:commit" "f:alias"]))
-                            (= "main" (get-in % ["f:commit" "f:branch"])))
+                            (= "example/ledger:main" (get-in % ["f:commit" "f:alias"])))
                       history)))))))
