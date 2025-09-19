@@ -198,39 +198,34 @@
       (log/info "  Closed mode: enabled"))))
 
 (defn start-config
-  ([config]
-   (start-config config nil))
-  ([config profile]
-   (let [json-config (if (string? config)
-                       (json/parse config false)
-                       config)
-         config-with-profile (if profile
-                               (config/apply-profile json-config profile)
-                               json-config)
-         parsed-config (config/parse config-with-profile)]
-     (log-config-summary parsed-config)
-     (conn-system/initialize parsed-config))))
+  [config & {:keys [profile reindex]}]
+  (let [json-config (if (string? config)
+                      (json/parse config false)
+                      config)
+        config-with-profile (if profile
+                              (config/apply-profile json-config profile)
+                              json-config)
+        parsed-config (config/parse config-with-profile)]
+    (log-config-summary parsed-config)
+    (conn-system/initialize parsed-config)))
 
 (defn start-file
-  ([path]
-   (start-file path nil))
-  ([path profile]
-   (log/info "Loading configuration from file:" path)
-   (-> path
-       config/read-file
-       (start-config profile))))
+  [path & {:keys [profile reindex]}]
+  (log/info "Loading configuration from file:" path)
+  (-> path
+      config/read-file
+      (start-config :profile profile :reindex reindex)))
 
 (defn start-resource
-  ([resource-name]
-   (start-resource resource-name nil))
-  ([resource-name profile]
-   (log/info "Loading configuration from resource:" resource-name)
-   (-> resource-name
-       config/read-resource
-       (start-config profile))))
+  [resource-name & {:keys [profile reindex]}]
+  (log/info "Loading configuration from resource:" resource-name)
+  (-> resource-name
+      config/read-resource
+      (start-config :profile profile :reindex reindex)))
 
-(def start
-  (partial start-resource default-resource-name))
+(defn start
+  [& {:keys [profile reindex]}]
+  (start-resource default-resource-name :profile profile :reindex reindex))
 
 (defn stop
   [server]

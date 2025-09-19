@@ -9,6 +9,7 @@
    ["-c" "--config FILE" "Load configuration at a file path"]
    ["-s" "--string STRING" "Load stringified configuration"]
    ["-r" "--resource NAME" "Load pre-defined configuration resource"]
+   ["--reindex" "--reindex LEDGER" "Reindex the specified ledger"]
    ["-h" "--help" "Print this usage summary and exit"]])
 
 (defn single-configuration?
