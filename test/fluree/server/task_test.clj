@@ -36,8 +36,7 @@
             conn (get system conn-key)]
         (create-ledger-with-data conn "test-ledger" 100)
         (let [result (async/<!! (task/reindex conn "test-ledger"))]
-          (is (= :reindexed result)
-              "Should return :reindexed on successful reindex"))
+          (is (= {:status 0} result)))
         (system/stop system)))
 
     (testing "reindex with --all flag"
@@ -46,7 +45,7 @@
             conn (get system conn-key)]
         (create-ledger-with-data conn "test-ledger-1" 50)
         (create-ledger-with-data conn "test-ledger-2" 60)
-        (is (= :reindexed-all (async/<!! (task/reindex conn "--all"))))
+        (is (= {:status 0} (async/<!! (task/reindex conn "--all"))))
         (system/stop system)))
 
     (testing "can reload reindexed ledgers"

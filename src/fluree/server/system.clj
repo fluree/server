@@ -213,7 +213,8 @@
     (when reindex
       (let [connection-key (first (filter #(isa? % :fluree.db/connection) (keys system)))]
         (when-let [conn (get system connection-key)]
-          (async/<!! (task/reindex conn reindex)))))
+          (let [{:keys [status]} (async/<!! (task/reindex conn reindex))]
+            (System/exit status)))))
     system))
 
 (defn start-file

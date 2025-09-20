@@ -21,10 +21,10 @@
       (if (util/exception? result)
         (do
           (log/error result "Reindex failed for ledger:" alias)
-          alias)
+          {:ledger alias :status 1})
         (do
           (log/info "Reindex completed for ledger:" alias)
-          :reindexed)))))
+          {:status 0})))))
 
 (defn reindex-all
   [{:keys [parallelism primary-publisher] :as conn
@@ -34,7 +34,7 @@
     (let [records    (<? (nameservice/all-records primary-publisher))
           aliases    (extract-ledger-aliases records)
           in-ch      (async/to-chan! aliases)
-          out-ch     (async/chan parallelism (remove #{:reindexed}))
+          out-ch     (async/chan parallelism (remove #(zero? (:status %))))
           reindex-fn (fn [alias ch]
                        (-> (reindex-single conn alias)
                            (async/pipe ch)))]
@@ -43,9 +43,9 @@
       (let [failed (<? (async/into [] out-ch))]
         (if (not-empty failed)
           (do (log/warn "Reindexing failed for ledgers:" failed)
-              :reindexing-failures)
+              {:status 1})
           (do (log/info "Reindex completed for all ledgers")
-              :reindexed-all))))))
+              {:status 0}))))))
 
 (defn reindex
   "Returns a vector of dbs for "
