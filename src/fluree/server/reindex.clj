@@ -1,4 +1,4 @@
-(ns fluree.server.task
+(ns fluree.server.reindex
   (:require [clojure.core.async :as async]
             [fluree.db.connection :as connection]
             [fluree.db.constants :as const]
@@ -40,7 +40,7 @@
                            (async/pipe ch)))]
       (log/info "Found" (count aliases) "ledgers to reindex:" aliases)
       (async/pipeline-async parallelism out-ch reindex-fn in-ch)
-      (let [failed (<? (async/into [] out-ch))]
+      (let [failed (async/<! (async/into [] out-ch))]
         (if (not-empty failed)
           (do (log/warn "Reindexing failed for ledgers:" failed)
               {:status 1})

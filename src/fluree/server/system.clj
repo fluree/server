@@ -17,7 +17,7 @@
             [fluree.server.consensus.standalone :as standalone]
             [fluree.server.handler :as handler]
             [fluree.server.http :as-alias http]
-            [fluree.server.task :as task]
+            [fluree.server.reindex :as reindex]
             [fluree.server.watcher :as watcher]
             [integrant.core :as ig]
             [ring.adapter.jetty9 :as jetty]))
@@ -210,12 +210,14 @@
         parsed-config       (config/parse config-with-profile)
         system              (conn-system/initialize parsed-config)]
     (log-config-summary parsed-config)
-    (when reindex
+    (if reindex
       (let [connection-key (first (filter #(isa? % :fluree.db/connection) (keys system)))]
-        (when-let [conn (get system connection-key)]
-          (let [{:keys [status]} (async/<!! (task/reindex conn reindex))]
-            (System/exit status)))))
-    system))
+        (if-let [conn (get system connection-key)]
+          (let [{:keys [status]} (async/<!! (reindex/reindex conn reindex))]
+            (System/exit status))
+          (do (log/error "No connection found." system)
+              (System/exit 1))))
+      system)))
 
 (defn start-file
   [path & {:keys [profile reindex]}]

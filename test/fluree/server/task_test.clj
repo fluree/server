@@ -4,8 +4,8 @@
             [fluree.db.api :as fluree]
             [fluree.db.util.json :as json]
             [fluree.server.integration.test-system :refer [api-post json-headers] :as test-system]
+            [fluree.server.reindex :as reindex]
             [fluree.server.system :as system]
-            [fluree.server.task :as task]
             [test-with-files.tools :refer [with-tmp-dir] :as twf]))
 
 (defn test-config
@@ -35,7 +35,7 @@
             conn-key (first (filter #(isa? % :fluree.db/connection) (keys system)))
             conn (get system conn-key)]
         (create-ledger-with-data conn "test-ledger" 100)
-        (let [result (async/<!! (task/reindex conn "test-ledger"))]
+        (let [result (async/<!! (reindex/reindex conn "test-ledger"))]
           (is (= {:status 0} result)))
         (system/stop system)))
 
@@ -45,7 +45,7 @@
             conn (get system conn-key)]
         (create-ledger-with-data conn "test-ledger-1" 50)
         (create-ledger-with-data conn "test-ledger-2" 60)
-        (is (= {:status 0} (async/<!! (task/reindex conn "--all"))))
+        (is (= {:status 0} (async/<!! (reindex/reindex conn "--all"))))
         (system/stop system)))
 
     (testing "can reload reindexed ledgers"
