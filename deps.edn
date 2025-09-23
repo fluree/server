@@ -1,11 +1,13 @@
 {:deps {org.clojure/clojure    {:mvn/version "1.11.3"}
         org.clojure/core.async {:mvn/version "1.6.681"}
         com.fluree/db          {:git/url "https://github.com/fluree/db.git"
-                                :git/sha "7f7011be1f3f9481640078550ad83735c5c99597"}
+                                :git/sha "59fd66c88a3ad7d239ab3ac4eb42e1580b8af70e"}
         com.fluree/json-ld     {:git/url "https://github.com/fluree/json-ld.git"
-                                :git/sha "73a990a4b803d0b4cfbbbe4dc16275b39a3add4e"}
+                                :git/sha "74083536c84d77f8cdd4b686b5661714010baad3"}
 
         integrant/integrant {:mvn/version "0.10.0"}
+        com.fluree/crypto   {:git/url "https://github.com/fluree/fluree.crypto.git"
+                             :git/sha "065c425d98c97cb648f01ad3c708f2c71c80e11d"}
 
         ;; network, consensus
         com.github.fluree/raft {:git/tag "v1.0.0-beta2"
@@ -49,15 +51,18 @@
    :ns-default build}
 
   :dev
-  {:extra-paths ["dev/src"]
+  {:extra-paths ["dev/src" "dev/resources"]
    :extra-deps  {org.clojure/tools.namespace {:mvn/version "1.5.0"}
                  clj-http/clj-http           {:mvn/version "3.13.0"}
                  criterium/criterium         {:mvn/version "0.4.6"}
-                 integrant/repl              {:mvn/version "0.3.3"}}}
+                 integrant/repl              {:mvn/version "0.3.3"}}
+   :jvm-opts    ["-Djdk.attach.allowAttachSelf"]}
 
   :run-dev
-  {:exec-fn   fluree.server/start
-   :exec-args {:profile :dev}}
+  {:main-opts ["-m" "fluree.server" "--profile" "dev"]}
+
+  :run-prod
+  {:main-opts ["-m" "fluree.server"]}
 
   :otel {:jvm-opts ["-javaagent:opentelemetry-javaagent.jar"
                     "-Dotel.traces.exporter=none"

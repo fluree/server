@@ -4,23 +4,12 @@
 
 (set! *warn-on-reflection* true)
 
-(defn strip-leading-colon
-  [s]
-  (if (str/starts-with? s ":")
-    (subs s 1)
-    s))
-
-(defn profile-string->keyword
-  [s]
-  (-> s str/trim strip-leading-colon keyword))
-
 (def cli-options
-  [["-p" "--profile PROFILE" "Run profile"
-    :default  :prod
-    :parse-fn profile-string->keyword]
+  [["-p" "--profile PROFILE" "Run profile"]
    ["-c" "--config FILE" "Load configuration at a file path"]
    ["-s" "--string STRING" "Load stringified configuration"]
    ["-r" "--resource NAME" "Load pre-defined configuration resource"]
+   ["--reindex" "--reindex LEDGER" "Reindex the specified ledger or use --all to reindex all ledgers"]
    ["-h" "--help" "Print this usage summary and exit"]])
 
 (defn single-configuration?

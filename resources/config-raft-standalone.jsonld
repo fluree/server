@@ -1,6 +1,6 @@
 {
   "@context": {
-    "@base": "https://ns.flur.ee/config/main/",
+    "@base": "https://ns.flur.ee/config/raft/",
     "@vocab": "https://ns.flur.ee/system#",
     "profiles": {
       "@container": [
@@ -9,12 +9,12 @@
       ]
     }
   },
-  "@id": "standaloneServer",
+  "@id": "raftClusterConfig",
   "@graph": [
     {
       "@id": "localDiskStorage",
       "@type": "Storage",
-      "filePath": "/opt/fluree-server/data"
+      "filePath": "dev/data/ledger"
     },
     {
       "@id": "connection",
@@ -43,8 +43,17 @@
     {
       "@id": "consensus",
       "@type": "Consensus",
-      "consensusProtocol": "standalone",
-      "maxPendingTxns": 512,
+      "consensusProtocol": "raft",
+      "raftLogHistory": 10,
+      "raftEntriesMax": 200,
+      "raftCatchUpRounds": 10,
+      "raftServers": [
+        "/ip4/127.0.0.1/tcp/62071"
+      ],
+      "raftThisServer": "/ip4/127.0.0.1/tcp/62071",
+      "storage": {
+        "@id": "localDiskStorage"
+      },
       "connection": {
         "@id": "connection"
       }
@@ -53,8 +62,7 @@
       "@id": "http",
       "@type": "API",
       "httpPort": 8090,
-      "maxTxnWaitMs": 120000,
-      "corsOrigins": ["*"]
+      "maxTxnWaitMs": 120000
     }
   ],
   "profiles": {

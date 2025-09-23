@@ -67,31 +67,33 @@
    "f"      "https://ns.flur.ee/ledger#"})
 
 (defn file-server-config
-  [file-path]
-  {"@context" {"@base"    "https://ns.flur.ee/dev/config/",
-               "@vocab"   "https://ns.flur.ee/system#",
-               "profiles" {"@container" ["@graph", "@id"]}}
-   "@id"      "testSystem"
-   "@graph"   [{"@id"   "fileStorage"
-                "@type" "Storage"
-                "filePath" file-path}
-               {"@id"              "testConnection"
-                "@type"            "Connection"
-                "parallelism"      1
-                "cacheMaxMb"       100
-                "commitStorage"    {"@id" "fileStorage"}
-                "indexStorage"     {"@id" "fileStorage"}
-                "primaryPublisher" {"@type"   "Publisher"
-                                    "storage" {"@id" "fileStorage"}}}
-               {"@id"               "testConsensus"
-                "@type"             "Consensus"
-                "consensusProtocol" "standalone"
-                "connection"        {"@id" "testConnection"}
-                "maxPendingTxns"    16}
-               {"@id"          "testApiServer"
-                "@type"        "API"
-                "httpPort"     @api-port
-                "maxTxnWaitMs" 45000}]})
+  ([file-path]
+   (file-server-config file-path @api-port))
+  ([file-path server-port]
+   {"@context" {"@base"    "https://ns.flur.ee/dev/config/",
+                "@vocab"   "https://ns.flur.ee/system#",
+                "profiles" {"@container" ["@graph", "@id"]}}
+    "@id"      "testSystem"
+    "@graph"   [{"@id"      "fileStorage"
+                 "@type"    "Storage"
+                 "filePath" file-path}
+                {"@id"              "testConnection"
+                 "@type"            "Connection"
+                 "parallelism"      1
+                 "cacheMaxMb"       100
+                 "commitStorage"    {"@id" "fileStorage"}
+                 "indexStorage"     {"@id" "fileStorage"}
+                 "primaryPublisher" {"@type"   "Publisher"
+                                     "storage" {"@id" "fileStorage"}}}
+                {"@id"               "testConsensus"
+                 "@type"             "Consensus"
+                 "consensusProtocol" "standalone"
+                 "connection"        {"@id" "testConnection"}
+                 "maxPendingTxns"    16}
+                {"@id"          "testApiServer"
+                 "@type"        "API"
+                 "httpPort"     server-port
+                 "maxTxnWaitMs" 45000}]}))
 
 (defn default-memory-server-config
   []
@@ -162,8 +164,8 @@
        (throw (ex-info "Error creating random ledger" res))))))
 
 (def auth
-  {:id      "did:fluree:TfHgFTQQiJMHaK1r1qxVPZ3Ridj9pCozqnh"
-   :public  "03b160698617e3b4cd621afd96c0591e33824cb9753ab2f1dace567884b4e242b0"
+  {:id      "did:key:z6MkmbNqfM3ANYZnzDp9YDfa62pHggKosBkCyVdgQtgEKkGQ",
+   :public  "6a16232782dd2cc2896ccdfaf67ef91a54e4bbf98e4a73b6739465ccf1fe23c9",
    :private "509553eece84d5a410f1012e8e19e84e938f226aa3ad144e2d12f36df0f51c1e"})
 
 (defn run-closed-test-server

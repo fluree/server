@@ -1,6 +1,6 @@
 (ns fluree.server.consensus.raft.handlers.tx-queue
   (:require [fluree.db.api :as fluree]
-            [fluree.db.util.core :as util]
+            [fluree.db.util :as util]
             [fluree.db.util.log :as log]
             [fluree.server.consensus.raft.producers.new-commit :refer [consensus-push-commit]]
             [fluree.server.consensus.raft.producers.new-index-file :as new-index-file]
@@ -65,8 +65,8 @@
                                   (- start-time (:instant params)) "milliseconds.")
 
         index-files-ch (new-index-file/monitor-chan config)]
-    (fluree/transact! conn txn (assoc opts :file-data? true
-                                      :index-files-ch index-files-ch))))
+    (fluree/update! conn ledger-id txn (assoc opts :file-data? true
+                                              :index-files-ch index-files-ch))))
 
 (defn get-next-transaction
   "Checks the consensus state machine to see if any more transactions

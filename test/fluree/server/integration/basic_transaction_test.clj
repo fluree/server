@@ -18,9 +18,28 @@
                                      "ex:name" "create-endpoint-test"}]})
           res         (api-post :create {:body req :headers json-headers})]
       (is (= 201 (:status res)))
+      ;; Should return t: 1 for genesis commit + transaction commit
       (is (= {"ledger" ledger-name
               "t"      1}
              (-> res :body (json/parse false) (select-keys ["ledger" "t"])))))))
+
+(deftest ^:integration ^:json create-endpoint-without-data-json-test
+  (testing "can create a new ledger without initial data w/ JSON"
+    (let [ledger-name (str "create-endpoint-no-data-" (random-uuid))
+          req         (json/stringify
+                       {"ledger" ledger-name})
+          res         (api-post :create {:body req :headers json-headers})
+          body        (json/parse (:body res) false)]
+      (is (= 201 (:status res)))
+      ;; Should return t: 0 for genesis commit only (no transaction data)
+      (is (= {"ledger" ledger-name
+              "t"      0}
+             (select-keys body ["ledger" "t"])))
+      ;; Should have same response structure as creation with data
+      (is (contains? body "tx-id"))
+      (is (contains? body "commit"))
+      (is (contains? (get body "commit") "address"))
+      (is (contains? (get body "commit") "hash")))))
 
 #_(deftest ^:integration ^:edn create-endpoint-edn-test
     (testing "can create a new ledger w/ EDN"
@@ -59,7 +78,7 @@
                         "insert" {"id"      "ex:transaction-test"
                                   "type"    "schema:Test"
                                   "ex:name" "transact-endpoint-json-test"}})
-          res         (api-post :transact {:body req :headers json-headers})]
+          res         (api-post :update {:body req :headers json-headers})]
       (is (= 200 (:status res)))
       (is (= {"ledger" ledger-name, "t" 2}
              (-> res :body (json/parse false) (select-keys ["ledger" "t"])))))))
@@ -168,6 +187,58 @@
              (-> (api-post :query {:body (json/stringify q1) :headers json-headers})
                  :body
                  (json/parse false)))))))
+
+(deftest upsert-test
+  (let [ledger-name (create-rand-ledger "upsert-test")
+
+        insert {"@context" {"ex" "http://example.org/ns/"
+                            "schema" "http://schema.org/"}
+                "@graph" [{"@id" "ex:alice",
+                           "@type" "ex:User",
+                           "schema:name" "Alice"
+                           "schema:age" 42}
+                          {"@id" "ex:bob",
+                           "@type" "ex:User",
+                           "schema:name" "Bob"
+                           "schema:age" 22}]}
+
+        upsert {"@context" {"ex" "http://example.org/ns/"
+                            "schema" "http://schema.org/"}
+                "@graph" [{"@id" "ex:alice"
+                           "schema:name" "Alice2"}
+                          {"@id" "ex:bob"
+                           "schema:name" "Bob2"}
+                          {"@id" "ex:jane"
+                           "schema:name" "Jane2"}]}
+
+        query {"@context" {"ex" "http://example.org/ns/"
+                           "schema" "http://schema.org/"}
+               "from" ledger-name
+               "select" {"?id" ["*"]}
+               "where" {"@id" "?id"
+                        "schema:name" "?name"}}]
+    (is (= 200
+           (-> (api-post :insert {:body (json/stringify insert)
+                                  :headers (-> json-headers
+                                               (assoc "fluree-ledger" ledger-name))})
+               :status)))
+    (is (= 200
+           (-> (api-post :upsert {:body (json/stringify upsert)
+                                  :headers (-> json-headers
+                                               (assoc "fluree-ledger" ledger-name))})
+               :status)))
+    (is (= [{"@id" "ex:alice",
+             "@type" "ex:User",
+             "schema:age" 42,
+             "schema:name" "Alice2"}
+            {"@id" "ex:bob",
+             "schema:age" 22,
+             "schema:name" "Bob2",
+             "@type" "ex:User"}
+            {"@id" "ex:jane",
+             "schema:name" "Jane2"}]
+           (-> (api-post :query {:body (json/stringify query) :headers json-headers})
+               :body (json/parse false))))))
 
 #_(deftest ^:integration ^:edn transaction-edn-test
     (testing "can transact in EDN"

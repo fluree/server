@@ -100,9 +100,15 @@
 (defrecord Subscriptions [state]
   Broadcaster
   (-broadcast-commit [_ ledger-id event]
-    (let [action  (events/event-type event)
-          message (select-keys event [:tx-id :commit :t])]
-      (send-message-to-all state action ledger-id message)))
+    (let [{:keys [address hash]} (:commit event)
+          message {:tx-id (:tx-id event)
+                   :address address
+                   :hash hash
+                   :t (:t event)}]
+      (send-message-to-all state ledger-id "new-commit" message)))
+  (-broadcast-drop [_ ledger-id event]
+    (let [action (events/event-type event)]
+      (send-message-to-all state ledger-id action event)))
   (-broadcast-error [_ ledger-id error-event]
     ;; no-op as subscribers are only concerned with successful transactions
     (log/debug "Skipping error broadcast of event" error-event "for ledger" ledger-id))

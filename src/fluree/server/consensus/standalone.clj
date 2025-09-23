@@ -6,6 +6,7 @@
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.events :as events]
             [fluree.server.consensus.response :as response]
+            [fluree.server.consensus.shared.create :as shared-create]
             [fluree.server.handlers.shared :refer [deref!]]))
 
 (set! *warn-on-reflection* true)
@@ -13,17 +14,25 @@
 (defn create-ledger!
   [conn watcher broadcaster {:keys [ledger-id tx-id txn opts] :as _params}]
   (go-try
-    (let [commit-result (deref! (fluree/create-with-txn conn txn opts))]
+    (let [commit-result (if txn
+                          (deref! (fluree/create-with-txn conn txn opts))
+                          (let [db (deref! (fluree/create conn ledger-id opts))]
+                            (shared-create/genesis-result db)))]
       (response/announce-new-ledger watcher broadcaster ledger-id tx-id commit-result))))
 
-(defn transact!
-  [conn watcher broadcaster {:keys [ledger-id tx-id txn opts] :as params}]
+(defn drop-ledger!
+  [conn watcher broadcaster {:keys [ledger-id] :as _params}]
   (go-try
-    (let [start-time    (System/currentTimeMillis)
-          _             (log/debug "Starting transaction processing for ledger:" ledger-id
-                                   "with tx-id" tx-id ". Transaction sat in queue for"
-                                   (- start-time (:instant params)) "milliseconds.")
-          commit-result (deref! (fluree/transact! conn txn opts))]
+    (let [drop-result (deref! (fluree/drop conn ledger-id))]
+      (response/announce-dropped-ledger watcher broadcaster ledger-id drop-result))))
+
+(defn transact!
+  [conn watcher broadcaster {:keys [ledger-id tx-id txn opts]}]
+  (go-try
+    (let [commit-result (case (:op opts)
+                          :update (deref! (fluree/update! conn ledger-id txn opts))
+                          :upsert (deref! (fluree/upsert! conn ledger-id txn opts))
+                          :insert (deref! (fluree/insert! conn ledger-id txn opts)))]
       (response/announce-commit watcher broadcaster ledger-id tx-id commit-result))))
 
 (defn process-event
@@ -38,12 +47,15 @@
           (= :ledger-create event-type)
           (<? (create-ledger! conn watcher broadcaster event*))
 
+          (= :ledger-drop event-type)
+          (<? (drop-ledger! conn watcher broadcaster event*))
+
           (= :tx-queue event-type)
           (<? (transact! conn watcher broadcaster event*))
 
           :else
           (throw (ex-info (str "Unexpected event message: event type '" event-type "' not"
-                               " one of (':ledger-create', ':tx-queue')")
+                               " one of (':ledger-create', ':ledger-drop', ':tx-queue')")
                           {:status 500, :error :consensus/unexpected-event}))))
       (catch Exception e
         (let [{:keys [ledger-id tx-id]} event]
@@ -106,6 +118,12 @@
               (put-and-close! out-ch overloaded-error)))
       out-ch))
 
+  (-queue-drop-ledger [_ drop-ledger-event]
+    (let [out-ch (async/chan)]
+      (go (or (async/offer! tx-queue [drop-ledger-event out-ch])
+              (put-and-close! out-ch overloaded-error)))
+      out-ch))
+
   (-queue-new-transaction [_ new-txn-event]
     (let [out-ch (async/chan)]
       (go (or (async/offer! tx-queue [new-txn-event out-ch])
@@ -122,6 +140,11 @@
   (-queue-new-ledger [_ new-ledger-event]
     (let [out-ch (async/chan)]
       (go (>! tx-queue [new-ledger-event out-ch]))
+      out-ch))
+
+  (-queue-drop-ledger [_ drop-ledger-event]
+    (let [out-ch (async/chan)]
+      (go (>! tx-queue [drop-ledger-event out-ch]))
       out-ch))
 
   (-queue-new-transaction [_ new-txn-event]

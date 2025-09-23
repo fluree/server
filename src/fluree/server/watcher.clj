@@ -7,7 +7,9 @@
   responsible server from a queue, processed, and then the results broadcast
   back out."
   (:require [clojure.core.async :as async :refer [<! go]]
-            [fluree.db.util.log :as log]))
+            [fluree.db.util :as util]
+            [fluree.db.util.log :as log]
+            [fluree.server.consensus.events :as events]))
 
 (set! *warn-on-reflection* true)
 
@@ -62,6 +64,7 @@
   (deliver-event [_ id event]
     ;; note: this can have a race condition, but given it is a promise chan, the
     ;; second put! will be ignored
+    (log/debug "Watcher delivering event for id:" id "event type:" (:type event))
     (swap! state deliver-event-state id event)))
 
 (defn start
@@ -76,3 +79,44 @@
         watches      (vals @watcher-atom)]
     (run! async/close! watches)
     (reset! watcher-atom {})))
+
+(defn monitor
+  "Wait for final result from consensus on `result-ch`, broadcast to any
+  subscribers and deliver response to promise `out-p`."
+  [out-p ledger-id result-ch & {:keys [tx-id]}]
+  (go
+    (let [result (async/<! result-ch)]
+      (log/debug "HTTP API transaction final response: " result)
+      (cond
+        (= :timeout result)
+        (let [ex (ex-info (str "Timeout waiting for event to complete for: " ledger-id
+                               (when tx-id (str " with tx-id: " tx-id)))
+                          (cond-> {:status 408
+                                   :error  :consensus/response-timeout
+                                   :ledger ledger-id}
+                            tx-id (assoc :tx-id tx-id)))]
+          (deliver out-p ex))
+
+        (nil? result)
+        (let [ex (ex-info (str "Missing event result for ledger: " ledger-id
+                               (when tx-id (str " with tx-id: " tx-id))
+                               ". Event may have been processed, check ledger"
+                               " for confirmation.")
+                          (cond-> {:status 500
+                                   :error  :consensus/no-response
+                                   :ledger ledger-id}
+                            tx-id (assoc :tx-id tx-id)))]
+          (deliver out-p ex))
+
+        (util/exception? result)
+        (deliver out-p result)
+
+        (events/error? result)
+        (let [ex (ex-info (:error-message result) (:error-data result))]
+          (deliver out-p ex))
+
+        :else
+        (let [{:keys [ledger-id commit t tx-id] :as event} result]
+          (log/debug "Event completed for:" ledger-id
+                     (when tx-id (str "tx-id: " tx-id " at t: " t ". commit head: " commit)))
+          (deliver out-p event))))))

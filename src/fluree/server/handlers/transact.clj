@@ -1,14 +1,11 @@
 (ns fluree.server.handlers.transact
-  (:require [clojure.core.async :as async :refer [<! go]]
-            [clojure.set :refer [rename-keys]]
+  (:refer-clojure :exclude [update])
+  (:require [clojure.set :refer [rename-keys]]
             [fluree.crypto :as crypto]
             [fluree.db.api :as fluree]
             [fluree.db.query.fql.parse :as parse]
-            [fluree.db.util.core :as util]
-            [fluree.db.util.log :as log]
             [fluree.json-ld :as json-ld]
             [fluree.server.consensus :as consensus]
-            [fluree.server.consensus.events :as events]
             [fluree.server.handlers.shared :as shared :refer [defhandler deref!]]
             [fluree.server.watcher :as watcher]))
 
@@ -21,66 +18,13 @@
     (-> (json-ld/normalize-data txn)
         (crypto/sha2-256 :hex :string))))
 
-(defn monitor-consensus-persistence
-  [watcher ledger tx-id persist-resp-ch]
-  (go
-    (let [persist-resp (<! persist-resp-ch)]
-      ;; check for exception trying to put txn in consensus, if so we must
-      ;; deliver the watch here, but if successful the consensus process will
-      ;; deliver the watch downstream
-      (when (util/exception? persist-resp)
-        (log/warn persist-resp "Error submitting transaction")
-        (let [error-event (events/error ledger tx-id persist-resp)]
-          (watcher/deliver-event watcher tx-id error-event))))))
-
 (defn queue-consensus
   "Register a new commit with consensus"
-  [consensus watcher ledger tx-id expanded-txn opts]
+  [consensus watcher ledger-id tx-id expanded-txn opts]
   (let [;; initial response is not completion, but acknowledgement of persistence
-        persist-resp-ch (consensus/queue-new-transaction consensus ledger tx-id
+        persist-resp-ch (consensus/queue-new-transaction consensus ledger-id tx-id
                                                          expanded-txn opts)]
-    (monitor-consensus-persistence watcher ledger tx-id persist-resp-ch)))
-
-(defn monitor-commit
-  "Wait for final commit result from consensus on `result-ch`, broadcast to any
-  subscribers and deliver response to promise `out-p`"
-  [out-p ledger-id tx-id result-ch]
-  (go
-    (let [result (async/<! result-ch)]
-      (log/debug "HTTP API transaction final response: " result)
-      (cond
-        (= :timeout result)
-        (let [ex (ex-info (str "Timeout waiting for transaction to complete for: "
-                               ledger-id " with tx-id: " tx-id)
-                          {:status 408
-                           :error  :consensus/response-timeout
-                           :ledger ledger-id
-                           :tx-id  tx-id})]
-          (deliver out-p ex))
-
-        (nil? result)
-        (let [ex (ex-info (str "Missing transaction result for ledger: "
-                               ledger-id " with tx-id: " tx-id
-                               ". Transaction may have processed, check ledger"
-                               " for confirmation.")
-                          {:status 500
-                           :error  :consensus/no-response
-                           :ledger ledger-id
-                           :tx-id  tx-id})]
-          (deliver out-p ex))
-
-        (util/exception? result)
-        (deliver out-p result)
-
-        (events/error? result)
-        (let [ex (ex-info (:error-message result) (:error-data result))]
-          (deliver out-p ex))
-
-        :else
-        (let [{:keys [ledger-id commit t tx-id] :as commit-event} result]
-          (log/debug "Transaction completed for:" ledger-id "tx-id:" tx-id "at t:" t
-                     ". commit head:" commit)
-          (deliver out-p commit-event))))))
+    (shared/monitor-consensus-persistence watcher ledger-id persist-resp-ch :tx-id tx-id)))
 
 (defn transact!
   [consensus watcher ledger-id txn opts]
@@ -88,7 +32,7 @@
         tx-id     (derive-tx-id txn)
         result-ch (watcher/create-watch watcher tx-id)]
     (queue-consensus consensus watcher ledger-id tx-id txn opts)
-    (monitor-commit p ledger-id tx-id result-ch)
+    (watcher/monitor p ledger-id result-ch :tx-id tx-id)
     p))
 
 (defn extract-ledger-id
@@ -104,17 +48,50 @@
       (select-keys [:ledger-id :commit :t :tx-id])
       (rename-keys {:ledger-id :ledger})))
 
-(defhandler default
+(defhandler update
   [{:keys          [fluree/consensus fluree/watcher credential/did fluree/opts raw-txn]
     {:keys [body]} :parameters}]
   (let [txn       (fluree/format-txn body opts)
         ledger-id (or (:ledger opts)
                       (extract-ledger-id txn))
-        opts*     (cond-> (assoc opts :format :fql)
+        ;; Ensure the transaction includes the ledger for the underlying update! function
+        txn-with-ledger (if (and (:ledger opts)
+                                 (not (parse/get-named txn "ledger")))
+                          (assoc txn "ledger" ledger-id)
+                          txn)
+        opts*     (cond-> (assoc opts :format :fql :op :update)
                     raw-txn (assoc :raw-txn raw-txn)
                     did     (assoc :did did))
         {:keys [status] :as commit-event}
-        (deref! (transact! consensus watcher ledger-id txn opts*))
+        (deref! (transact! consensus watcher ledger-id txn-with-ledger opts*))
+
+        body (commit-event->response-body commit-event)]
+    (shared/with-tracking-headers {:status status, :body body}
+      commit-event)))
+
+(defhandler insert
+  [{:keys [fluree/consensus fluree/watcher credential/did fluree/opts raw-txn]
+    {insert-txn :body} :parameters}]
+  (let [ledger-id (:ledger opts)
+        opts*     (cond-> (assoc opts :op :insert)
+                    raw-txn (assoc :raw-txn raw-txn)
+                    did     (assoc :identity did))
+        {:keys [status] :as commit-event}
+        (deref! (transact! consensus watcher ledger-id insert-txn opts*))
+
+        body (commit-event->response-body commit-event)]
+    (shared/with-tracking-headers {:status status, :body body}
+      commit-event)))
+
+(defhandler upsert
+  [{:keys [fluree/consensus fluree/watcher credential/did fluree/opts raw-txn]
+    {upsert-txn :body} :parameters}]
+  (let [ledger-id (:ledger opts)
+        opts*     (cond-> (assoc opts :op :upsert)
+                    raw-txn (assoc :raw-txn raw-txn)
+                    did     (assoc :identity did))
+        {:keys [status] :as commit-event}
+        (deref! (transact! consensus watcher ledger-id upsert-txn opts*))
 
         body (commit-event->response-body commit-event)]
     (shared/with-tracking-headers {:status status, :body body}

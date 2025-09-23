@@ -8,6 +8,7 @@
             [fluree.db.util.log :as log]
             [fluree.db.validation :as v]
             [fluree.server.handlers.create :as create]
+            [fluree.server.handlers.drop :as drop]
             [fluree.server.handlers.ledger :as ledger]
             [fluree.server.handlers.remote-resource :as remote]
             [fluree.server.handlers.subscription :as subscription]
@@ -45,8 +46,14 @@
 (def CreateRequestBody
   (m/schema [:map-of [:orn [:string :string] [:keyword :keyword]] :any]))
 
+(def DropRequestBody
+  (m/schema [:map-of :keyword :string]))
+
+(def DropResponseBody
+  (m/schema [:map-of :keyword :any]))
+
 (def TValue
-  (m/schema pos-int?))
+  (m/schema nat-int?))
 
 (def DID
   (m/schema [:string {:min 1}]))
@@ -131,6 +138,12 @@
              [:map
               [:resource Address]]]))
 
+(def HashRequestBody
+  (m/schema [:and
+             [:map-of :keyword :any]
+             [:map
+              [:address Address]]]))
+
 (def AliasRequestBody
   (m/schema [:and
              [:map-of :keyword :any]
@@ -197,10 +210,13 @@
         handler)))
 
 (defn wrap-cors
-  [handler]
-  (rmc/wrap-cors handler
-                 :access-control-allow-origin [#".*"]
-                 :access-control-allow-methods [:get :post]))
+  [cors-origins handler]
+  (let [origins (or cors-origins [#".*"])]
+    (rmc/wrap-cors handler
+                   :access-control-allow-origin origins
+                   :access-control-allow-methods [:get :post :options]
+                   :access-control-allow-headers :any
+                   :access-control-allow-credentials false)))
 
 (defn unwrap-credential
   "Checks to see if the request body (:body-params) is a verifiable credential. If it is,
@@ -228,7 +244,8 @@
           (handler req)))))
 
 (def root-only-routes
-  #{"/fluree/create"})
+  #{"/fluree/create"
+    "/fluree/drop"})
 
 (defn wrap-closed-mode
   [root-identities closed-mode]
@@ -256,7 +273,8 @@
 (def fluree-request-header-keys
   ["fluree-track-meta" "fluree-track-fuel" "fluree-track-policy" "fluree-ledger"
    "fluree-max-fuel" "fluree-identity" "fluree-policy-identity" "fluree-policy"
-   "fluree-policy-class" "fluree-policy-values" "fluree-format" "fluree-output"])
+   "fluree-policy-class" "fluree-policy-values" "fluree-format" "fluree-output"
+   "fluree-ledger-opts"])
 
 (defn parse-boolean-header
   [header name]
@@ -277,7 +295,7 @@
   (fn [{:keys [headers credential/did] :as req}]
     (let [{:keys [track-meta track-fuel track-policy max-fuel
                   identity policy-identity policy policy-class policy-values
-                  format output ledger]}
+                  format output ledger ledger-opts]}
           (-> headers
               (select-keys fluree-request-header-keys)
               (update-keys (fn [k] (keyword (subs k request-header-prefix-count)))))
@@ -320,9 +338,12 @@
                        :sparql
                        (-> headers (get "content-type") (= "application/sparql-update"))
                        :sparql
+                       (-> headers (get "content-type") (= "text/turtle"))
+                       :turtle
 
                        (= format "sparql") :sparql
-                       (= output "fql")    :fql
+                       (= format "fql")    :fql
+                       (= format "turtle") :turtle
                        :else               :fql)
 
           policy        (when policy
@@ -340,6 +361,12 @@
                                  (throw (ex-info "Invalid Fluree-Policy-Values header: must be JSON."
                                                  {:status 400})))))
 
+          ledger-opts    (when ledger-opts
+                           (try (-> (json/parse ledger-opts false)
+                                    (update-vals #(update-keys % keyword)))
+                                (catch Exception _
+                                  (throw (ex-info "Invalid Fluree-Ledger-Opts header: must be JSON."
+                                                  {:status 400})))))
           opts (cond-> {}
                  meta          (assoc :meta meta)
                  max-fuel      (assoc :max-fuel max-fuel)
@@ -354,7 +381,8 @@
                  ;; Fluree-Identity overrides Fluree-Policy-Identity
                  identity        (assoc :identity identity)
                  ;; credential (signed) identity overrides all else
-                 did             (assoc :identity did))]
+                 did             (assoc :identity did)
+                 ledger-opts   (merge ledger-opts))]
       (-> req
           (assoc :fluree/opts opts)
           handler))))
@@ -391,6 +419,17 @@
                     (String. (.readAllBytes ^InputStream data)
                              ^String charset))))]}))
 
+(def turtle-format
+  "Turn turtle/TTL content from an InputStream into a string that will be found on :body-params in the
+  request map."
+  (mf/map->Format
+   {:name "text/turtle"
+    :decoder [(fn [_]
+                (reify mf/Decode
+                  (decode [_ data charset]
+                    (String. (.readAllBytes ^InputStream data)
+                             ^String charset))))]}))
+
 (def jwt-format
   "Turn a JWT from an InputStream into a string that will be found on :body-params in the
   request map."
@@ -418,14 +457,26 @@
          resp)))))
 
 (defn compose-app-middleware
-  [{:keys [connection consensus watcher subscriptions root-identities closed-mode]
+  [{:keys [connection consensus watcher subscriptions root-identities closed-mode cors-origins]
     :as   _config}]
-  (let [exception-middleware (exception/create-exception-middleware
+  (let [fluree-exception-handler (fn [exception request]
+                                   (let [data (ex-data exception)
+                                         msg  (ex-message exception)]
+                                     (log/error exception "Exception in handler, message:" msg "ex-data:" data)
+                                     (if-let [response (:response data)]
+                                       (do
+                                         (log/debug "Returning fluree exception response:" response)
+                                         ;; Ensure response has a body
+                                         (if (:body response)
+                                           response
+                                           (assoc response :body {:error (or (:error data) msg)})))
+                                       (exception/http-response-handler exception request))))
+        exception-middleware (exception/create-exception-middleware
                               (merge
                                exception/default-handlers
                                {::exception/default
                                 (partial exception/wrap-log-to-console
-                                         exception/http-response-handler)}))]
+                                         fluree-exception-handler)}))]
     ;; Exception middleware should always be first AND last.
     ;; The last (highest sort order) one ensures that middleware that comes
     ;; after it will not be skipped on response if handler code throws an
@@ -434,7 +485,7 @@
     ;; other middleware are caught and turned into appropriate responses.
     ;; Seems kind of clunky. Maybe there's a better way? - WSM 2023-04-28
     (sort-middleware-by-weight [[1 exception-middleware]
-                                [10 wrap-cors]
+                                [10 (partial wrap-cors cors-origins)]
                                 [10 (partial wrap-assoc-system connection consensus
                                              watcher subscriptions)]
                                 [20 trace-http/wrap-reitit-route]
@@ -457,6 +508,17 @@
                         500 {:body ErrorResponse}}
            :handler    #'create/default}}])
 
+(def fluree-drop-route
+  ["/drop"
+   {:post {:summary    "Drop the specified ledger and delete all persisted artifacts."
+           :parameters {:body DropRequestBody}
+           :responses  {200 {:body DropResponseBody}
+                        400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+           :coercion   (rcm/create {:transformers {:body {:default rcm/json-transformer-provider}}})
+           :handler    #'drop/drop-handler}}])
+
 (def fluree-transact-routes
   ["/transact"
    {:post {:summary    "Endpoint for submitting transactions"
@@ -465,7 +527,37 @@
                         400 {:body ErrorResponse}
                         409 {:body ErrorResponse}
                         500 {:body ErrorResponse}}
-           :handler    #'srv-tx/default}}])
+           :handler    #'srv-tx/update}}])
+
+(def fluree-update-route
+  ["/update"
+   {:post {:summary    "Endpoint for submitting transactions"
+           :parameters {:body TransactRequestBody}
+           :responses  {200 {:body TransactResponseBody}
+                        400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+           :handler    #'srv-tx/update}}])
+
+(def fluree-insert-route
+  ["/insert"
+   {:post {:summary    "Endpoint for inserting into the specified ledger."
+           :parameters {:body :any}
+           :responses  {200 {:body TransactResponseBody}
+                        400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+           :handler    #'srv-tx/insert}}])
+
+(def fluree-upsert-route
+  ["/upsert"
+   {:post {:summary    "Endpoint for upserting into the specified ledger."
+           :parameters {:body :any}
+           :responses  {200 {:body TransactResponseBody}
+                        400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+           :handler    #'srv-tx/upsert}}])
 
 (def fluree-query-routes
   ["/query"
@@ -487,6 +579,10 @@
     {:post {:summary    "Read resource from address"
             :parameters {:body AddressRequestBody}
             :handler    #'remote/read-resource-address}}]
+   ["/hash"
+    {:post {:summary    "Parse content hash from address"
+            :parameters {:body HashRequestBody}
+            :handler    #'remote/parse-address-hash}}]
    ["/addresses"
     {:post {:summary    "Retrieve ledger address from alias"
             :parameters {:body AliasRequestBody}
@@ -500,6 +596,10 @@
 
 (def default-fluree-route-map
   {:create       fluree-create-routes
+   :drop         fluree-drop-route
+   :insert       fluree-insert-route
+   :upsert       fluree-upsert-route
+   :update       fluree-update-route
    :transact     fluree-transact-routes
    :query        fluree-query-routes
    :history      fluree-history-routes
@@ -538,6 +638,7 @@
                         (assoc-in [:formats "application/json"] json-format)
                         (assoc-in [:formats "application/sparql-query"] sparql-format)
                         (assoc-in [:formats "application/sparql-update"] sparql-update-format)
+                        (assoc-in [:formats "text/turtle"] turtle-format)
                         (assoc-in [:formats "application/jwt"] jwt-format)))
         middleware [swagger/swagger-feature
                     muuntaja-mw/format-negotiate-middleware

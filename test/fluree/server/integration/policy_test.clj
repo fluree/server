@@ -42,15 +42,15 @@
                                        "f:policyClass" [{"@id" "ex:EmployeePolicy"}]
                                        "ex:user"       {"@id" "ex:alice"}}
                                       ;; embedded policy
-                                      {"@id"          "ex:ssnRestriction"
-                                       "@type"        ["f:AccessPolicy" "ex:EmployeePolicy"]
-                                       "f:onProperty" [{"@id" "schema:ssn"}]
-                                       "f:required"   true
-                                       "f:action"     [{"@id" "f:view"} {"@id" "f:modify"}]
-                                       "f:query"      {"@type"  "@json"
-                                                       "@value" {"@context" {"ex" "http://example.org/ns/"}
-                                                                 "where"    {"@id"     "?$identity"
-                                                                             "ex:user" {"@id" "?$this"}}}}}
+                                      {"@id"            "ex:ssnRestriction"
+                                       "@type"          ["f:AccessPolicy" "ex:EmployeePolicy"]
+                                       "f:targetProperty" [{"@id" "schema:ssn"}]
+                                       "f:required"     true
+                                       "f:action"       [{"@id" "f:view"} {"@id" "f:modify"}]
+                                       "f:query"        {"@type"  "@json"
+                                                         "@value" {"@context" {"ex" "http://example.org/ns/"}
+                                                                   "where"    {"@id"     "?$identity"
+                                                                               "ex:user" {"@id" "?$this"}}}}}
                                       {"@id"      "ex:defaultAllowView"
                                        "@type"    ["f:AccessPolicy" "ex:EmployeePolicy"]
                                        "f:action" {"@id" "f:view"}
@@ -192,7 +192,6 @@
                                                          (json/stringify txn-req)
                                                          (:private auth))
                                                :headers {"Content-Type" "application/jwt"}})]
-
               (is (= 200
                      (:status txn-res))
                   "txn signed by authorized user succeeds")))
@@ -269,15 +268,15 @@
                                        "f:policyClass" [{"@id" "ex:EmployeePolicy"}]
                                        "ex:user"       {"@id" "ex:alice"}}
                                       ;; embedded policy
-                                      {"@id"          "ex:ssnRestriction"
-                                       "@type"        ["f:AccessPolicy" "ex:EmployeePolicy"]
-                                       "f:onProperty" [{"@id" "schema:ssn"}]
-                                       "f:action"     [{"@id" "f:view"} {"@id" "f:modify"}]
-                                       "f:required"   true
-                                       "f:query"      {"@type"  "@json"
-                                                       "@value" {"@context" {"ex" "http://example.org/ns/"}
-                                                                 "where"    {"@id"     "?$identity"
-                                                                             "ex:user" {"@id" "?$this"}}}}}
+                                      {"@id"            "ex:ssnRestriction"
+                                       "@type"          ["f:AccessPolicy" "ex:EmployeePolicy"]
+                                       "f:targetProperty" [{"@id" "schema:ssn"}]
+                                       "f:action"       [{"@id" "f:view"} {"@id" "f:modify"}]
+                                       "f:required"     true
+                                       "f:query"        {"@type"  "@json"
+                                                         "@value" {"@context" {"ex" "http://example.org/ns/"}
+                                                                   "where"    {"@id"     "?$identity"
+                                                                               "ex:user" {"@id" "?$this"}}}}}
                                       {"@id"      "ex:defaultAllowView"
                                        "@type"    ["f:AccessPolicy" "ex:EmployeePolicy"]
                                        "f:action" {"@id" "f:view"}
@@ -297,7 +296,7 @@
                         (json/stringify
                          (assoc secret-query
                                 "opts" {"policyClass"  "ex:EmployeePolicy"
-                                        "policyValues" ["?$identity" [alice-did]]}))
+                                        "policyValues" ["?$identity" [{"@type" "@id" "@value" alice-did}]]}))
                         :headers json-headers}
           query-res    (api-post :query query-req)]
 
@@ -317,12 +316,103 @@
                                                    schema:ssn ?ssn.}")
                          :headers (assoc sparql-headers
                                          "Fluree-Policy-Class" "ex:EmployeePolicy"
-                                         "Fluree-Policy-Values" (json/stringify ["?$identity" [alice-did]]))}
+                                         "Fluree-Policy-Values" (json/stringify ["?$identity" [{"@type" "@id" "@value" alice-did}]]))}
               query-res (api-post :query query-req)]
 
           (is (= [["ex:alice" "111-11-1111"]]
                  (-> query-res :body (json/parse false)))
               "query policy opts should prevent seeing john's ssn"))))))
+
+(deftest ^:integration ^:json dataset-test
+  (let [personnel (create-rand-ledger "personnel")
+        widgets   (create-rand-ledger "widgets")
+
+        personnel-txn {"@context" {"f"  "https://ns.flur.ee/ledger#"
+                                   "ex" "https://example.com/"}
+                       "ledger"   personnel
+                       "insert"
+                       [{"@id"              "ex:ssnRestriction"
+                         "@type"            ["f:AccessPolicy" "ex:AuthenticatedPolicy"]
+                         "f:required"       true
+                         "f:targetProperty" [{"@id" "ex:ssn"}]
+                         "f:action"         {"@id" "f:view"}
+                         "f:query"          {"@type"  "@json"
+                                             "@value" {"@context" {"ex" "https://example.com/"}
+                                                       "where"    {"@id"     "?$identity"
+                                                                   "ex:user" {"@id" "?$this"}}}}}
+
+                        {"@id"      "ex:defaultAllowView"
+                         "@type"    ["f:AccessPolicy" "ex:UnauthenticatedPolicy"]
+                         "f:action" {"@id" "f:view"}
+                         "f:query"  {"@type"  "@json"
+                                     "@value" {}}}
+
+                        {"@id"     "ex:alice",
+                         "@type"   "ex:User",
+                         "ex:name" "Alice"
+                         "ex:ssn"  "111-11-1111"}
+
+                        {"@id"     "ex:john",
+                         "@type"   "ex:User",
+                         "ex:name" "John"
+                         "ex:ssn"  "888-88-8888"}]}
+
+        widget-txn {"@context" {"f"  "https://ns.flur.ee/ledger#"
+                                "ex" "https://example.com/"}
+                    "ledger"   widgets
+                    "insert"
+                    [{"@id"      "ex:defaultAllowView"
+                      "@type"    ["f:AccessPolicy" "ex:UnauthenticatedPolicy"]
+                      "f:action" {"@id" "f:view"}
+                      "f:query"  {"@type"  "@json"
+                                  "@value" {}}}
+
+                     {"@id"              "ex:widget1",
+                      "@type"            "ex:Product",
+                      "ex:name"          "Widget1"
+                      "ex:salesperson"   {"@id" "ex:john"}
+                      "ex:price"         99.99
+                      "ex:priceCurrency" "USD"}
+                     {"@id"              "ex:widget2",
+                      "@type"            "ex:Product",
+                      "ex:name"          "Widget2"
+                      "ex:salesperson"   {"@id" "ex:alice"}
+                      "ex:price"         990.99
+                      "ex:priceCurrency" "USD"}
+                     {"@id"              "ex:widget3",
+                      "@type"            "ex:Product",
+                      "ex:name"          "Widget3"
+                      "ex:salesperson"   [{"@id" "ex:alice"} {"@id" "ex:john"}]
+                      "ex:price"         9.99
+                      "ex:priceCurrency" "USD"}]}
+        _personnel-res (api-post :transact {:body (json/stringify personnel-txn) :headers json-headers})
+        _widget-res    (api-post :transact {:body (json/stringify widget-txn) :headers json-headers})
+
+        dataset-query {"@context" {"ex" "https://example.com/"}
+                       "from"     [personnel widgets]
+                       "where"    [{"@id" "?widget" "@type" {"@id" "ex:Product"}}
+                                   {"@id" "?widget" "ex:name" "?product"}
+                                   {"@id" "?widget" "ex:salesperson" "?person"}
+                                   [:optional
+                                    {"@id" "?person" "ex:name" "?name"}
+                                    {"@id" "?person" "ex:ssn" "?ssn"}]]
+                       "select"   ["?product" "?name" "?ssn"]}
+
+        query-req {:body    (json/stringify dataset-query)
+                   :headers (assoc json-headers "fluree-ledger-opts"
+                                   (json/stringify {personnel {:policy-class ["https://example.com/AuthenticatedPolicy"]}
+                                                    widgets   {:policy-class ["https://example.com/UnauthenticatedPolicy"]}}))}
+        query-res (api-post :query query-req)]
+
+    (is (= 200 (:status query-res))
+        (str "policy-enforced query response was: " (pr-str query-res)))
+
+    (is (= [["Widget1" nil nil]
+            ["Widget2" nil nil]
+            ["Widget3" nil nil]
+            ["Widget3" nil nil]]
+           (-> query-res :body (json/parse false)))
+        "ledger-opts should make widgets viewable but personnel not")))
 
 (deftest ^:integration ^:json policy-json-ld-opts-test
   (testing "policy-enforcing opts for json-ld policy are correctly handled"
@@ -367,21 +457,21 @@
           policy        {"@context" {"ex"     "http://example.org/ns/"
                                      "schema" "http://schema.org/"
                                      "f"      "https://ns.flur.ee/ledger#"}
-                         "@graph"   [{"@id"          "ex:ssnRestriction"
-                                      "@type"        ["f:AccessPolicy" "ex:EmployeePolicy"]
-                                      "f:onProperty" [{"@id" "schema:ssn"}]
-                                      "f:action"     [{"@id" "f:view"} {"@id" "f:modify"}]
-                                      "f:required"   true
-                                      "f:query"      {"@type"  "@json"
-                                                      "@value" {"@context" {"ex" "http://example.org/ns/"}
-                                                                "where"    {"@id"     "?$identity"
-                                                                            "ex:user" {"@id" "?$this"}}}}}
+                         "@graph"   [{"@id"            "ex:ssnRestriction"
+                                      "@type"          ["f:AccessPolicy" "ex:EmployeePolicy"]
+                                      "f:targetProperty" [{"@id" "schema:ssn"}]
+                                      "f:action"       [{"@id" "f:view"} {"@id" "f:modify"}]
+                                      "f:required"     true
+                                      "f:query"        {"@type"  "@json"
+                                                        "@value" {"@context" {"ex" "http://example.org/ns/"}
+                                                                  "where"    {"@id"     "?$identity"
+                                                                              "ex:user" {"@id" "?$this"}}}}}
                                      {"@id"      "ex:defaultAllowView"
                                       "@type"    ["f:AccessPolicy" "ex:EmployeePolicy"]
                                       "f:action" {"@id" "f:view"}
                                       "f:query"  {"@type"  "@json"
                                                   "@value" {}}}]}
-          policy-values ["?$identity" [alice-did]]
+          policy-values ["?$identity" [{"@type" "@id" "@value" alice-did}]]
           query-req     {:body
                          (json/stringify
                           (assoc secret-query
