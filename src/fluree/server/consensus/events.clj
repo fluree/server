@@ -4,7 +4,7 @@
   (:require [clojure.string :as str]
             [fluree.db.connection :as connection]
             [fluree.db.track :as-alias track]
-            [fluree.db.transact :as transact]
+            [fluree.db.ledger :as ledger]
             [fluree.db.util.async :refer [<? go-try]]
             [fluree.db.util.log :as log]))
 
@@ -107,7 +107,7 @@
   [{:keys [commit-catalog] :as _conn} ledger-id event]
   (go-try
     (if-let [raw-txn (-> event :opts :raw-txn)]
-      (let [{:keys [address]} (<? (transact/save-txn! commit-catalog ledger-id raw-txn))]
+      (let [{:keys [address]} (<? (ledger/save-txn! commit-catalog ledger-id raw-txn))]
         (-> event
             (assoc-in [:opts :raw-txn-address] address)
             (update :opts dissoc :raw-txn)))
@@ -122,7 +122,7 @@
   (go-try
     (if-let [txn (:txn event)]
       (let [{:keys [ledger-id]} event
-            {:keys [address]}   (<? (transact/save-txn! commit-catalog ledger-id txn))
+            {:keys [address]}   (<? (ledger/save-txn! commit-catalog ledger-id txn))
             event*              (-> event
                                     (assoc :txn-address address)
                                     (dissoc :txn))]
