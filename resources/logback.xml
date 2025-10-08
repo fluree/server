@@ -1,19 +1,44 @@
 <configuration>
-
+    <statusListener class="ch.qos.logback.core.status.NopStatusListener" />
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>
-                %d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n
-            </pattern>
-        </encoder>
+      <encoder>
+        <pattern>
+          %d{HH:mm:ss.SSS} %-5level %X{trace_id} %t %logger{36} - %msg%n
+        </pattern>
+      </encoder>
+    </appender>
+    <appender name="CONSOLE_COLORS" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder>
+          <pattern>%highlight(%-5level) %cyan(%logger{24}) - %msg%n</pattern>
+      </encoder>
+    </appender>
+    <appender name="CONSOLE_TRACE_COLORS" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder>
+        <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) %cyan(%logger %t %X)\n  %msg%n</pattern>
+      </encoder>
+    </appender>
+    <appender name="CONSOLE_JSON_PRETTY" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+        <jsonGeneratorDecorator class="net.logstash.logback.decorate.PrettyPrintingJsonGeneratorDecorator" />
+        <includeMdc>true</includeMdc>
+      </encoder>
+    </appender>
+    <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+        <includeMdc>true</includeMdc>
+      </encoder>
     </appender>
 
-    <logger name="fluree" level="info" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-    </logger>
+    <appender name="OTEL" class="io.opentelemetry.instrumentation.logback.mdc.v1_0.OpenTelemetryAppender">
+      <appender-ref ref="${CONSOLE_APPENDER:-CONSOLE_TRACE_COLORS}"/>
+    </appender>
 
-    <root level="error">
-        <appender-ref ref="CONSOLE"/>
+
+    <root level="${ROOT_LOG_LEVEL:-WARN}">
+      <appender-ref ref="OTEL"/>
     </root>
 
-</configuration>
+    <logger name="user" level="ALL"/>
+    <logger name="ch.qos.logback" level="WARN"/>
+    <logger name="fluree" level="${FLUREE_LOG_LEVEL:-INFO}"/>
+  </configuration>
