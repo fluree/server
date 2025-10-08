@@ -3,8 +3,8 @@
   protocols"
   (:require [clojure.string :as str]
             [fluree.db.connection :as connection]
-            [fluree.db.track :as-alias track]
             [fluree.db.ledger :as ledger]
+            [fluree.db.track :as-alias track]
             [fluree.db.util.async :refer [<? go-try]]
             [fluree.db.util.log :as log]))
 

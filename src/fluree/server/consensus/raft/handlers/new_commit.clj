@@ -1,8 +1,8 @@
 (ns fluree.server.consensus.raft.handlers.new-commit
   (:require [clojure.core.async :as async]
+            [fluree.db.ledger :as ledger]
             [fluree.db.storage :as storage]
             [fluree.db.storage.file :as file-storage]
-            [fluree.db.ledger :as ledger]
             [fluree.db.util.async :refer [<? go-try]]
             [fluree.db.util.bytes :as bytes]
             [fluree.db.util.filesystem :as fs]
