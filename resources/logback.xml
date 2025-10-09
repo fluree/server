@@ -1,4 +1,5 @@
 <configuration>
+    <property scope="context" name="LOG_LEVEL" value="${LOG_LEVEL:-INFO}"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
@@ -8,7 +9,7 @@
         </encoder>
     </appender>
 
-    <logger name="fluree" level="info" additivity="false">
+    <logger name="fluree" level="${LOG_LEVEL}" additivity="false">
         <appender-ref ref="CONSOLE"/>
     </logger>
 
