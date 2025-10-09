@@ -833,6 +833,10 @@ settings include:
   (default: 120000)
 - `closedMode` - Enable closed mode (requires authentication)
 - `rootIdentities` - Array of root identity DIDs for authentication
+- `corsOrigins` - Array of allowed CORS origins (default: `["*"]` accepts all).
+  Can be exact URLs (e.g., `"https://app.example.com"`), regex patterns
+  (e.g., `"^https://.*\\.example\\.com$"`), or `"*"` wildcard. For production
+  deployments, restrict to specific origins for security
 
 #### Example Configuration
 Here's a minimal standalone server configuration:
@@ -865,8 +869,46 @@ Here's a minimal standalone server configuration:
     {
       "@id": "http",
       "@type": "API",
-      "httpPort": 8090
+      "httpPort": 8090,
+      "corsOrigins": ["*"]
     }
+  ]
+}
+```
+
+#### CORS Configuration Examples
+
+For development, accept all origins:
+```json
+{
+  "@id": "http",
+  "@type": "API",
+  "httpPort": 8090,
+  "corsOrigins": ["*"]
+}
+```
+
+For production, restrict to specific origins:
+```json
+{
+  "@id": "http",
+  "@type": "API",
+  "httpPort": 8090,
+  "corsOrigins": [
+    "https://app.example.com",
+    "https://dashboard.example.com"
+  ]
+}
+```
+
+Use regex patterns to match multiple subdomains:
+```json
+{
+  "@id": "http",
+  "@type": "API",
+  "httpPort": 8090,
+  "corsOrigins": [
+    "^https://.*\\.example\\.com$"
   ]
 }
 ```

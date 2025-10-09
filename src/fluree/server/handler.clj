@@ -208,13 +208,32 @@
                :fluree/subscriptions subscriptions)
         handler)))
 
+(def standard-request-headers
+  "Standard HTTP headers that browsers may send in cross-origin requests."
+  ["content-type" "accept" "origin" "authorization" "cache-control" "x-requested-with"])
+
+(def fluree-request-header-keys
+  "Fluree-specific request headers that are consumed by wrap-request-header-opts."
+  ["fluree-track-meta" "fluree-track-fuel" "fluree-track-policy" "fluree-ledger"
+   "fluree-max-fuel" "fluree-identity" "fluree-policy-identity" "fluree-policy"
+   "fluree-policy-class" "fluree-policy-values" "fluree-format" "fluree-output"
+   "fluree-ledger-opts"])
+
+(def fluree-response-header-keys
+  "Fluree-specific response headers that browsers may need to read in cross-origin requests."
+  fluree-request-header-keys)
+
 (defn wrap-cors
   [cors-origins handler]
-  (let [origins (or cors-origins [#".*"])]
+  (let [origins        (or cors-origins [#".*"])
+        allow-headers  (concat standard-request-headers fluree-request-header-keys)
+        expose-headers fluree-response-header-keys]
     (rmc/wrap-cors handler
                    :access-control-allow-origin origins
                    :access-control-allow-methods [:get :post :options]
-                   :access-control-allow-headers :any
+                   :access-control-allow-headers allow-headers
+                   :access-control-expose-headers expose-headers
+                   :access-control-max-age 86400
                    :access-control-allow-credentials false)))
 
 (defn unwrap-credential
@@ -268,12 +287,6 @@
                       req* (assoc req :server/closed-mode closed-mode :body-params body-params*)]
                   (handler req*))))
         (handler req)))))
-
-(def fluree-request-header-keys
-  ["fluree-track-meta" "fluree-track-fuel" "fluree-track-policy" "fluree-ledger"
-   "fluree-max-fuel" "fluree-identity" "fluree-policy-identity" "fluree-policy"
-   "fluree-policy-class" "fluree-policy-values" "fluree-format" "fluree-output"
-   "fluree-ledger-opts"])
 
 (defn parse-boolean-header
   [header name]
@@ -497,99 +510,125 @@
 
 (def fluree-create-routes
   ["/create"
-   {:post {:summary    "Endpoint for creating new ledgers"
-           :parameters {:body CreateRequestBody}
-           :responses  {201 {:body CreateResponseBody}
-                        400 {:body ErrorResponse}
-                        409 {:body ErrorResponse}
-                        500 {:body ErrorResponse}}
-           :handler    #'create/default}}])
+   {:options {:summary "CORS preflight"
+              :handler (fn [_] {:status 204})}
+    :post    {:summary    "Endpoint for creating new ledgers"
+              :parameters {:body CreateRequestBody}
+              :responses  {201 {:body CreateResponseBody}
+                           400 {:body ErrorResponse}
+                           409 {:body ErrorResponse}
+                           500 {:body ErrorResponse}}
+              :handler    #'create/default}}])
 
 (def fluree-drop-route
   ["/drop"
-   {:post {:summary    "Drop the specified ledger and delete all persisted artifacts."
-           :parameters {:body DropRequestBody}
-           :responses  {200 {:body DropResponseBody}
-                        400 {:body ErrorResponse}
-                        409 {:body ErrorResponse}
-                        500 {:body ErrorResponse}}
-           :coercion   (rcm/create {:transformers {:body {:default rcm/json-transformer-provider}}})
-           :handler    #'drop/drop-handler}}])
+   {:options {:summary "CORS preflight"
+              :handler (fn [_] {:status 204})}
+    :post    {:summary    "Drop the specified ledger and delete all persisted artifacts."
+              :parameters {:body DropRequestBody}
+              :responses  {200 {:body DropResponseBody}
+                           400 {:body ErrorResponse}
+                           409 {:body ErrorResponse}
+                           500 {:body ErrorResponse}}
+              :coercion   (rcm/create {:transformers {:body {:default rcm/json-transformer-provider}}})
+              :handler    #'drop/drop-handler}}])
 
 (def fluree-transact-routes
   ["/transact"
-   {:post {:summary    "Endpoint for submitting transactions"
-           :parameters {:body TransactRequestBody}
-           :responses  {200 {:body TransactResponseBody}
-                        400 {:body ErrorResponse}
-                        409 {:body ErrorResponse}
-                        500 {:body ErrorResponse}}
-           :handler    #'srv-tx/update}}])
+   {:options {:summary "CORS preflight"
+              :handler (fn [_] {:status 204})}
+    :post    {:summary    "Endpoint for submitting transactions"
+              :parameters {:body TransactRequestBody}
+              :responses  {200 {:body TransactResponseBody}
+                           400 {:body ErrorResponse}
+                           409 {:body ErrorResponse}
+                           500 {:body ErrorResponse}}
+              :handler    #'srv-tx/update}}])
 
 (def fluree-update-route
   ["/update"
-   {:post {:summary    "Endpoint for submitting transactions"
-           :parameters {:body TransactRequestBody}
-           :responses  {200 {:body TransactResponseBody}
-                        400 {:body ErrorResponse}
-                        409 {:body ErrorResponse}
-                        500 {:body ErrorResponse}}
-           :handler    #'srv-tx/update}}])
+   {:options {:summary "CORS preflight"
+              :handler (fn [_] {:status 204})}
+    :post    {:summary    "Endpoint for submitting transactions"
+              :parameters {:body TransactRequestBody}
+              :responses  {200 {:body TransactResponseBody}
+                           400 {:body ErrorResponse}
+                           409 {:body ErrorResponse}
+                           500 {:body ErrorResponse}}
+              :handler    #'srv-tx/update}}])
 
 (def fluree-insert-route
   ["/insert"
-   {:post {:summary    "Endpoint for inserting into the specified ledger."
-           :parameters {:body :any}
-           :responses  {200 {:body TransactResponseBody}
-                        400 {:body ErrorResponse}
-                        409 {:body ErrorResponse}
-                        500 {:body ErrorResponse}}
-           :handler    #'srv-tx/insert}}])
+   {:options {:summary "CORS preflight"
+              :handler (fn [_] {:status 204})}
+    :post    {:summary    "Endpoint for inserting into the specified ledger."
+              :parameters {:body :any}
+              :responses  {200 {:body TransactResponseBody}
+                           400 {:body ErrorResponse}
+                           409 {:body ErrorResponse}
+                           500 {:body ErrorResponse}}
+              :handler    #'srv-tx/insert}}])
 
 (def fluree-upsert-route
   ["/upsert"
-   {:post {:summary    "Endpoint for upserting into the specified ledger."
-           :parameters {:body :any}
-           :responses  {200 {:body TransactResponseBody}
-                        400 {:body ErrorResponse}
-                        409 {:body ErrorResponse}
-                        500 {:body ErrorResponse}}
-           :handler    #'srv-tx/upsert}}])
+   {:options {:summary "CORS preflight"
+              :handler (fn [_] {:status 204})}
+    :post    {:summary    "Endpoint for upserting into the specified ledger."
+              :parameters {:body :any}
+              :responses  {200 {:body TransactResponseBody}
+                           400 {:body ErrorResponse}
+                           409 {:body ErrorResponse}
+                           500 {:body ErrorResponse}}
+              :handler    #'srv-tx/upsert}}])
 
 (def fluree-query-routes
   ["/query"
-   {:get  query-endpoint
-    :post query-endpoint}])
+   {:options {:summary "CORS preflight"
+              :handler (fn [_] {:status 204})}
+    :get     query-endpoint
+    :post    query-endpoint}])
 
 (def fluree-history-routes
   ["/history"
-   {:get  history-endpoint
-    :post history-endpoint}])
+   {:options {:summary "CORS preflight"
+              :handler (fn [_] {:status 204})}
+    :get     history-endpoint
+    :post    history-endpoint}])
 
 (def fluree-remote-routes
   ["/remote"
    ["/latestCommit"
-    {:post {:summary    "Read latest commit for a ledger"
-            :parameters {:body LatestCommitRequestBody}
-            :handler    #'remote/latest-commit}}]
+    {:options {:summary "CORS preflight"
+               :handler (fn [_] {:status 204})}
+     :post    {:summary    "Read latest commit for a ledger"
+               :parameters {:body LatestCommitRequestBody}
+               :handler    #'remote/latest-commit}}]
    ["/resource"
-    {:post {:summary    "Read resource from address"
-            :parameters {:body AddressRequestBody}
-            :handler    #'remote/read-resource-address}}]
+    {:options {:summary "CORS preflight"
+               :handler (fn [_] {:status 204})}
+     :post    {:summary    "Read resource from address"
+               :parameters {:body AddressRequestBody}
+               :handler    #'remote/read-resource-address}}]
    ["/hash"
-    {:post {:summary    "Parse content hash from address"
-            :parameters {:body HashRequestBody}
-            :handler    #'remote/parse-address-hash}}]
+    {:options {:summary "CORS preflight"
+               :handler (fn [_] {:status 204})}
+     :post    {:summary    "Parse content hash from address"
+               :parameters {:body HashRequestBody}
+               :handler    #'remote/parse-address-hash}}]
    ["/addresses"
-    {:post {:summary    "Retrieve ledger address from alias"
-            :parameters {:body AliasRequestBody}
-            :handler    #'remote/published-ledger-addresses}}]])
+    {:options {:summary "CORS preflight"
+               :handler (fn [_] {:status 204})}
+     :post    {:summary    "Retrieve ledger address from alias"
+               :parameters {:body AliasRequestBody}
+               :handler    #'remote/published-ledger-addresses}}]])
 
 (def fluree-subscription-routes
   ["/subscribe"
-   {:get {:summary    "Subscribe to ledger updates"
-          :parameters {:body SubscriptionRequestBody}
-          :handler    #'subscription/default}}])
+   {:options {:summary "CORS preflight"
+              :handler (fn [_] {:status 204})}
+    :get     {:summary    "Subscribe to ledger updates"
+              :parameters {:body SubscriptionRequestBody}
+              :handler    #'subscription/default}}])
 
 (def default-fluree-route-map
   {:create       fluree-create-routes
