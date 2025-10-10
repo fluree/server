@@ -269,14 +269,14 @@ curl -X POST http://localhost:8090/fluree/query \
   }'
 ```
 
-Expected output (NDJSON format - one JSON array per line):
+Expected output (NDJSON format - one JSON value per line):
 ```
 ["Alice Johnson","alice@example.com"]
 ["Bob Smith","bob@example.com"]
 ```
 
 **Key differences from buffered queries:**
-- Results are returned as tuples (arrays) instead of maps for efficiency
+- Results are streamed as individual items, not wrapped in an outer array
 - Each result is on its own line (newline-delimited)
 - Server returns HTTP 206 (Partial Content) instead of 200
 - Stream closes when all results are emitted (no explicit completion marker by default)
