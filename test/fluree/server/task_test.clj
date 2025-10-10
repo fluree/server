@@ -25,7 +25,7 @@
                              {"@id" (str "ex:item-" i)
                               "@type" "ex:Item"
                               "ex:value" i}))}]
-    @(fluree/transact! conn txn)))
+    @(fluree/update! conn txn)))
 
 (deftest reindex-task
   (test-system/set-server-ports)

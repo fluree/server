@@ -243,6 +243,74 @@ Expected output (SPARQL Results JSON format):
 }
 ```
 
+### Streaming Queries (NDJSON)
+
+For large result sets, you can use streaming queries to receive results as they are produced rather than waiting for the entire result set. This reduces memory pressure and enables progressive rendering in UIs.
+
+Streaming is enabled by setting the `Accept` header to `application/x-ndjson` (Newline-Delimited JSON):
+
+```bash
+curl -X POST http://localhost:8090/fluree/query \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/x-ndjson" \
+  -d '{
+    "from": "example/ledger",
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    },
+    "select": ["?name", "?email"],
+    "where": {
+      "@id": "?person",
+      "@type": "schema:Person",
+      "schema:name": "?name",
+      "schema:email": "?email"
+    }
+  }'
+```
+
+Expected output (NDJSON format - one JSON value per line):
+```
+["Alice Johnson","alice@example.com"]
+["Bob Smith","bob@example.com"]
+```
+
+**Key differences from buffered queries:**
+- Results are streamed as individual items, not wrapped in an outer array
+- Each result is on its own line (newline-delimited)
+- Server returns HTTP 206 (Partial Content) instead of 200
+- Stream closes when all results are emitted (no explicit completion marker by default)
+
+**Enable query tracking** to get fuel, time, and policy statistics in the metadata:
+
+```bash
+curl -X POST http://localhost:8090/fluree/query \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/x-ndjson" \
+  -H "fluree-track-fuel: true" \
+  -H "fluree-track-time: true" \
+  -d '{
+    "from": "example/ledger",
+    "@context": {
+      "schema": "http://schema.org/",
+      "ex": "http://example.org/"
+    },
+    "select": ["?name"],
+    "where": {
+      "@id": "?person",
+      "@type": "schema:Person",
+      "schema:name": "?name"
+    }
+  }'
+```
+
+Expected output with tracking:
+```
+["Alice Johnson"]
+["Bob Smith"]
+{"_fluree-meta":{"status":200,"fuel":245,"time":"3ms"}}
+```
+
 ### Insert More Data
 
 The `/insert` endpoint adds new data to the ledger. If the subject already exists, the operation will merge the new properties with existing ones:
