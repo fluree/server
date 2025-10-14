@@ -5,11 +5,13 @@
             [fluree.server.handlers.shared :refer [defhandler deref!] :as shared]))
 
 (defhandler query
-  [{:keys [fluree/conn fluree/opts] {:keys [body]} :parameters :as _req}]
+  [{:keys [fluree/conn fluree/opts] {:keys [body path]} :parameters :as _req}]
   (let [query (or (::handler/query body) body)
+        ;; supply ledger-alias from path params if not overridden by a header
+        opts* (update opts :ledger #(or % (:ledger-alias path)))
         {:keys [status result] :as query-response}
-        (deref! (fluree/query-connection conn query opts))]
-    (log/debug "query handler received query:" query opts)
+        (deref! (fluree/query-connection conn query opts*))]
+    (log/debug "query handler received query:" query opts*)
     (shared/with-tracking-headers {:status status, :body result}
       query-response)))
 

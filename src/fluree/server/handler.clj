@@ -189,6 +189,16 @@
    :coercion   ^:replace  query-coercer
    :handler    #'ledger/query})
 
+(def ledger-query-endpoint
+  {:summary    "Endpoint for submitting queries to a specific ledger"
+   :parameters {:body QueryRequestBody
+                :path [:map [:ledger-alias :string]]}
+   :responses  {200 {:body QueryResponse}
+                400 {:body ErrorResponse}
+                500 {:body ErrorResponse}}
+   :coercion   ^:replace  query-coercer
+   :handler    #'ledger/query})
+
 (def history-endpoint
   {:summary    "Endpoint for submitting history queries"
    :parameters {:body HistoryQuery}
@@ -299,6 +309,12 @@
               (select-keys fluree-request-header-keys)
               (update-keys (fn [k] (keyword (subs k request-header-prefix-count)))))
 
+          ;; SPARQL protocol headers for graph specification
+          from         (get headers "default-graph-uri")
+          from-named   (get headers "named-graph-uri")
+          using        (get headers "using-graph-uri")
+          using-named  (get headers "using-named-graph-uri")
+
           max-fuel     (when max-fuel
                          (try (Integer/parseInt max-fuel)
                               (catch Exception e
@@ -371,6 +387,10 @@
                  max-fuel      (assoc :max-fuel max-fuel)
                  format        (assoc :format format)
                  output        (assoc :output output)
+                 from          (assoc :from from)
+                 from-named    (assoc :from from-named)
+                 using         (assoc :using using)
+                 using-named   (assoc :using using-named)
                  ledger        (assoc :ledger ledger)
                  policy        (assoc :policy policy)
                  policy-class  (assoc :policy-class policy-class)
@@ -561,6 +581,10 @@
    {:get  query-endpoint
     :post query-endpoint}])
 
+(def fluree-ledger-query-routes
+  ["/query/{*ledger-alias}"
+   {:post ledger-query-endpoint}])
+
 (def fluree-history-routes
   ["/history"
    {:get  history-endpoint
@@ -599,6 +623,7 @@
    :update       fluree-update-route
    :transact     fluree-transact-routes
    :query        fluree-query-routes
+   :ledger-query fluree-ledger-query-routes
    :history      fluree-history-routes
    :remote       fluree-remote-routes
    :subscription fluree-subscription-routes})
