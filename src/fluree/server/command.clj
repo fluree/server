@@ -9,6 +9,7 @@
    ["-c" "--config FILE" "Load configuration at a file path"]
    ["-s" "--string STRING" "Load stringified configuration"]
    ["-r" "--resource NAME" "Load pre-defined configuration resource"]
+   ["-fed-q" "--setup-federated-query-demo" "Prepare an in-memory database to demonstrate federated query capabilities"]
    ["--reindex" "--reindex LEDGER" "Reindex the specified ledger or use --all to reindex all ledgers"]
    ["-h" "--help" "Print this usage summary and exit"]])
 
