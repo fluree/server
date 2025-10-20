@@ -208,6 +208,33 @@
    :coercion   ^:replace history-coercer
    :handler    #'ledger/history})
 
+(def fallback-handler
+  (let [swagger-ui-handler (swagger-ui/create-swagger-ui-handler
+                            {:path   "/"
+                             :config {:validatorUrl     nil
+                                      :operationsSorter "alpha"}})
+        default-handler    (ring/create-default-handler)]
+    (ring/routes swagger-ui-handler default-handler)))
+
+(defn ledger-specific-handler
+  "Reroutes a ledger-specific request to the appropriate endpoint, adding the
+  `fluree-ledger` header so that the request is directed to the appropriate ledger."
+  [{{ledger-path :ledger-path} :path-params
+    :as                        req}]
+  (let [op-delimiter-idx (str/last-index-of ledger-path "/")
+
+        ;; deconstruct the path to obtain the ledger-alias and the endpoint
+        alias    (subs ledger-path 0 op-delimiter-idx)
+        endpoint (str "/fluree" (subs ledger-path op-delimiter-idx))
+
+        ;; construct a new request to the correct endpoint with the fluree-ledger header
+        new-req  (-> req
+                     (update :headers assoc "fluree-ledger" alias)
+                     (assoc :uri endpoint))
+        ;; create a new dynamic handler and re-route the new request.
+        re-route (ring/ring-handler (:reitit.core/router req) fallback-handler)]
+    (re-route new-req)))
+
 (defn wrap-assoc-system
   [conn consensus watcher subscriptions handler]
   (fn [req]
@@ -567,7 +594,6 @@
                 :post history-endpoint}]
 
    ["/ledger/{*ledger-path}" #'ledger-specific-handler]
-   ["/query/{*ledger-alias}" {:post ledger-query-endpoint}]
 
    ["/subscribe"
     {:get {:summary    "Subscribe to ledger updates"
@@ -590,14 +616,6 @@
      {:post {:summary "Retrieve ledger address from alias"
              :parameters {:body AliasRequestBody}
              :handler #'remote/published-ledger-addresses}}]]])
-
-(def fallback-handler
-  (let [swagger-ui-handler (swagger-ui/create-swagger-ui-handler
-                            {:path   "/"
-                             :config {:validatorUrl     nil
-                                      :operationsSorter "alpha"}})
-        default-handler    (ring/create-default-handler)]
-    (ring/routes swagger-ui-handler default-handler)))
 
 (def swagger-routes
   ["/swagger.json"

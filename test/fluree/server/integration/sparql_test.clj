@@ -66,7 +66,7 @@
 
 (deftest sparql-federated-query
   (let [ledger-name "test-federated-query"
-        service     (str "http://localhost:" @test-system/api-port "/fluree/query/" ledger-name)
+        service     (str "http://localhost:" @test-system/api-port "/fluree/ledger/" ledger-name "/query")
 
         txn-req     {"ledger" ledger-name
                      "@context" {"ex" "http://example.com/"}
