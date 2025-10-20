@@ -628,10 +628,8 @@
   ([config]
    (app config []))
   ([config custom-routes]
-   (app config custom-routes default-fluree-routes))
-  ([config custom-routes fluree-routes]
    (let [app-middleware (compose-app-middleware config)
-         app-routes     (cond-> ["" {:middleware app-middleware} fluree-routes]
+         app-routes     (cond-> ["" {:middleware app-middleware} default-fluree-routes]
                           (seq custom-routes) (conj custom-routes))
          router         (app-router app-routes)]
      (ring/ring-handler router fallback-handler))))
