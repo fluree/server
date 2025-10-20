@@ -406,10 +406,6 @@
           (assoc :fluree/opts opts)
           handler))))
 
-(defn sort-middleware-by-weight
-  [weighted-middleware]
-  (map (fn [[_ mw]] mw) (sort-by first weighted-middleware)))
-
 (def json-format
   (mf/map->Format
    {:name    "application/json"
@@ -514,127 +510,86 @@
      (wrap-closed-mode root-identities closed-mode)
      exception-middleware]))
 
-(def fluree-create-routes
-  ["/create"
-   {:post {:summary    "Endpoint for creating new ledgers"
-           :parameters {:body CreateRequestBody}
-           :responses  {201 {:body CreateResponseBody}
-                        400 {:body ErrorResponse}
-                        409 {:body ErrorResponse}
-                        500 {:body ErrorResponse}}
-           :handler    #'create/default}}])
-
-(def fluree-drop-route
-  ["/drop"
-   {:post {:summary    "Drop the specified ledger and delete all persisted artifacts."
-           :parameters {:body DropRequestBody}
-           :responses  {200 {:body DropResponseBody}
-                        400 {:body ErrorResponse}
-                        409 {:body ErrorResponse}
-                        500 {:body ErrorResponse}}
-           :coercion   (rcm/create {:transformers {:body {:default rcm/json-transformer-provider}}})
-           :handler    #'drop/drop-handler}}])
-
-(def fluree-transact-routes
-  ["/transact"
-   {:post {:summary    "Endpoint for submitting transactions"
-           :parameters {:body TransactRequestBody}
-           :responses  {200 {:body TransactResponseBody}
-                        400 {:body ErrorResponse}
-                        409 {:body ErrorResponse}
-                        500 {:body ErrorResponse}}
-           :handler    #'srv-tx/update}}])
-
-(def fluree-update-route
-  ["/update"
-   {:post {:summary    "Endpoint for submitting transactions"
-           :parameters {:body TransactRequestBody}
-           :responses  {200 {:body TransactResponseBody}
-                        400 {:body ErrorResponse}
-                        409 {:body ErrorResponse}
-                        500 {:body ErrorResponse}}
-           :handler    #'srv-tx/update}}])
-
-(def fluree-insert-route
-  ["/insert"
-   {:post {:summary    "Endpoint for inserting into the specified ledger."
-           :parameters {:body :any}
-           :responses  {200 {:body TransactResponseBody}
-                        400 {:body ErrorResponse}
-                        409 {:body ErrorResponse}
-                        500 {:body ErrorResponse}}
-           :handler    #'srv-tx/insert}}])
-
-(def fluree-upsert-route
-  ["/upsert"
-   {:post {:summary    "Endpoint for upserting into the specified ledger."
-           :parameters {:body :any}
-           :responses  {200 {:body TransactResponseBody}
-                        400 {:body ErrorResponse}
-                        409 {:body ErrorResponse}
-                        500 {:body ErrorResponse}}
-           :handler    #'srv-tx/upsert}}])
-
-(def fluree-query-routes
-  ["/query"
-   {:get  query-endpoint
-    :post query-endpoint}])
-
-(def fluree-ledger-query-routes
-  ["/query/{*ledger-alias}"
-   {:post ledger-query-endpoint}])
-
-(def fluree-history-routes
-  ["/history"
-   {:get  history-endpoint
-    :post history-endpoint}])
-
-(def fluree-remote-routes
-  ["/remote"
-   ["/latestCommit"
-    {:post {:summary    "Read latest commit for a ledger"
-            :parameters {:body LatestCommitRequestBody}
-            :handler    #'remote/latest-commit}}]
-   ["/resource"
-    {:post {:summary    "Read resource from address"
-            :parameters {:body AddressRequestBody}
-            :handler    #'remote/read-resource-address}}]
-   ["/hash"
-    {:post {:summary    "Parse content hash from address"
-            :parameters {:body HashRequestBody}
-            :handler    #'remote/parse-address-hash}}]
-   ["/addresses"
-    {:post {:summary    "Retrieve ledger address from alias"
-            :parameters {:body AliasRequestBody}
-            :handler    #'remote/published-ledger-addresses}}]])
-
-(def fluree-subscription-routes
-  ["/subscribe"
-   {:get {:summary    "Subscribe to ledger updates"
-          :parameters {:body SubscriptionRequestBody}
-          :handler    #'subscription/default}}])
-
-(def default-fluree-route-map
-  {:create       fluree-create-routes
-   :drop         fluree-drop-route
-   :insert       fluree-insert-route
-   :upsert       fluree-upsert-route
-   :update       fluree-update-route
-   :transact     fluree-transact-routes
-   :query        fluree-query-routes
-   :ledger-query fluree-ledger-query-routes
-   :history      fluree-history-routes
-   :remote       fluree-remote-routes
-   :subscription fluree-subscription-routes})
-
-(defn combine-fluree-routes
-  [fluree-route-map]
-  (->> fluree-route-map
-       vals
-       (into ["/fluree"])))
-
 (def default-fluree-routes
-  (combine-fluree-routes default-fluree-route-map))
+  ["/fluree"
+   ["/create"
+    {:post {:summary "Endpoint for creating new ledgers"
+            :parameters {:body CreateRequestBody}
+            :responses {201 {:body CreateResponseBody}
+                        400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+            :handler #'create/default}}]
+   ["/drop"
+    {:post {:summary "Drop the specified ledger and delete all persisted artifacts."
+            :parameters {:body DropRequestBody}
+            :responses {200 {:body DropResponseBody}
+                        400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+            :coercion (rcm/create {:transformers {:body {:default rcm/json-transformer-provider}}})
+            :handler #'drop/drop-handler}}]
+   ["/transact"
+    {:post {:summary "Endpoint for submitting transactions"
+            :parameters {:body TransactRequestBody}
+            :responses {200 {:body TransactResponseBody}
+                        400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+            :handler #'srv-tx/update}}]
+   ["/update"
+    {:post {:summary "Endpoint for submitting transactions"
+            :parameters {:body TransactRequestBody}
+            :responses {200 {:body TransactResponseBody}
+                        400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+            :handler #'srv-tx/update}}]
+   ["/insert"
+    {:post {:summary "Endpoint for inserting into the specified ledger."
+            :parameters {:body :any}
+            :responses {200 {:body TransactResponseBody}
+                        400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+            :handler #'srv-tx/insert}}]
+
+   ["/upsert" {:post {:summary "Endpoint for upserting into the specified ledger."
+                      :parameters {:body :any}
+                      :responses {200 {:body TransactResponseBody}
+                                  400 {:body ErrorResponse}
+                                  409 {:body ErrorResponse}
+                                  500 {:body ErrorResponse}}
+                      :handler #'srv-tx/upsert}}]
+   ["/query" {:get query-endpoint
+              :post query-endpoint}]
+   ["/history" {:get history-endpoint
+                :post history-endpoint}]
+
+   ["/ledger/{*ledger-path}" #'ledger-specific-handler]
+   ["/query/{*ledger-alias}" {:post ledger-query-endpoint}]
+
+   ["/subscribe"
+    {:get {:summary    "Subscribe to ledger updates"
+           :parameters {:body SubscriptionRequestBody}
+           :handler    #'subscription/default}}]
+   ["/remote"
+    ["/latestCommit"
+     {:post {:summary "Read latest commit for a ledger"
+             :parameters {:body LatestCommitRequestBody}
+             :handler #'remote/latest-commit}}]
+    ["/resource"
+     {:post {:summary "Read resource from address"
+             :parameters {:body AddressRequestBody}
+             :handler #'remote/read-resource-address}}]
+    ["/hash"
+     {:post {:summary "Parse content hash from address"
+             :parameters {:body HashRequestBody}
+             :handler #'remote/parse-address-hash}}]
+    ["/addresses"
+     {:post {:summary "Retrieve ledger address from alias"
+             :parameters {:body AliasRequestBody}
+             :handler #'remote/published-ledger-addresses}}]]])
 
 (def fallback-handler
   (let [swagger-ui-handler (swagger-ui/create-swagger-ui-handler
