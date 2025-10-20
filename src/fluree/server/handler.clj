@@ -496,24 +496,23 @@
                                {::exception/default
                                 (partial exception/wrap-log-to-console
                                          fluree-exception-handler)}))]
-    ;; Exception middleware should always be first AND last.
-    ;; The last (highest sort order) one ensures that middleware that comes
-    ;; after it will not be skipped on response if handler code throws an
-    ;; exception b/c this it catches them and turns them into responses.
-    ;; The first (lowest sort order) one ensures that exceptions thrown by
-    ;; other middleware are caught and turned into appropriate responses.
-    ;; Seems kind of clunky. Maybe there's a better way? - WSM 2023-04-28
-    (sort-middleware-by-weight [[1 exception-middleware]
-                                [10 (partial wrap-cors cors-origins)]
-                                [10 (partial wrap-assoc-system connection consensus
-                                             watcher subscriptions)]
-                                [50 unwrap-credential]
-                                [200 coercion/coerce-exceptions-middleware]
-                                [300 coercion/coerce-response-middleware]
-                                [400 coercion/coerce-request-middleware]
-                                [500 wrap-request-header-opts]
-                                [600 (wrap-closed-mode root-identities closed-mode)]
-                                [1000 exception-middleware]])))
+    ;; Exception middleware should always be first AND last.  The last one ensures that
+    ;; middleware that comes after it will not be skipped on response if handler code
+    ;; throws an exception b/c this it catches them and turns them into responses.  The
+    ;; first one ensures that exceptions thrown by other middleware are caught and
+    ;; turned into appropriate responses.  Seems kind of clunky. Maybe there's a better
+    ;; way? - WSM 2023-04-28
+    [exception-middleware
+     (partial wrap-cors cors-origins)
+     (partial wrap-assoc-system connection consensus
+              watcher subscriptions)
+     unwrap-credential
+     coercion/coerce-exceptions-middleware
+     coercion/coerce-response-middleware
+     coercion/coerce-request-middleware
+     wrap-request-header-opts
+     (wrap-closed-mode root-identities closed-mode)
+     exception-middleware]))
 
 (def fluree-create-routes
   ["/create"
