@@ -18,7 +18,6 @@
             [fluree.server.handler :as handler]
             [fluree.server.http :as-alias http]
             [fluree.server.reindex :as reindex]
-            [fluree.server.fedq-demo :as fedq-demo]
             [fluree.server.watcher :as watcher]
             [integrant.core :as ig]
             [ring.adapter.jetty9 :as jetty]))
@@ -201,7 +200,7 @@
       (log/info "  Closed mode: enabled"))))
 
 (defn start-config
-  [config & {:keys [profile reindex setup-federated-query-demo]}]
+  [config & {:keys [profile reindex]}]
   (let [json-config         (if (string? config)
                               (json/parse config false)
                               config)
@@ -211,31 +210,21 @@
         parsed-config       (config/parse config-with-profile)
         system              (conn-system/initialize parsed-config)]
     (log-config-summary parsed-config)
-    (cond
-      setup-federated-query-demo
-      (let [connection-key (first (filter #(isa? % :fluree.db/connection) (keys system)))]
-        (if-let [conn (get system connection-key)]
-          (do (fedq-demo/load-data conn)
-              system)
-          (do (log/error "No connection found." system)
-              (System/exit 1))))
-
-      reindex
+    (if reindex
       (let [connection-key (first (filter #(isa? % :fluree.db/connection) (keys system)))]
         (if-let [conn (get system connection-key)]
           (let [{:keys [status]} (async/<!! (reindex/reindex conn reindex))]
             (System/exit status))
           (do (log/error "No connection found." system)
               (System/exit 1))))
-      :else
       system)))
 
 (defn start-file
-  [path & {:keys [profile reindex setup-federated-query-demo]}]
+  [path & {:keys [profile reindex]}]
   (log/info "Loading configuration from file:" path)
   (-> path
       config/read-file
-      (start-config :profile profile :reindex reindex :setup-federated-query-demo setup-federated-query-demo)))
+      (start-config :profile profile :reindex reindex)))
 
 (defn start-resource
   [resource-name & {:keys [profile reindex]}]
