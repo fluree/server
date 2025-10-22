@@ -201,6 +201,90 @@
               ["Leticia" 2 false]]
              (-> query-res :body (json/parse false)))))))
 
+(deftest ledger-specific-request-test
+  (let [ledger-name "ledger-endpoint/basic-query-test"]
+    (testing "create"
+      (let [create-req1 {"ledger"   ledger-name
+                         "@context" {"ex" "http://example.com/"}
+                         "insert"   (mapv #(do {"@id"     (str "ex:" %)
+                                                "@type"   (if (odd? %) "ex:Odd" "ex:Even")
+                                                "ex:name" (str "name" %)
+                                                "ex:num"  [(dec %) % (inc %)]
+                                                "ex:ref"  {"@id" (str "ex:" (inc %))}})
+                                          (range 10))}
+            create-res1 (api-post :create {:body (json/stringify create-req1) :headers json-headers})
+
+            ledger-name2 (str ledger-name 2)
+            create-req2  {"ledger"   ledger-name2
+                          "@context" {"ex" "http://example.com/"}
+                          "insert"   (mapv #(do {"@id"     (str "ex:" %)
+                                                 "@type"   (if (odd? %) "ex:Odd" "ex:Even")
+                                                 "ex:name" (str "name" %)
+                                                 "ex:num"  [(dec %) % (inc %)]
+                                                 "ex:ref"  {"@id" (str "ex:" (inc %))}})
+                                           (range 10))}
+            create-res2  (api-post (str "/ledger/" ledger-name2 "/create") {:body (json/stringify create-req2) :headers json-headers})]
+        (is (= 201 (:status create-res1)))
+        (is (= 201 (:status create-res2)))))
+    (testing "transact"
+      (let [tx-req {"ledger"   ledger-name
+                    "@context" {"ex" "http://example.com/"}
+                    "insert"   {"@id" "ex:1" "ex:op" "transact"}}
+            tx-res (api-post (str "/ledger/" ledger-name "/transact") {:body (json/stringify tx-req) :headers json-headers})]
+        (is (= 200 (:status tx-res)))))
+    (testing "update"
+      (let [tx-req {"ledger"   ledger-name
+                    "@context" {"ex" "http://example.com/"}
+                    "insert"   {"@id" "ex:1" "ex:op" "update"}}
+            tx-res (api-post (str "/ledger/" ledger-name "/update") {:body (json/stringify tx-req) :headers json-headers})]
+        (is (= 200 (:status tx-res)))))
+    (testing "upsert"
+      (let [tx-req {"@context" {"ex" "http://example.com/"}
+                    "@id"      "ex:1" "ex:op2" "upsert"}
+            tx-res (api-post (str "/ledger/" ledger-name "/upsert") {:body (json/stringify tx-req) :headers json-headers})]
+        (is (= 200 (:status tx-res)))))
+    (testing "insert"
+      (let [tx-req {"@context" {"ex" "http://example.com/"}
+                    "@id"      "ex:1" "ex:op2" "insert"}
+            tx-res (api-post (str "/ledger/" ledger-name "/insert") {:body (json/stringify tx-req) :headers json-headers})]
+        (is (= 200 (:status tx-res)))))
+    (testing "query"
+      (let [query-req {"@context" {"ex" "http://example.com/"}
+                       "select"   {"ex:1" ["ex:op" "ex:op2"]}}
+            query-res (api-post (str "ledger/" ledger-name "/query")
+                                {:body (json/stringify query-req) :headers json-headers})]
+        (is (= 200 (:status query-res)))
+        (is (= [{"ex:op"  ["transact" "update"]
+                 "ex:op2" ["insert" "upsert"]}]
+               (-> query-res :body (json/parse false))))))
+    (testing "history"
+      (let [query-req {"@context" {"ex" "http://example.com/"}
+                       "from"     ledger-name
+                       "history"  "ex:1"
+                       "t"        {"from" 2}}
+            query-res (api-post (str "ledger/" ledger-name "/history")
+                                {:body (json/stringify query-req) :headers json-headers})]
+        (is (= 200 (:status query-res)))
+        (is (= [{"https://ns.flur.ee/ledger#t" 2,
+                 "https://ns.flur.ee/ledger#assert" [{"@id" "ex:1", "ex:op" "transact"}],
+                 "https://ns.flur.ee/ledger#retract" []}
+                {"https://ns.flur.ee/ledger#t" 3,
+                 "https://ns.flur.ee/ledger#assert" [{"@id" "ex:1", "ex:op" "update"}],
+                 "https://ns.flur.ee/ledger#retract" []}
+                {"https://ns.flur.ee/ledger#t" 4,
+                 "https://ns.flur.ee/ledger#assert" [{"@id" "ex:1", "ex:op2" "upsert"}],
+                 "https://ns.flur.ee/ledger#retract" []}
+                {"https://ns.flur.ee/ledger#t" 5,
+                 "https://ns.flur.ee/ledger#assert" [{"@id" "ex:1", "ex:op2" "insert"}],
+                 "https://ns.flur.ee/ledger#retract" []}]
+               (-> query-res :body (json/parse false))))))
+
+    (testing "nonmatching routes are handled uniformly"
+      (let [not-found1 (api-post "foo" {:body "{}" :headers json-headers})
+            not-found2 (api-post (str "ledger/" ledger-name "/foo") {:body "{}" :headers json-headers})]
+        (is (= 404 (:status not-found1)))
+        (is (= 404 (:status not-found2)))))))
+
 #_(deftest ^:integration ^:edn query-edn-test
     (testing "can query a basic entity w/ EDN"
       (let [ledger-name (create-rand-ledger "query-endpoint-basic-entity-test")

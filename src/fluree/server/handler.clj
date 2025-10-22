@@ -228,7 +228,7 @@
         endpoint (str "/fluree" (subs ledger-path op-delimiter-idx))
 
         ;; construct a new request to the correct endpoint with the fluree-ledger header
-        new-req  (-> req
+        new-req  (-> (dissoc req :reitit.core/match)
                      (update :headers assoc "fluree-ledger" alias)
                      (assoc :uri endpoint))
         ;; create a new dynamic handler and re-route the new request.
