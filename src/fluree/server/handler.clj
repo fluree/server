@@ -189,16 +189,6 @@
    :coercion   ^:replace  query-coercer
    :handler    #'ledger/query})
 
-(def ledger-query-endpoint
-  {:summary    "Endpoint for submitting queries to a specific ledger"
-   :parameters {:body QueryRequestBody
-                :path [:map [:ledger-alias :string]]}
-   :responses  {200 {:body QueryResponse}
-                400 {:body ErrorResponse}
-                500 {:body ErrorResponse}}
-   :coercion   ^:replace  query-coercer
-   :handler    #'ledger/query})
-
 (def history-endpoint
   {:summary    "Endpoint for submitting history queries"
    :parameters {:body HistoryQuery}
