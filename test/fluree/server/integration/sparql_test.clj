@@ -2,7 +2,7 @@
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [fluree.db.util.json :as json]
-            [fluree.server.integration.test-system
+            [fluree.server.integration.test-system :as test-system
              :refer [api-post create-rand-ledger run-test-server sparql-headers
                      sparql-results-headers sparql-update-headers]]))
 
@@ -63,3 +63,61 @@
               "@graph" [{"@id" "ex:query-sparql-test"
                          "foo:name" ["query-sparql-test"]}]}
              (-> rdf-res :body (json/parse false)))))))
+
+(deftest sparql-federated-query
+  (let [ledger-name "test-federated-query"
+        service     (str "http://localhost:" @test-system/api-port "/fluree/ledger/" ledger-name "/query")
+
+        txn-req     {"ledger" ledger-name
+                     "@context" {"ex" "http://example.com/"}
+                     "insert" (mapv #(do {"@id" (str "ex:" %)
+                                          "@type" (if (odd? %) "ex:Odd" "ex:Even")
+                                          "ex:name" (str "name" %)
+                                          "ex:num" [(dec %) % (inc %)]
+                                          "ex:ref" {"@id" (str "ex:" (inc %))}})
+                                    (range 10))}
+        txn-res (api-post :create {:body (json/stringify txn-req) :headers test-system/json-headers})]
+    (is (= 201 (:status txn-res)))
+    (testing "federated query can join across local and remote graphs"
+      (let [service-q (str/join "\n" ["PREFIX ex: <http://example.com/>"
+                                      "SELECT ?name ?type"
+                                      (str "FROM <" ledger-name ">")
+                                      "WHERE { ?s a ex:Even ; ex:ref ?ref . "
+                                      (str "SERVICE <" service "> { ?ref ex:name ?name ; a ?type . }")
+                                      "}"])
+            service-res (api-post :query {:body service-q :headers sparql-headers})]
+        (is (= 200 (:status service-res)))
+        (is (= [["name1" "ex:Odd"]
+                ["name3" "ex:Odd"]
+                ["name5" "ex:Odd"]
+                ["name7" "ex:Odd"]
+                ["name9" "ex:Odd"]]
+               (-> service-res :body (json/parse false))))))
+    (testing "SERVICE query with unavailable service returns an error"
+      (let [service-q (str/join "\n" ["PREFIX ex: <http://example.com/>"
+                                      "SELECT ?name ?type"
+                                      (str "FROM <" ledger-name ">")
+                                      "WHERE { ?s a ex:Even ; ex:ref ?ref . "
+                                      "SERVICE <http://localhost:9999/foo/bar> { ?ref ex:name ?name ; a ?type . }"
+                                      "}"])
+            service-res (api-post :query {:body service-q :headers sparql-headers})]
+        (is (= 400 (:status service-res)))
+        (is (= "Error executing query"
+               (-> service-res :body (json/parse false) (get "message"))))))
+    (testing "SERVICE query with unavailable service proceeds with SILENT"
+      (let [service-q (str/join "\n" ["PREFIX ex: <http://example.com/>"
+                                      "SELECT ?s ?type"
+                                      (str "FROM <" ledger-name ">")
+                                      "WHERE { ?s a ex:Even ; ex:ref ?ref . "
+                                      (str "SERVICE SILENT <"
+                                           (str/replace service ledger-name "foo/bar")
+                                           "> { ?ref ex:name ?name ; a ?type . }")
+                                      "}"])
+            service-res (api-post :query {:body service-q :headers sparql-headers})]
+        (is (= 200 (:status service-res)))
+        (is (= [["ex:0" nil]
+                ["ex:2" nil]
+                ["ex:4" nil]
+                ["ex:6" nil]
+                ["ex:8" nil]]
+               (-> service-res :body (json/parse false))))))))

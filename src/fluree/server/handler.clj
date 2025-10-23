@@ -198,6 +198,33 @@
    :coercion   ^:replace history-coercer
    :handler    #'ledger/history})
 
+(def fallback-handler
+  (let [swagger-ui-handler (swagger-ui/create-swagger-ui-handler
+                            {:path   "/"
+                             :config {:validatorUrl     nil
+                                      :operationsSorter "alpha"}})
+        default-handler    (ring/create-default-handler)]
+    (ring/routes swagger-ui-handler default-handler)))
+
+(defn ledger-specific-handler
+  "Reroutes a ledger-specific request to the appropriate endpoint, adding the
+  `fluree-ledger` header so that the request is directed to the appropriate ledger."
+  [{{ledger-path :ledger-path} :path-params
+    :as                        req}]
+  (let [op-delimiter-idx (str/last-index-of ledger-path "/")
+
+        ;; deconstruct the path to obtain the ledger-alias and the endpoint
+        alias    (subs ledger-path 0 op-delimiter-idx)
+        endpoint (str "/fluree" (subs ledger-path op-delimiter-idx))
+
+        ;; construct a new request to the correct endpoint with the fluree-ledger header
+        new-req  (-> (dissoc req :reitit.core/match)
+                     (update :headers assoc "fluree-ledger" alias)
+                     (assoc :uri endpoint))
+        ;; create a new dynamic handler and re-route the new request.
+        re-route (ring/ring-handler (:reitit.core/router req) fallback-handler)]
+    (re-route new-req)))
+
 (defn wrap-assoc-system
   [conn consensus watcher subscriptions handler]
   (fn [req]
@@ -299,6 +326,12 @@
               (select-keys fluree-request-header-keys)
               (update-keys (fn [k] (keyword (subs k request-header-prefix-count)))))
 
+          ;; SPARQL protocol headers for graph specification
+          from         (get headers "default-graph-uri")
+          from-named   (get headers "named-graph-uri")
+          using        (get headers "using-graph-uri")
+          using-named  (get headers "using-named-graph-uri")
+
           max-fuel     (when max-fuel
                          (try (Integer/parseInt max-fuel)
                               (catch Exception e
@@ -371,6 +404,10 @@
                  max-fuel      (assoc :max-fuel max-fuel)
                  format        (assoc :format format)
                  output        (assoc :output output)
+                 from          (assoc :from from)
+                 from-named    (assoc :from from-named)
+                 using         (assoc :using using)
+                 using-named   (assoc :using using-named)
                  ledger        (assoc :ledger ledger)
                  policy        (assoc :policy policy)
                  policy-class  (assoc :policy-class policy-class)
@@ -385,10 +422,6 @@
       (-> req
           (assoc :fluree/opts opts)
           handler))))
-
-(defn sort-middleware-by-weight
-  [weighted-middleware]
-  (map (fn [[_ mw]] mw) (sort-by first weighted-middleware)))
 
 (def json-format
   (mf/map->Format
@@ -476,149 +509,103 @@
                                {::exception/default
                                 (partial exception/wrap-log-to-console
                                          fluree-exception-handler)}))]
-    ;; Exception middleware should always be first AND last.
-    ;; The last (highest sort order) one ensures that middleware that comes
-    ;; after it will not be skipped on response if handler code throws an
-    ;; exception b/c this it catches them and turns them into responses.
-    ;; The first (lowest sort order) one ensures that exceptions thrown by
-    ;; other middleware are caught and turned into appropriate responses.
-    ;; Seems kind of clunky. Maybe there's a better way? - WSM 2023-04-28
-    (sort-middleware-by-weight [[1 exception-middleware]
-                                [10 (partial wrap-cors cors-origins)]
-                                [10 (partial wrap-assoc-system connection consensus
-                                             watcher subscriptions)]
-                                [50 unwrap-credential]
-                                [200 coercion/coerce-exceptions-middleware]
-                                [300 coercion/coerce-response-middleware]
-                                [400 coercion/coerce-request-middleware]
-                                [500 wrap-request-header-opts]
-                                [600 (wrap-closed-mode root-identities closed-mode)]
-                                [1000 exception-middleware]])))
-
-(def fluree-create-routes
-  ["/create"
-   {:post {:summary    "Endpoint for creating new ledgers"
-           :parameters {:body CreateRequestBody}
-           :responses  {201 {:body CreateResponseBody}
-                        400 {:body ErrorResponse}
-                        409 {:body ErrorResponse}
-                        500 {:body ErrorResponse}}
-           :handler    #'create/default}}])
-
-(def fluree-drop-route
-  ["/drop"
-   {:post {:summary    "Drop the specified ledger and delete all persisted artifacts."
-           :parameters {:body DropRequestBody}
-           :responses  {200 {:body DropResponseBody}
-                        400 {:body ErrorResponse}
-                        409 {:body ErrorResponse}
-                        500 {:body ErrorResponse}}
-           :coercion   (rcm/create {:transformers {:body {:default rcm/json-transformer-provider}}})
-           :handler    #'drop/drop-handler}}])
-
-(def fluree-transact-routes
-  ["/transact"
-   {:post {:summary    "Endpoint for submitting transactions"
-           :parameters {:body TransactRequestBody}
-           :responses  {200 {:body TransactResponseBody}
-                        400 {:body ErrorResponse}
-                        409 {:body ErrorResponse}
-                        500 {:body ErrorResponse}}
-           :handler    #'srv-tx/update}}])
-
-(def fluree-update-route
-  ["/update"
-   {:post {:summary    "Endpoint for submitting transactions"
-           :parameters {:body TransactRequestBody}
-           :responses  {200 {:body TransactResponseBody}
-                        400 {:body ErrorResponse}
-                        409 {:body ErrorResponse}
-                        500 {:body ErrorResponse}}
-           :handler    #'srv-tx/update}}])
-
-(def fluree-insert-route
-  ["/insert"
-   {:post {:summary    "Endpoint for inserting into the specified ledger."
-           :parameters {:body :any}
-           :responses  {200 {:body TransactResponseBody}
-                        400 {:body ErrorResponse}
-                        409 {:body ErrorResponse}
-                        500 {:body ErrorResponse}}
-           :handler    #'srv-tx/insert}}])
-
-(def fluree-upsert-route
-  ["/upsert"
-   {:post {:summary    "Endpoint for upserting into the specified ledger."
-           :parameters {:body :any}
-           :responses  {200 {:body TransactResponseBody}
-                        400 {:body ErrorResponse}
-                        409 {:body ErrorResponse}
-                        500 {:body ErrorResponse}}
-           :handler    #'srv-tx/upsert}}])
-
-(def fluree-query-routes
-  ["/query"
-   {:get  query-endpoint
-    :post query-endpoint}])
-
-(def fluree-history-routes
-  ["/history"
-   {:get  history-endpoint
-    :post history-endpoint}])
-
-(def fluree-remote-routes
-  ["/remote"
-   ["/latestCommit"
-    {:post {:summary    "Read latest commit for a ledger"
-            :parameters {:body LatestCommitRequestBody}
-            :handler    #'remote/latest-commit}}]
-   ["/resource"
-    {:post {:summary    "Read resource from address"
-            :parameters {:body AddressRequestBody}
-            :handler    #'remote/read-resource-address}}]
-   ["/hash"
-    {:post {:summary    "Parse content hash from address"
-            :parameters {:body HashRequestBody}
-            :handler    #'remote/parse-address-hash}}]
-   ["/addresses"
-    {:post {:summary    "Retrieve ledger address from alias"
-            :parameters {:body AliasRequestBody}
-            :handler    #'remote/published-ledger-addresses}}]])
-
-(def fluree-subscription-routes
-  ["/subscribe"
-   {:get {:summary    "Subscribe to ledger updates"
-          :parameters {:body SubscriptionRequestBody}
-          :handler    #'subscription/default}}])
-
-(def default-fluree-route-map
-  {:create       fluree-create-routes
-   :drop         fluree-drop-route
-   :insert       fluree-insert-route
-   :upsert       fluree-upsert-route
-   :update       fluree-update-route
-   :transact     fluree-transact-routes
-   :query        fluree-query-routes
-   :history      fluree-history-routes
-   :remote       fluree-remote-routes
-   :subscription fluree-subscription-routes})
-
-(defn combine-fluree-routes
-  [fluree-route-map]
-  (->> fluree-route-map
-       vals
-       (into ["/fluree"])))
+    ;; Exception middleware should always be first AND last.  The last one ensures that
+    ;; middleware that comes after it will not be skipped on response if handler code
+    ;; throws an exception b/c this it catches them and turns them into responses.  The
+    ;; first one ensures that exceptions thrown by other middleware are caught and
+    ;; turned into appropriate responses.  Seems kind of clunky. Maybe there's a better
+    ;; way? - WSM 2023-04-28
+    [exception-middleware
+     (partial wrap-cors cors-origins)
+     (partial wrap-assoc-system connection consensus
+              watcher subscriptions)
+     unwrap-credential
+     coercion/coerce-exceptions-middleware
+     coercion/coerce-response-middleware
+     coercion/coerce-request-middleware
+     wrap-request-header-opts
+     (wrap-closed-mode root-identities closed-mode)
+     exception-middleware]))
 
 (def default-fluree-routes
-  (combine-fluree-routes default-fluree-route-map))
+  ["/fluree"
+   ["/create"
+    {:post {:summary "Endpoint for creating new ledgers"
+            :parameters {:body CreateRequestBody}
+            :responses {201 {:body CreateResponseBody}
+                        400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+            :handler #'create/default}}]
+   ["/drop"
+    {:post {:summary "Drop the specified ledger and delete all persisted artifacts."
+            :parameters {:body DropRequestBody}
+            :responses {200 {:body DropResponseBody}
+                        400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+            :coercion (rcm/create {:transformers {:body {:default rcm/json-transformer-provider}}})
+            :handler #'drop/drop-handler}}]
+   ["/transact"
+    {:post {:summary "Endpoint for submitting transactions"
+            :parameters {:body TransactRequestBody}
+            :responses {200 {:body TransactResponseBody}
+                        400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+            :handler #'srv-tx/update}}]
+   ["/update"
+    {:post {:summary "Endpoint for submitting transactions"
+            :parameters {:body TransactRequestBody}
+            :responses {200 {:body TransactResponseBody}
+                        400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+            :handler #'srv-tx/update}}]
+   ["/insert"
+    {:post {:summary "Endpoint for inserting into the specified ledger."
+            :parameters {:body :any}
+            :responses {200 {:body TransactResponseBody}
+                        400 {:body ErrorResponse}
+                        409 {:body ErrorResponse}
+                        500 {:body ErrorResponse}}
+            :handler #'srv-tx/insert}}]
 
-(def fallback-handler
-  (let [swagger-ui-handler (swagger-ui/create-swagger-ui-handler
-                            {:path   "/"
-                             :config {:validatorUrl     nil
-                                      :operationsSorter "alpha"}})
-        default-handler    (ring/create-default-handler)]
-    (ring/routes swagger-ui-handler default-handler)))
+   ["/upsert" {:post {:summary "Endpoint for upserting into the specified ledger."
+                      :parameters {:body :any}
+                      :responses {200 {:body TransactResponseBody}
+                                  400 {:body ErrorResponse}
+                                  409 {:body ErrorResponse}
+                                  500 {:body ErrorResponse}}
+                      :handler #'srv-tx/upsert}}]
+   ["/query" {:get query-endpoint
+              :post query-endpoint}]
+   ["/history" {:get history-endpoint
+                :post history-endpoint}]
+
+   ["/ledger/{*ledger-path}" #'ledger-specific-handler]
+
+   ["/subscribe"
+    {:get {:summary    "Subscribe to ledger updates"
+           :parameters {:body SubscriptionRequestBody}
+           :handler    #'subscription/default}}]
+   ["/remote"
+    ["/latestCommit"
+     {:post {:summary "Read latest commit for a ledger"
+             :parameters {:body LatestCommitRequestBody}
+             :handler #'remote/latest-commit}}]
+    ["/resource"
+     {:post {:summary "Read resource from address"
+             :parameters {:body AddressRequestBody}
+             :handler #'remote/read-resource-address}}]
+    ["/hash"
+     {:post {:summary "Parse content hash from address"
+             :parameters {:body HashRequestBody}
+             :handler #'remote/parse-address-hash}}]
+    ["/addresses"
+     {:post {:summary "Retrieve ledger address from alias"
+             :parameters {:body AliasRequestBody}
+             :handler #'remote/published-ledger-addresses}}]]])
 
 (def swagger-routes
   ["/swagger.json"
@@ -649,10 +636,8 @@
   ([config]
    (app config []))
   ([config custom-routes]
-   (app config custom-routes default-fluree-routes))
-  ([config custom-routes fluree-routes]
    (let [app-middleware (compose-app-middleware config)
-         app-routes     (cond-> ["" {:middleware app-middleware} fluree-routes]
+         app-routes     (cond-> ["" {:middleware app-middleware} default-fluree-routes]
                           (seq custom-routes) (conj custom-routes))
          router         (app-router app-routes)]
      (ring/ring-handler router fallback-handler))))
