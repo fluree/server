@@ -106,7 +106,7 @@
 (def QueryResponse
   (m/schema [:orn
              [:select [:sequential [:or coll? map?]]]
-             [:select-one [:or coll? map?]]
+             [:select-one [:or coll? map? nil? [:enum "null"]]]
              [:construct map?]]))
 
 (def HistoryQuery
@@ -234,6 +234,15 @@
                :fluree/watcher watcher
                :fluree/subscriptions subscriptions)
         handler)))
+
+(defn wrap-no-result
+  "Handle a nil response from a selectOne query with no results."
+  [handler]
+  (fn [req]
+    (let [{:keys [status body] :as result} (handler req)]
+      (if (and (= 200 status) (nil? body))
+        (assoc result :body "null")
+        result))))
 
 (defn wrap-cors
   [cors-origins handler]
@@ -523,6 +532,7 @@
      coercion/coerce-exceptions-middleware
      coercion/coerce-response-middleware
      coercion/coerce-request-middleware
+     wrap-no-result
      wrap-request-header-opts
      (wrap-closed-mode root-identities closed-mode)
      exception-middleware]))

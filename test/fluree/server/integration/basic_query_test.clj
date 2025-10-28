@@ -118,21 +118,33 @@
                                       "type"    "schema:Test"
                                       "ex:name" "query-test"}]})
                        :headers json-headers}
-          txn-res     (api-post :transact txn-req)
-          _           (assert (= 200 (:status txn-res)))
-          query-req   {:body
-                       (json/stringify
-                        {"@context"  test-system/default-context
-                         "from"      ledger-name
-                         "selectOne" '{?t ["*"]}
-                         "where"     '{"id" ?t, "type" "schema:Test"}})
-                       :headers json-headers}
-          query-res   (api-post :query query-req)]
-      (is (= 200 (:status query-res)))
-      (is (= {"id"      "ex:query-test"
-              "type"    "schema:Test"
-              "ex:name" "query-test"}
-             (-> query-res :body (json/parse false))))))
+          txn-res     (api-post :transact txn-req)]
+      (assert (= 200 (:status txn-res)))
+      (testing "with result"
+        (let [query-req {:body
+                         (json/stringify
+                          {"@context" test-system/default-context
+                           "from" ledger-name
+                           "selectOne" '{?t ["*"]}
+                           "where" '{"id" ?t, "type" "schema:Test"}})
+                         :headers json-headers}
+              query-res (api-post :query query-req)]
+          (is (= 200 (:status query-res)))
+          (is (= {"id"      "ex:query-test"
+                  "type"    "schema:Test"
+                  "ex:name" "query-test"}
+                 (-> query-res :body (json/parse false))))))
+      (testing "without result"
+        (let [query-req {:body
+                         (json/stringify
+                          {"@context" test-system/default-context
+                           "from" ledger-name
+                           "selectOne" '{?t ["*"]}
+                           "where" '{"id" ?t, "type" "schema:Foo"}})
+                         :headers json-headers}
+              query-res (api-post :query query-req)]
+          (is (= 200 (:status query-res)))
+          (is (nil? (-> query-res :body (json/parse false))))))))
 
   (testing "bind query works"
     (let [ledger-name (create-rand-ledger "query-endpoint-bind-test")
