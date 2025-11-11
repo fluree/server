@@ -206,16 +206,22 @@
         default-handler    (ring/create-default-handler)]
     (ring/routes swagger-ui-handler default-handler)))
 
+(def op-delimiter "/:")
+
 (defn ledger-specific-handler
   "Reroutes a ledger-specific request to the appropriate endpoint, adding the
   `fluree-ledger` header so that the request is directed to the appropriate ledger."
   [{{ledger-path :ledger-path} :path-params
     :as                        req}]
-  (let [op-delimiter-idx (str/last-index-of ledger-path "/")
+  (let [op-delimiter-idx (str/last-index-of ledger-path op-delimiter)
 
         ;; deconstruct the path to obtain the ledger-alias and the endpoint
-        alias    (subs ledger-path 0 op-delimiter-idx)
-        endpoint (str "/fluree" (subs ledger-path op-delimiter-idx))
+        alias    (if op-delimiter-idx
+                   (subs ledger-path 0 op-delimiter-idx)
+                   ledger-path)
+        endpoint (str "/fluree/" (if op-delimiter-idx
+                                   (subs ledger-path (+ op-delimiter-idx (count op-delimiter)))
+                                   "query"))
 
         ;; construct a new request to the correct endpoint with the fluree-ledger header
         new-req  (-> (dissoc req :reitit.core/match)
