@@ -20,7 +20,7 @@
       "@id": "connection",
       "@type": "Connection",
       "parallelism": 8,
-      "cacheMaxMb": 57000,
+      "cacheMaxMb": 20000,
       "commitStorage": {
         "@id": "localDiskStorage"
       },
