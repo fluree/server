@@ -1,19 +1,64 @@
 <configuration>
+  <property scope="context" name="LOG_LEVEL" value="${LOG_LEVEL:-INFO}"/>
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>
+        %d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n
+      </pattern>
+    </encoder>
+  </appender>
 
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>
-                %d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n
-            </pattern>
-        </encoder>
-    </appender>
+  <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+      <providers>
+        <!-- Timestamp in ISO8601 -->
+        <timestamp>
+          <fieldName>timestamp</fieldName>
+          <pattern>yyyy-MM-dd'T'HH:mm:ss.SSSZ</pattern>
+        </timestamp>
 
-    <logger name="fluree" level="info" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-    </logger>
+        <!-- Log level -->
+        <logLevel>
+          <fieldName>level</fieldName>
+        </logLevel>
 
-    <root level="error">
-        <appender-ref ref="CONSOLE"/>
-    </root>
+        <!-- Thread name -->
+        <threadName>
+          <fieldName>thread</fieldName>
+        </threadName>
+
+        <!-- Logger name -->
+        <loggerName>
+          <fieldName>logger</fieldName>
+        </loggerName>
+
+        <!-- Message -->
+        <message>
+          <fieldName>message</fieldName>
+        </message>
+
+        <!-- Mapped diagnostic context (MDC) -->
+        <mdc>
+          <fieldName>mdc</fieldName>
+        </mdc>
+
+        <!-- Throwable / stacktrace -->
+        <throwable>
+          <fieldName>exception</fieldName>
+          <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+            <maxDepthPerThrowable>30</maxDepthPerThrowable>
+            <maxLength>2048</maxLength>
+            <shortenedClassNameLength>20</shortenedClassNameLength>
+          </throwableConverter>
+        </throwable>
+      </providers>
+    </encoder>
+  </appender>
+
+
+  <root level="${LOG_LEVEL}">
+    <!-- Change ref to JSON_CONSOLE for structured logs -->
+    <appender-ref ref="CONSOLE"/>
+  </root>
 
 </configuration>

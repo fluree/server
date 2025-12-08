@@ -25,7 +25,8 @@
             [reitit.swagger :as swagger]
             [reitit.swagger-ui :as swagger-ui]
             [ring.adapter.jetty9 :as http]
-            [ring.middleware.cors :as rmc])
+            [ring.middleware.cors :as rmc]
+            [steffan-westcott.clj-otel.api.trace.http :as trace-http])
   (:import (java.io InputStream)))
 
 (set! *warn-on-reflection* true)
@@ -656,4 +657,5 @@
          app-routes     (cond-> ["" {:middleware app-middleware} default-fluree-routes]
                           (seq custom-routes) (conj custom-routes))
          router         (app-router app-routes)]
-     (ring/ring-handler router fallback-handler))))
+     (trace-http/wrap-server-span
+       (ring/ring-handler router fallback-handler)))))
