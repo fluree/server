@@ -1,7 +1,7 @@
 {:deps {org.clojure/clojure    {:mvn/version "1.11.3"}
         org.clojure/core.async {:mvn/version "1.6.681"}
         com.fluree/db          {:git/url "https://github.com/fluree/db.git"
-                                :git/sha "d52f3960e7da7012ac1af153cc11a1cc1502998d"}
+                                :git/sha "966892f4911aa24bf28cea314d74519dfd5b8230"}
         com.fluree/json-ld     {:git/url "https://github.com/fluree/json-ld.git"
                                 :git/sha "74083536c84d77f8cdd4b686b5661714010baad3"}
 
@@ -23,8 +23,11 @@
         camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
 
         ;; logging
-        ch.qos.logback/logback-classic {:mvn/version "1.5.6"}
-        org.slf4j/slf4j-api            {:mvn/version "2.0.13"}
+        ch.qos.logback/logback-classic     {:mvn/version "1.5.6"}
+        org.slf4j/slf4j-api                {:mvn/version "2.0.13"}
+        com.taoensso/trove                 {:mvn/version "1.1.0"}
+        com.taoensso/telemere              {:mvn/version "1.2.0"}
+        io.opentelemetry/opentelemetry-api {:mvn/version "1.56.0"}
 
         ;; http
         ;; ring-jetty9-adapter 0.30.x+ uses Jetty 12 & requires JDK 17+
