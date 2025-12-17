@@ -20,12 +20,7 @@
             [fluree.server.reindex :as reindex]
             [fluree.server.watcher :as watcher]
             [integrant.core :as ig]
-            [ring.adapter.jetty9 :as jetty]
-            [taoensso.telemere :as tel]
-            [taoensso.telemere.open-telemetry :as tel-otel]
-            [taoensso.telemere.tools-logging :as tel-tl]
-            [taoensso.trove :as trove]
-            [taoensso.trove.telemere :as trove-tel]))
+            [ring.adapter.jetty9 :as jetty]))
 
 (set! *warn-on-reflection* true)
 
@@ -157,17 +152,6 @@
   config)
 
 (def default-resource-name "file-config.jsonld")
-
-(defn initialize-logging!
-  []
-  ;; set logging impl
-  #_(trove/set-log-fn! (trace-log2))
-  #_(tel-tl/tools-logging->telemere!)
-  ;; add structured logs
-  #_(tel/add-handler! :default/console (tel/handler:console {:output-fn (tel/pr-signal-fn {:pr-fn json/stringify})}))
-  ;; add otel tracing, if present
-  #_(when tel/otel-tracing?
-    (tel/add-handler! :otel (tel-otel/handler:open-telemetry))))
 
 (defn log-config-summary
   [parsed-config]
