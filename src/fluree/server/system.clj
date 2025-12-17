@@ -158,15 +158,15 @@
 
 (def default-resource-name "file-config.jsonld")
 
-(defn initialize-logging
+(defn initialize-logging!
   []
   ;; set logging impl
-  (trove/set-log-fn! (trove-tel/get-log-fn))
-  (tel-tl/tools-logging->telemere!)
+  #_(trove/set-log-fn! (trace-log2))
+  #_(tel-tl/tools-logging->telemere!)
   ;; add structured logs
-  (tel/add-handler! :json (tel/handler:console {:output-fn (tel/pr-signal-fn {:pr-fn json/stringify})}))
+  #_(tel/add-handler! :default/console (tel/handler:console {:output-fn (tel/pr-signal-fn {:pr-fn json/stringify})}))
   ;; add otel tracing, if present
-  (when tel/otel-tracing?
+  #_(when tel/otel-tracing?
     (tel/add-handler! :otel (tel-otel/handler:open-telemetry))))
 
 (defn log-config-summary
@@ -217,7 +217,6 @@
 
 (defn start-config
   [config & {:keys [profile reindex]}]
-  (initialize-logging)
   (let [json-config         (if (string? config)
                               (json/parse config false)
                               config)

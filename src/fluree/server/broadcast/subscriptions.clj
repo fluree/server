@@ -4,7 +4,8 @@
             [fluree.db.util.log :as log]
             [fluree.server.broadcast :refer [Broadcaster]]
             [fluree.server.consensus.events :as events]
-            [ring.adapter.jetty9.websocket :as ws])
+            [ring.adapter.jetty9.websocket :as ws]
+            [steffan-westcott.clj-otel.context :as otel-context])
   (:import (java.io Closeable IOException)
            (java.nio.channels ClosedChannelException)))
 

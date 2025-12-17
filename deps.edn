@@ -28,6 +28,7 @@
         com.taoensso/trove                 {:mvn/version "1.1.0"}
         com.taoensso/telemere              {:mvn/version "1.2.0"}
         io.opentelemetry/opentelemetry-api {:mvn/version "1.56.0"}
+        com.github.steffan-westcott/clj-otel-api {:mvn/version "0.2.10"}
 
         ;; http
         ;; ring-jetty9-adapter 0.30.x+ uses Jetty 12 & requires JDK 17+
@@ -54,7 +55,11 @@
                  clj-http/clj-http           {:mvn/version "3.13.0"}
                  criterium/criterium         {:mvn/version "0.4.6"}
                  integrant/repl              {:mvn/version "0.3.3"}}
-   :jvm-opts    ["-Djdk.attach.allowAttachSelf"]}
+   :jvm-opts    ["-Djdk.attach.allowAttachSelf"
+                 "-javaagent:/home/dan/scratch/learn-otel/opentelemetry-javaagent.jar"
+                 "-Dotel.exporter.otlp.endpoint=http://localhost:4318"
+                 "-Dotel.exporter.otlp.protocol=http/protobuf"
+                 "-Dotel.service.name=fluree-server"]}
 
   :run-dev
   {:main-opts ["-m" "fluree.server" "--profile" "dev"]}
