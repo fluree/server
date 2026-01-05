@@ -24,3 +24,8 @@
     (if (and (map? result) (:status result) (:result result))
       {:status (:status result), :body (:result result)}
       {:status 200, :body result})))
+
+(defhandler info
+  [{:keys [fluree/conn fluree/opts] :as _req}]
+  (let [result (deref! (fluree/ledger-info conn (:ledger opts)))]
+    {:status 200 :body result}))

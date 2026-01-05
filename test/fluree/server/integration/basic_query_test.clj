@@ -3,7 +3,7 @@
             [fluree.db.util.json :as json]
             [fluree.server.integration.test-system
              :as test-system
-             :refer [api-post create-rand-ledger json-headers run-test-server]]))
+             :refer [api-get api-post create-rand-ledger json-headers run-test-server]]))
 
 (use-fixtures :once run-test-server)
 
@@ -300,6 +300,16 @@
                  "https://ns.flur.ee/ledger#assert" [{"@id" "ex:1", "ex:op2" "insert"}],
                  "https://ns.flur.ee/ledger#retract" []}]
                (-> query-res :body (json/parse false))))))
+
+    (testing "info"
+      (let [info-res (api-get :info {:headers {"fluree-ledger" ledger-name}})]
+        (is (= 200 (:status info-res)))
+        (is (= ["address" "alias" "branch" "commit" "index" "namespace-codes" "stats" "t"]
+               (-> info-res :body (json/parse false) keys sort))))
+      (let [info-res (api-get (str "ledger/" ledger-name "/:info") {})]
+        (is (= 200 (:status info-res)))
+        (is (= ["address" "alias" "branch" "commit" "index" "namespace-codes" "stats" "t"]
+               (-> info-res :body (json/parse false) keys sort)))))
 
     (testing "nonmatching routes are handled uniformly"
       (let [not-found1 (api-post "foo" {:body "{}" :headers json-headers})

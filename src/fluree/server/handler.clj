@@ -198,6 +198,10 @@
    :coercion   ^:replace history-coercer
    :handler    #'ledger/history})
 
+(def info-endpoint
+  {:summary "Ledger status and statistics"
+   :handler #'ledger/info})
+
 (def fallback-handler
   (let [swagger-ui-handler (swagger-ui/create-swagger-ui-handler
                             {:path   "/"
@@ -598,6 +602,8 @@
               :post query-endpoint}]
    ["/history" {:get history-endpoint
                 :post history-endpoint}]
+
+   ["/info" {:get info-endpoint}]
 
    ["/ledger/{*ledger-path}" #'ledger-specific-handler]
 
