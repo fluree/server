@@ -26,5 +26,5 @@
   (log/debug "drop body:" body)
   (let [ledger-id (:ledger body)
         resp-p    (trace/form ::drop-handler {}
-                    (drop-ledger consensus watcher ledger-id))]
+                              (drop-ledger consensus watcher ledger-id))]
     {:status 200, :body (deref! resp-p)}))

@@ -52,7 +52,7 @@
                                         {:status 400 :error :db/invalid-ledger-id})))
         opts*         (prepare-create-options opts)
         commit-event  (trace/form ::create-handler {}
-                        (deref! (create-ledger! consensus watcher ledger-id txn opts*)))
+                                  (deref! (create-ledger! consensus watcher ledger-id txn opts*)))
         response-body (srv-tx/commit-event->response-body commit-event)]
     (shared/with-tracking-headers {:status 201, :body response-body}
       commit-event)))

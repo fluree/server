@@ -17,27 +17,27 @@
   (go-try
     (let [commit-result
           (trace/form ::create-ledger! {:parent context}
-            (if txn
-              (deref! (fluree/create-with-txn conn txn opts))
-              (let [db (deref! (fluree/create conn ledger-id opts))]
-                (shared-create/genesis-result db))))]
+                      (if txn
+                        (deref! (fluree/create-with-txn conn txn opts))
+                        (let [db (deref! (fluree/create conn ledger-id opts))]
+                          (shared-create/genesis-result db))))]
       (response/announce-new-ledger watcher broadcaster ledger-id tx-id commit-result))))
 
 (defn drop-ledger!
   [conn watcher broadcaster {:keys [ledger-id otel/context] :as _params}]
   (go-try
     (let [drop-result (trace/form ::drop-ledger! {:parent context}
-                        (deref! (fluree/drop conn ledger-id)))]
+                                  (deref! (fluree/drop conn ledger-id)))]
       (response/announce-dropped-ledger watcher broadcaster ledger-id drop-result))))
 
 (defn transact!
   [conn watcher broadcaster {:keys [ledger-id tx-id txn opts otel/context]}]
   (go-try
     (let [commit-result (trace/form ::transact! {:parent context}
-                          (case (:op opts)
-                            :update (deref! (fluree/update! conn ledger-id txn opts))
-                            :upsert (deref! (fluree/upsert! conn ledger-id txn opts))
-                            :insert (deref! (fluree/insert! conn ledger-id txn opts))))]
+                                    (case (:op opts)
+                                      :update (deref! (fluree/update! conn ledger-id txn opts))
+                                      :upsert (deref! (fluree/upsert! conn ledger-id txn opts))
+                                      :insert (deref! (fluree/insert! conn ledger-id txn opts))))]
       (response/announce-commit watcher broadcaster ledger-id tx-id commit-result))))
 
 (defn process-event

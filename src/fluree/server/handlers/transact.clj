@@ -65,7 +65,7 @@
                     did     (assoc :did did))
         {:keys [status] :as commit-event}
         (trace/form ::update-handler {}
-          (deref! (transact! consensus watcher ledger-id txn-with-ledger opts*)))
+                    (deref! (transact! consensus watcher ledger-id txn-with-ledger opts*)))
 
         body (commit-event->response-body commit-event)]
     (shared/with-tracking-headers {:status status, :body body}
@@ -80,7 +80,7 @@
                     did     (assoc :identity did))
         {:keys [status] :as commit-event}
         (trace/form ::insert-handler {}
-          (deref! (transact! consensus watcher ledger-id insert-txn opts*)))
+                    (deref! (transact! consensus watcher ledger-id insert-txn opts*)))
 
         body (commit-event->response-body commit-event)]
     (shared/with-tracking-headers {:status status, :body body}
@@ -95,7 +95,7 @@
                     did     (assoc :identity did))
         {:keys [status] :as commit-event}
         (trace/form ::upsert-handler {}
-          (deref! (transact! consensus watcher ledger-id upsert-txn opts*)))
+                    (deref! (transact! consensus watcher ledger-id upsert-txn opts*)))
 
         body (commit-event->response-body commit-event)]
     (shared/with-tracking-headers {:status status, :body body}
