@@ -52,10 +52,7 @@
    :extra-deps  {org.clojure/tools.namespace {:mvn/version "1.5.0"}
                  clj-http/clj-http           {:mvn/version "3.13.0"}
                  criterium/criterium         {:mvn/version "0.4.6"}
-                 integrant/repl              {:mvn/version "0.3.3"}
-                 com.taoensso/trove          {:mvn/version "1.1.0"}
-                 com.taoensso/telemere       {:mvn/version "1.2.0"}
-                 io.opentelemetry/opentelemetry-api {:mvn/version "1.56.0"}}
+                 integrant/repl              {:mvn/version "0.3.3"}}
    :jvm-opts    ["-Djdk.attach.allowAttachSelf"
                  "-javaagent:/home/dan/scratch/learn-otel/opentelemetry-javaagent.jar"
                  "-Dotel.exporter.otlp.endpoint=http://localhost:4318"
