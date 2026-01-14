@@ -1,9 +1,9 @@
 (ns fluree.server.handlers.drop
   (:require [fluree.db.util.log :as log]
+            [fluree.db.util.trace :as trace]
             [fluree.server.consensus :as consensus]
             [fluree.server.handlers.shared :as shared :refer [deref! defhandler]]
-            [fluree.server.watcher :as watcher]
-            [steffan-westcott.clj-otel.api.trace.span :as span]))
+            [fluree.server.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
 
@@ -25,6 +25,6 @@
     {:keys [body]} :parameters}]
   (log/debug "drop body:" body)
   (let [ledger-id (:ledger body)
-        resp-p    (span/with-span! {:name ::drop-handler}
+        resp-p    (trace/form ::drop-handler {}
                     (drop-ledger consensus watcher ledger-id))]
     {:status 200, :body (deref! resp-p)}))

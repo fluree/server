@@ -4,11 +4,11 @@
             [fluree.crypto :as crypto]
             [fluree.db.api :as fluree]
             [fluree.db.query.fql.parse :as parse]
+            [fluree.db.util.trace :as trace]
             [fluree.json-ld :as json-ld]
             [fluree.server.consensus :as consensus]
             [fluree.server.handlers.shared :as shared :refer [defhandler deref!]]
-            [fluree.server.watcher :as watcher]
-            [steffan-westcott.clj-otel.api.trace.span :as span]))
+            [fluree.server.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
 
@@ -64,7 +64,7 @@
                     raw-txn (assoc :raw-txn raw-txn)
                     did     (assoc :did did))
         {:keys [status] :as commit-event}
-        (span/with-span! {:name ::update-handler}
+        (trace/form ::update-handler {}
           (deref! (transact! consensus watcher ledger-id txn-with-ledger opts*)))
 
         body (commit-event->response-body commit-event)]
@@ -79,7 +79,7 @@
                     raw-txn (assoc :raw-txn raw-txn)
                     did     (assoc :identity did))
         {:keys [status] :as commit-event}
-        (span/with-span! {:name ::insert-handler}
+        (trace/form ::insert-handler {}
           (deref! (transact! consensus watcher ledger-id insert-txn opts*)))
 
         body (commit-event->response-body commit-event)]
@@ -94,7 +94,7 @@
                     raw-txn (assoc :raw-txn raw-txn)
                     did     (assoc :identity did))
         {:keys [status] :as commit-event}
-        (span/with-span! {:name ::upsert-handler}
+        (trace/form ::upsert-handler {}
           (deref! (transact! consensus watcher ledger-id upsert-txn opts*)))
 
         body (commit-event->response-body commit-event)]

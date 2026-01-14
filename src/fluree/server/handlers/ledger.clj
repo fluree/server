@@ -1,9 +1,9 @@
 (ns fluree.server.handlers.ledger
   (:require [fluree.db.api :as fluree]
             [fluree.db.util.log :as log]
+            [fluree.db.util.trace :as trace]
             [fluree.server.handler :as-alias handler]
-            [fluree.server.handlers.shared :refer [defhandler deref!] :as shared]
-            [steffan-westcott.clj-otel.api.trace.span :as span]))
+            [fluree.server.handlers.shared :refer [defhandler deref!] :as shared]))
 
 (defhandler query
   [{:keys [fluree/conn fluree/opts] {:keys [body path]} :parameters :as _req}]
@@ -11,7 +11,7 @@
         ;; supply ledger-alias from path params if not overridden by a header
         opts* (update opts :ledger #(or % (:ledger-alias path)))
         {:keys [status result] :as query-response}
-        (span/with-span! {:name ::query-handler}
+        (trace/form ::query-handler {}
           (deref! (fluree/query-connection conn query opts*)))]
     (log/debug "query handler received query:" query opts*)
     (shared/with-tracking-headers {:status status, :body result}
@@ -20,7 +20,7 @@
 (defhandler history
   [{:keys [fluree/conn fluree/opts] {{ledger :from :as query} :body} :parameters :as _req}]
   (let [query*  (dissoc query :from)
-        result  (span/with-span! {:name ::history-handler}
+        result  (trace/form ::history-handler {}
                   (deref! (fluree/history conn ledger query* opts)))]
     (log/debug "history handler received query:" query opts "result:" result)
     ;; fluree/history may return either raw result or wrapped in {:status :result}

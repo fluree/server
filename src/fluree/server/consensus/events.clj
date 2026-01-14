@@ -7,7 +7,7 @@
             [fluree.db.track :as-alias track]
             [fluree.db.util.async :refer [<? go-try]]
             [fluree.db.util.log :as log]
-            [steffan-westcott.clj-otel.context :as otel-context]))
+            [fluree.db.util.trace :as trace]))
 
 (defn event-type
   [event]
@@ -31,7 +31,7 @@
 
 (defn with-otel-ctx
   [evt]
-  (assoc evt :otel/context (otel-context/dyn)))
+  (assoc evt :otel/context (trace/get-context)))
 
 (defn with-txn
   [evt txn]

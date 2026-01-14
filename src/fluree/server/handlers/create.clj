@@ -1,10 +1,10 @@
 (ns fluree.server.handlers.create
   (:require [fluree.db.api :as fluree]
+            [fluree.db.util.trace :as trace]
             [fluree.server.consensus :as consensus]
             [fluree.server.handlers.shared :as shared :refer [deref! defhandler]]
             [fluree.server.handlers.transact :as srv-tx]
-            [fluree.server.watcher :as watcher]
-            [steffan-westcott.clj-otel.api.trace.span :as span]))
+            [fluree.server.watcher :as watcher]))
 
 (set! *warn-on-reflection* true)
 
@@ -51,7 +51,7 @@
                         (throw (ex-info "Ledger ID must be provided"
                                         {:status 400 :error :db/invalid-ledger-id})))
         opts*         (prepare-create-options opts)
-        commit-event  (span/with-span! {:name ::create-handler}
+        commit-event  (trace/form ::create-handler {}
                         (deref! (create-ledger! consensus watcher ledger-id txn opts*)))
         response-body (srv-tx/commit-event->response-body commit-event)]
     (shared/with-tracking-headers {:status 201, :body response-body}

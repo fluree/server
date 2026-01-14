@@ -3,12 +3,12 @@
             [fluree.db.api :as fluree]
             [fluree.db.util.async :refer [<? go-try]]
             [fluree.db.util.log :as log]
+            [fluree.db.util.trace :as trace]
             [fluree.server.consensus :as consensus]
             [fluree.server.consensus.events :as events]
             [fluree.server.consensus.response :as response]
             [fluree.server.consensus.shared.create :as shared-create]
-            [fluree.server.handlers.shared :refer [deref!]]
-            [steffan-westcott.clj-otel.api.trace.span :as span]))
+            [fluree.server.handlers.shared :refer [deref!]]))
 
 (set! *warn-on-reflection* true)
 
@@ -16,7 +16,7 @@
   [conn watcher broadcaster {:keys [ledger-id tx-id txn opts otel/context] :as _params}]
   (go-try
     (let [commit-result
-          (span/with-span! {:parent context :name ::process-event}
+          (trace/form ::create-ledger! {:parent context}
             (if txn
               (deref! (fluree/create-with-txn conn txn opts))
               (let [db (deref! (fluree/create conn ledger-id opts))]
@@ -26,14 +26,14 @@
 (defn drop-ledger!
   [conn watcher broadcaster {:keys [ledger-id otel/context] :as _params}]
   (go-try
-    (let [drop-result (span/with-span! {:name ::process-event :parent context}
+    (let [drop-result (trace/form ::drop-ledger! {:parent context}
                         (deref! (fluree/drop conn ledger-id)))]
       (response/announce-dropped-ledger watcher broadcaster ledger-id drop-result))))
 
 (defn transact!
   [conn watcher broadcaster {:keys [ledger-id tx-id txn opts otel/context]}]
   (go-try
-    (let [commit-result (span/with-span! {:name ::process-event :parent context}
+    (let [commit-result (trace/form ::transact! {:parent context}
                           (case (:op opts)
                             :update (deref! (fluree/update! conn ledger-id txn opts))
                             :upsert (deref! (fluree/upsert! conn ledger-id txn opts))
@@ -42,30 +42,31 @@
 
 (defn process-event
   [conn watcher broadcaster event]
-  (go
-    (try
-      (let [event*     (if (events/resolve-txn? event)
-                         (<? (events/resolve-txns conn event))
-                         event)
-            event-type (events/event-type event*)]
-        (cond
-          (= :ledger-create event-type)
-          (<? (create-ledger! conn watcher broadcaster event*))
+  (trace/with-parent-context ::process-event (:otel/context event)
+    (go
+      (try
+        (let [event*     (if (events/resolve-txn? event)
+                           (<? (events/resolve-txns conn event))
+                           event)
+              event-type (events/event-type event*)]
+          (cond
+            (= :ledger-create event-type)
+            (<? (create-ledger! conn watcher broadcaster event*))
 
-          (= :ledger-drop event-type)
-          (<? (drop-ledger! conn watcher broadcaster event*))
+            (= :ledger-drop event-type)
+            (<? (drop-ledger! conn watcher broadcaster event*))
 
-          (= :tx-queue event-type)
-          (<? (transact! conn watcher broadcaster event*))
+            (= :tx-queue event-type)
+            (<? (transact! conn watcher broadcaster event*))
 
-          :else
-          (throw (ex-info (str "Unexpected event message: event type '" event-type "' not"
-                               " one of (':ledger-create', ':ledger-drop', ':tx-queue')")
-                          {:status 500, :error :consensus/unexpected-event}))))
-      (catch Exception e
-        (let [{:keys [ledger-id tx-id]} event]
-          (log/warn e "Error processing consensus event")
-          (response/announce-error watcher broadcaster ledger-id tx-id e))))))
+            :else
+            (throw (ex-info (str "Unexpected event message: event type '" event-type "' not"
+                                 " one of (':ledger-create', ':ledger-drop', ':tx-queue')")
+                            {:status 500, :error :consensus/unexpected-event}))))
+        (catch Exception e
+          (let [{:keys [ledger-id tx-id]} event]
+            (log/warn e "Error processing consensus event")
+            (response/announce-error watcher broadcaster ledger-id tx-id e)))))))
 
 (defn error?
   [result]
