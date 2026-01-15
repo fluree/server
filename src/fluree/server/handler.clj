@@ -658,6 +658,4 @@
                           (seq custom-routes) (conj custom-routes))
          router         (app-router app-routes)]
      (trace-http/wrap-server-span
-      (ring/ring-handler router fallback-handler)
-      {:create-span? true
-       :captured-request-headers ["x-amzn-trace-id"]}))))
+      (ring/ring-handler router fallback-handler)))))
