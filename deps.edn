@@ -53,13 +53,17 @@
                  clj-http/clj-http           {:mvn/version "3.13.0"}
                  criterium/criterium         {:mvn/version "0.4.6"}
                  integrant/repl              {:mvn/version "0.3.3"}}
-   :jvm-opts    ["-Djdk.attach.allowAttachSelf"
-                 "-javaagent:/home/dan/scratch/learn-otel/opentelemetry-javaagent.jar"
-                 "-Dotel.exporter.otlp.endpoint=http://localhost:4318"
-                 "-Dotel.exporter.otlp.protocol=http/protobuf"
-                 "-Dotel.logs.exporter=none"
-                 "-Dotel.metrics.exporter=none"
-                 "-Dotel.service.name=fluree-server"]}
+   :jvm-opts    ["-Djdk.attach.allowAttachSelf"]}
+
+  :otel
+  {:jvm-opts [ ;;; download jar from https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases
+              ;; "-javaagent:/path/to/opentelemetry-javaagent.jar"
+              "-Dotel.exporter.otlp.endpoint=http://localhost:4318"
+              "-Dotel.exporter.otlp.protocol=http/protobuf"
+              "-Dotel.logs.exporter=none"
+              "-Dotel.metrics.exporter=none"
+              "-Dotel.service.name=fluree-server"
+              "-Dotel.instrumentation.http.capture.headers.server.request=x-amzn-trace-id"]}
 
   :run-dev
   {:main-opts ["-m" "fluree.server" "--profile" "dev"]}
