@@ -43,9 +43,21 @@
   (println message)
   (System/exit status))
 
+
+(defn preprocess-args [args]
+  (mapcat (fn [arg]
+            (if (and (string? arg)
+                     (.startsWith arg "--")
+                     (.contains arg "="))
+              (let [[k v] (.split arg "=" 2)]
+                [k v])
+              [arg]))
+          args))
+
 (defn parse
   [args]
   (-> args
+      preprocess-args
       (cli/parse-opts cli-options)
       validate-opts))
 
