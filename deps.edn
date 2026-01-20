@@ -1,7 +1,7 @@
 {:deps {org.clojure/clojure    {:mvn/version "1.11.3"}
         org.clojure/core.async {:mvn/version "1.6.681"}
         com.fluree/db          {:git/url "https://github.com/fluree/db.git"
-                                :git/sha "f5f76fb2373b712aeee96574e1bbc2cd0277fce1"}
+                                :git/sha "2843030084a3a9378b312ffaaa21f23fb45f5a26"}
         com.fluree/json-ld     {:git/url "https://github.com/fluree/json-ld.git"
                                 :git/sha "74083536c84d77f8cdd4b686b5661714010baad3"}
 
@@ -23,8 +23,10 @@
         camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
 
         ;; logging
-        ch.qos.logback/logback-classic {:mvn/version "1.5.6"}
-        org.slf4j/slf4j-api            {:mvn/version "2.0.13"}
+        org.slf4j/slf4j-api                {:mvn/version "2.0.13"}
+        ch.qos.logback/logback-classic     {:mvn/version "1.5.6"}
+        net.logstash.logback/logstash-logback-encoder {:mvn/version "9.0"}
+        com.github.steffan-westcott/clj-otel-api {:mvn/version "0.2.10"}
 
         ;; http
         ;; ring-jetty9-adapter 0.30.x+ uses Jetty 12 & requires JDK 17+
@@ -52,6 +54,16 @@
                  criterium/criterium         {:mvn/version "0.4.6"}
                  integrant/repl              {:mvn/version "0.3.3"}}
    :jvm-opts    ["-Djdk.attach.allowAttachSelf"]}
+
+  :otel
+  {:jvm-opts [ ;;; download jar from https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases
+              ;; "-javaagent:/path/to/opentelemetry-javaagent.jar"
+              "-Dotel.exporter.otlp.endpoint=http://localhost:4318"
+              "-Dotel.exporter.otlp.protocol=http/protobuf"
+              "-Dotel.logs.exporter=none"
+              "-Dotel.metrics.exporter=none"
+              "-Dotel.service.name=fluree-server"
+              "-Dotel.instrumentation.http.capture.headers.server.request=x-amzn-trace-id"]}
 
   :run-dev
   {:main-opts ["-m" "fluree.server" "--profile" "dev"]}

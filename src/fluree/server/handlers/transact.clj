@@ -4,6 +4,7 @@
             [fluree.crypto :as crypto]
             [fluree.db.api :as fluree]
             [fluree.db.query.fql.parse :as parse]
+            [fluree.db.util.trace :as trace]
             [fluree.json-ld :as json-ld]
             [fluree.server.consensus :as consensus]
             [fluree.server.handlers.shared :as shared :refer [defhandler deref!]]
@@ -63,7 +64,8 @@
                     raw-txn (assoc :raw-txn raw-txn)
                     did     (assoc :did did))
         {:keys [status] :as commit-event}
-        (deref! (transact! consensus watcher ledger-id txn-with-ledger opts*))
+        (trace/form ::update-handler {}
+                    (deref! (transact! consensus watcher ledger-id txn-with-ledger opts*)))
 
         body (commit-event->response-body commit-event)]
     (shared/with-tracking-headers {:status status, :body body}
@@ -77,7 +79,8 @@
                     raw-txn (assoc :raw-txn raw-txn)
                     did     (assoc :identity did))
         {:keys [status] :as commit-event}
-        (deref! (transact! consensus watcher ledger-id insert-txn opts*))
+        (trace/form ::insert-handler {}
+                    (deref! (transact! consensus watcher ledger-id insert-txn opts*)))
 
         body (commit-event->response-body commit-event)]
     (shared/with-tracking-headers {:status status, :body body}
@@ -91,7 +94,8 @@
                     raw-txn (assoc :raw-txn raw-txn)
                     did     (assoc :identity did))
         {:keys [status] :as commit-event}
-        (deref! (transact! consensus watcher ledger-id upsert-txn opts*))
+        (trace/form ::upsert-handler {}
+                    (deref! (transact! consensus watcher ledger-id upsert-txn opts*)))
 
         body (commit-event->response-body commit-event)]
     (shared/with-tracking-headers {:status status, :body body}

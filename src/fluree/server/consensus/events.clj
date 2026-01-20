@@ -6,7 +6,8 @@
             [fluree.db.ledger :as ledger]
             [fluree.db.track :as-alias track]
             [fluree.db.util.async :refer [<? go-try]]
-            [fluree.db.util.log :as log]))
+            [fluree.db.util.log :as log]
+            [fluree.db.util.trace :as trace]))
 
 (defn event-type
   [event]
@@ -27,6 +28,10 @@
 (defn turtle-txn?
   [x]
   (string? x))
+
+(defn with-otel-ctx
+  [evt]
+  (assoc evt :otel/context (trace/get-context)))
 
 (defn with-txn
   [evt txn]
@@ -65,14 +70,16 @@
              :ledger-id ledger-id
              :opts      opts
              :instant   (System/currentTimeMillis)}]
-    (with-txn evt txn)))
+    (-> evt
+        (with-txn txn)
+        (with-otel-ctx))))
 
 (defn drop-ledger
   "Create a new event message to drop an existing ledger."
   [ledger-id]
-  {:type      :ledger-drop
-   :ledger-id ledger-id
-   :instant   (System/currentTimeMillis)})
+  (with-otel-ctx {:type      :ledger-drop
+                  :ledger-id ledger-id
+                  :instant   (System/currentTimeMillis)}))
 
 (defn commit-transaction
   "Create a new event message to commit a new transaction. The `txn` argument may
@@ -85,8 +92,8 @@
              :opts      opts
              :instant   (System/currentTimeMillis)}]
     (if (= :turtle (:format opts))
-      (with-turtle-txn evt txn)
-      (with-txn evt txn))))
+      (-> (with-turtle-txn evt txn) (with-otel-ctx))
+      (-> (with-txn evt txn) (with-otel-ctx)))))
 
 (defn get-txn
   "Gets the transaction value, either a transaction document or the storage
