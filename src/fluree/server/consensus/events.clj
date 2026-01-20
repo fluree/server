@@ -92,8 +92,8 @@
              :opts      opts
              :instant   (System/currentTimeMillis)}]
     (if (= :turtle (:format opts))
-      (with-otel-ctx (with-turtle-txn evt txn))
-      (with-otel-ctx (with-txn evt txn)))))
+      (-> (with-turtle-txn evt txn) (with-otel-ctx))
+      (-> (with-txn evt txn) (with-otel-ctx)))))
 
 (defn get-txn
   "Gets the transaction value, either a transaction document or the storage
