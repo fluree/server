@@ -304,11 +304,11 @@
     (testing "info"
       (let [info-res (api-get :info {:headers {"fluree-ledger" ledger-name}})]
         (is (= 200 (:status info-res)))
-        (is (= ["address" "alias" "branch" "commit" "index" "namespace-codes" "stats" "t"]
+        (is (= ["commit" "index" "nameservice" "namespace-codes" "stats"]
                (-> info-res :body (json/parse false) keys sort))))
       (let [info-res (api-get (str "ledger/" ledger-name "/:info") {})]
         (is (= 200 (:status info-res)))
-        (is (= ["address" "alias" "branch" "commit" "index" "namespace-codes" "stats" "t"]
+        (is (= ["commit" "index" "nameservice" "namespace-codes" "stats"]
                (-> info-res :body (json/parse false) keys sort)))))
 
     (testing "nonmatching routes are handled uniformly"
